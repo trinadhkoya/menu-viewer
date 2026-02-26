@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride } from '../types/menu';
+import { OptimizedImage } from './OptimizedImage';
 import {
   getProductIngredients,
   getProductModifierGroups,
@@ -11,6 +12,7 @@ import {
   isProductRef,
   mergeWithOverrides,
   hasOverrides,
+  isRecipeGroup,
 } from '../utils/menuHelpers';
 
 interface ProductDetailProps {
@@ -76,7 +78,7 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
       {/* Header */}
       <div className="detail-header">
         {product.imageUrl && (
-          <img src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" />
+          <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} />
         )}
         <div className="detail-title-area">
           <h2 className="detail-title">{product.displayName}</h2>
@@ -107,7 +109,7 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                 title={`Navigate to ${virtualProduct.displayName}`}
               >
                 {virtualProduct.imageUrl && (
-                  <img src={virtualProduct.imageUrl} alt="" className="virtual-parent-thumb" />
+                  <OptimizedImage src={virtualProduct.imageUrl} alt="" className="virtual-parent-thumb" width={32} height={32} />
                 )}
                 <span className="virtual-parent-name">{virtualProduct.displayName}</span>
                 <span className="badge badge--virtual" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>Virtual</span>
@@ -154,7 +156,7 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                         title={`Navigate to ${sizeProduct.displayName}`}
                       >
                         {sizeProduct.imageUrl && (
-                          <img src={sizeProduct.imageUrl} alt={sizeProduct.displayName ?? ''} className="size-variant-image" />
+                          <OptimizedImage src={sizeProduct.imageUrl} alt={sizeProduct.displayName ?? ''} className="size-variant-image" width={64} height={64} />
                         )}
                         <div className="size-variant-body">
                           <span className="size-variant-label">
@@ -403,10 +405,13 @@ function IngredientCard({
   }, [type, item, menu]);
 
   return (
-    <div className="ingredient-card" onClick={() => setExpanded(!expanded)}>
+    <div className={`ingredient-card ${type === 'productGroups' && item && 'isRecipe' in item && isRecipeGroup(item as ProductGroup) ? 'ingredient-card--recipe' : ''}`} onClick={() => setExpanded(!expanded)}>
       <div className="ingredient-header">
         <span className={`ingredient-type-badge ingredient-type--${type}`}>{type}</span>
         <span className="ingredient-name">{name}</span>
+        {type === 'productGroups' && item && 'isRecipe' in item && isRecipeGroup(item as ProductGroup) && (
+          <span className="mini-badge recipe">🍳 Recipe</span>
+        )}
         <code className="ingredient-ref">{getRefId(ref_)}</code>
       </div>
       {item && (
@@ -507,10 +512,13 @@ function ProductGroupCard({
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className="modifier-group-card">
+    <div className={`modifier-group-card ${isRecipeGroup(group) ? 'modifier-group-card--recipe' : ''}`}>
       <div className="modifier-group-header" onClick={() => setExpanded(!expanded)}>
         <div>
-          <strong>{group.displayName}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <strong>{group.displayName}</strong>
+            {isRecipeGroup(group) && <span className="mini-badge recipe">🍳 Recipe</span>}
+          </div>
           <code className="modifier-ref">{getRefId(ref_)}</code>
           {group.description && (
             <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 2 }}>

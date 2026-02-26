@@ -91,6 +91,14 @@ export function isProductGroupRef(ref: string): boolean {
 }
 
 /**
+ * Checks if a ProductGroup is a recipe group.
+ * The isRecipe field can be a boolean or a Python-style string ("True"/"False").
+ */
+export function isRecipeGroup(group: ProductGroup): boolean {
+  return group.isRecipe === true || group.isRecipe === 'True';
+}
+
+/**
  * Gets the root category from the menu.
  * rootCategoryRef is a full ref like "categories.main-menu-39c0dc58".
  */
@@ -287,26 +295,26 @@ export function searchMenu(
     .filter(([ref, p]) => {
       const name = p.displayName?.toLowerCase() ?? '';
       const desc = p.description?.toLowerCase() ?? '';
-      const id = getRefId(ref).toLowerCase();
+      const id = ref.toLowerCase();
       return name.includes(q) || desc.includes(q) || id.includes(q);
     })
-    .map(([ref, product]) => ({ ref, product }));
+    .map(([ref, product]) => ({ ref: `products.${ref}`, product }));
 
   const modifiers = Object.entries(menu.modifiers || {})
     .filter(([ref, m]) => {
       const name = m.displayName?.toLowerCase() ?? '';
-      const id = getRefId(ref).toLowerCase();
+      const id = ref.toLowerCase();
       return name.includes(q) || id.includes(q);
     })
-    .map(([ref, modifier]) => ({ ref, modifier }));
+    .map(([ref, modifier]) => ({ ref: `modifiers.${ref}`, modifier }));
 
   const categories = Object.entries(menu.categories || {})
     .filter(([ref, c]) => {
       const name = c.displayName?.toLowerCase() ?? '';
-      const id = getRefId(ref).toLowerCase();
+      const id = ref.toLowerCase();
       return name.includes(q) || id.includes(q);
     })
-    .map(([ref, category]) => ({ ref, category }));
+    .map(([ref, category]) => ({ ref: `categories.${ref}`, category }));
 
   return { products, modifiers, categories };
 }

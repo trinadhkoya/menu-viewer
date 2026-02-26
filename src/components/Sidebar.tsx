@@ -50,8 +50,9 @@ export function Sidebar({
             const subCat = resolveRef(menu, childRef) as Category;
             if (!subCat) return null;
             const isExpanded = expandedCategories.has(childRef);
-            const subChildRefs = category.childRefs?.[childRef];
-            const productCount = subChildRefs ? Object.keys(subChildRefs).filter(isProductRef).length : 0;
+            // Use the subcategory's own childRefs for counting/listing — NOT the parent's override value
+            const subCatChildRefs = subCat.childRefs;
+            const productCount = subCatChildRefs ? Object.keys(subCatChildRefs).filter(isProductRef).length : 0;
 
             return (
               <li key={childRef} className="sidebar-subcategory">
@@ -66,27 +67,7 @@ export function Sidebar({
                   <span className="sidebar-item-name">{subCat.displayName || getRefId(childRef)}</span>
                   <span className="sidebar-badge">{productCount}</span>
                 </div>
-                {isExpanded && subChildRefs && (
-                  <ul className="sidebar-products">
-                    {Object.keys(subChildRefs)
-                      .filter(isProductRef)
-                      .map((prodRef) => {
-                        const product = resolveRef(menu, prodRef) as Product;
-                        if (!product) return null;
-                        return (
-                          <li
-                            key={prodRef}
-                            className={`sidebar-item sidebar-item--product ${selectedProductRef === prodRef ? 'sidebar-item--active' : ''}`}
-                            onClick={() => onProductSelect(prodRef, subCat.displayName)}
-                          >
-                            <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
-                            <span className="sidebar-item-name">{product.displayName || getRefId(prodRef)}</span>
-                            {product.price != null && <span className="sidebar-price">${product.price.toFixed(2)}</span>}
-                          </li>
-                        );
-                      })}
-                  </ul>
-                )}
+                {isExpanded && subCatChildRefs && renderCategoryChildren(subCat, childRef, depth + 1)}
               </li>
             );
           } else if (isProductRef(childRef)) {

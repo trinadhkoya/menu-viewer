@@ -69,7 +69,7 @@ export interface ProductGroup {
   displayName: string;
   description?: string | null;
   selectionQuantity?: Quantity;
-  isRecipe?: string;
+  isRecipe?: boolean | string;
   childRefs?: Record<string, ChildRefOverride>;
 }
 

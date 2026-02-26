@@ -35,7 +35,11 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
       const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => parseAndLoad(reader.result as string);
+      reader.onload = () => {
+        parseAndLoad(reader.result as string);
+        // Reset input so the same file can be re-selected
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      };
       reader.onerror = () => setError('Failed to read file');
       reader.readAsText(file);
     },

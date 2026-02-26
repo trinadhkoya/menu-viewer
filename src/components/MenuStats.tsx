@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Menu, Product } from '../types/menu';
+import { OptimizedImage } from './OptimizedImage';
 import {
   getMenuStats,
   getTopLevelCategories,
@@ -74,7 +75,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuSt
               onClick={() => onProductSelect(ref, categoryData.displayName)}
             >
               {product.imageUrl && (
-                <img src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" />
+                <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} />
               )}
               <div className="product-card-body">
                 <div className="product-card-header">
@@ -141,7 +142,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuSt
               onClick={() => onProductSelect('', category.displayName)}
             >
               {category.imageUrl && (
-                <img src={category.imageUrl} alt={category.displayName} className="category-card-image" />
+                <OptimizedImage src={category.imageUrl} alt={category.displayName} className="category-card-image" width={280} height={100} />
               )}
               <div className="category-card-body">
                 <strong>{category.displayName}</strong>

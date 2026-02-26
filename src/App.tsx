@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { Menu } from './types/menu';
 
 const STORAGE_KEY = 'mbdp-menu-viewer-menu';
@@ -18,6 +18,8 @@ import { SearchBar } from './components/SearchBar';
 import { SearchResults } from './components/SearchResults';
 import { MenuStats } from './components/MenuStats';
 import { Breadcrumb } from './components/Breadcrumb';
+import { ThemeToggle } from './components/ThemeToggle';
+import { useTheme } from './hooks/useTheme';
 import './App.css';
 
 interface BreadcrumbItem {
@@ -27,20 +29,33 @@ interface BreadcrumbItem {
 }
 
 function App() {
+  const { theme, toggleTheme } = useTheme();
   const [menu, setMenu] = useState<Menu | null>(loadMenuFromStorage);
   const [selectedProductRef, setSelectedProductRef] = useState<string | null>(null);
   const [selectedCategoryRef, setSelectedCategoryRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const menuSizeBytes = useMemo(() => {
+    if (!menu) return 0;
+    try {
+      return new Blob([JSON.stringify(menu)]).size;
+    } catch {
+      return 0;
+    }
+  }, [menu]);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>(() => {
     const stored = loadMenuFromStorage();
     return [{ label: stored?.displayName || 'Menu', type: 'root' }];
   });
 
   const handleMenuLoad = useCallback((loadedMenu: Menu) => {
-    setMenu(loadedMenu);
+    // Clear any existing menu state first
+    localStorage.removeItem(STORAGE_KEY);
     setSelectedProductRef(null);
     setSelectedCategoryRef(null);
     setSearchQuery('');
+    // Load the new menu
+    setMenu(loadedMenu);
     setBreadcrumbs([{ label: loadedMenu.displayName || 'Menu', type: 'root' }]);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loadedMenu));
@@ -123,6 +138,9 @@ function App() {
   if (!menu) {
     return (
       <div className="app">
+        <div style={{ position: 'absolute', top: 16, right: 16 }}>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
         <MenuUploader onMenuLoad={handleMenuLoad} />
       </div>
     );
@@ -139,6 +157,7 @@ function App() {
         </div>
         <div className="header-right">
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <button className="reset-btn" onClick={handleReset} title="Load different menu">
             ↻ New Menu
           </button>
@@ -154,6 +173,16 @@ function App() {
             onCategorySelect={handleCategorySelect}
             onProductSelect={handleProductSelect}
           />
+          <div className="sidebar-footer">
+            <span className="sidebar-footer-label">Menu size</span>
+            <span className="sidebar-footer-value">
+              {menuSizeBytes < 1024
+                ? `${menuSizeBytes} B`
+                : menuSizeBytes < 1048576
+                  ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
+                  : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
+            </span>
+          </div>
         </aside>
 
         <main className="app-main">
