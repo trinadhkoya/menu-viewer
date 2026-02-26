@@ -8,16 +8,19 @@ interface OptimizedImageProps {
   width?: number;
   /** Height in px */
   height?: number;
+  /** Show combo overlay styling */
+  isCombo?: boolean;
 }
 
 /**
  * Performance-optimised image component:
  * - `loading="lazy"` + `decoding="async"` for off-screen images
  * - Explicit width/height to prevent Cumulative Layout Shift (CLS)
- * - Skeleton placeholder while loading
+ * - Food-themed shimmer skeleton with plate icon while loading
  * - Fade-in transition on load
  * - IntersectionObserver to defer src assignment for images far below the fold
- * - Graceful fallback on error (hides broken image icon)
+ * - Graceful fallback on error
+ * - Optional combo overlay ribbon
  */
 export function OptimizedImage({
   src,
@@ -25,6 +28,7 @@ export function OptimizedImage({
   className = '',
   width,
   height,
+  isCombo = false,
 }: OptimizedImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -36,7 +40,6 @@ export function OptimizedImage({
     const el = containerRef.current;
     if (!el) return;
 
-    // If IntersectionObserver is unsupported, just show immediately
     if (!('IntersectionObserver' in window)) {
       setInView(true);
       return;
@@ -59,7 +62,7 @@ export function OptimizedImage({
   const handleLoad = useCallback(() => setLoaded(true), []);
   const handleError = useCallback(() => {
     setError(true);
-    setLoaded(true); // stop showing skeleton
+    setLoaded(true);
   }, []);
 
   return (
@@ -71,8 +74,12 @@ export function OptimizedImage({
         height: height ? `${height}px` : undefined,
       }}
     >
-      {/* Skeleton placeholder */}
-      {!loaded && <div className="optimized-image-skeleton" />}
+      {/* Food-themed skeleton placeholder */}
+      {!loaded && (
+        <div className="optimized-image-skeleton">
+          <span className="skeleton-food-icon">🍽️</span>
+        </div>
+      )}
 
       {/* Actual image — only set src when in view */}
       {inView && !error && (
@@ -89,10 +96,16 @@ export function OptimizedImage({
         />
       )}
 
+      {/* Combo ribbon overlay */}
+      {isCombo && loaded && !error && (
+        <span className="combo-ribbon">🍔+🍟 Combo</span>
+      )}
+
       {/* Error fallback */}
       {error && (
         <div className="optimized-image-error">
           <span>📷</span>
+          <span className="optimized-image-error-text">No image</span>
         </div>
       )}
     </div>

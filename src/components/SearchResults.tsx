@@ -56,7 +56,7 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
             {results.products.map(({ ref, product }) => (
               <div
                 key={ref}
-                className="search-card search-card--product"
+                className={`search-card search-card--product ${product.isCombo ? 'search-card--combo' : ''}`}
                 onClick={() => onProductSelect(ref)}
               >
                 <div className="search-card-header">

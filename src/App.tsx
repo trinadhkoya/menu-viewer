@@ -196,7 +196,7 @@ function App() {
           ) : selectedProductRef ? (
             <ProductDetail menu={menu} productRef={selectedProductRef} onProductSelect={handleProductSelect} />
           ) : (
-            <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} />
+            <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
           )}
         </main>
       </div>

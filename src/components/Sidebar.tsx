@@ -80,6 +80,7 @@ export function Sidebar({
                 onClick={() => onProductSelect(childRef, category.displayName)}
               >
                 <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+                {product.isCombo && <span className="sidebar-combo-icon">🍔+🍟</span>}
                 <span className="sidebar-item-name">{product.displayName || getRefId(childRef)}</span>
                 {product.price != null && <span className="sidebar-price">${product.price.toFixed(2)}</span>}
               </li>

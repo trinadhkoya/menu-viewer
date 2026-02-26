@@ -1673,7 +1673,7 @@ body,
 }
 
 /* ============================================
-   Optimized Image — Shimmer & Fade-in
+   Optimized Image — Food-Themed Shimmer & Fade-in
    ============================================ */
 
 @keyframes shimmer {
@@ -1685,6 +1685,17 @@ body,
   }
 }
 
+@keyframes pulse-icon {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
 .optimized-image-wrapper {
   position: relative;
   overflow: hidden;
@@ -1692,19 +1703,34 @@ body,
   flex-shrink: 0;
 }
 
-/* Shimmer skeleton — fills the wrapper */
+/* Food-themed shimmer skeleton */
 .optimized-image-skeleton {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   background: linear-gradient(
-    90deg,
-    var(--color-surface) 25%,
-    var(--color-surface-hover) 37%,
-    var(--color-surface) 63%
+    110deg,
+    var(--color-surface) 20%,
+    var(--color-surface-hover) 35%,
+    var(--color-surface-active) 40%,
+    var(--color-surface-hover) 45%,
+    var(--color-surface) 60%
   );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  background-size: 250% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Pulsing food icon centered in skeleton */
+.skeleton-food-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.8rem;
+  animation: pulse-icon 1.6s ease-in-out infinite;
+  pointer-events: none;
+  filter: grayscale(0.5);
+  line-height: 1;
 }
 
 /* Actual image — hidden until loaded, then fades in */
@@ -1714,7 +1740,7 @@ body,
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.35s ease;
 }
 
 .optimized-image--loaded {
@@ -1726,12 +1752,36 @@ body,
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   background: var(--color-surface);
   color: var(--color-text-muted);
   font-size: 1.5rem;
   border-radius: inherit;
+}
+
+.optimized-image-error-text {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+/* Combo ribbon overlay on images */
+.combo-ribbon {
+  position: absolute;
+  top: 8px;
+  right: -30px;
+  background: var(--color-combo);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 32px;
+  transform: rotate(35deg);
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* ---- Per-location sizing overrides ---- */
@@ -1749,6 +1799,12 @@ body,
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
+}
+
+/* Small images — smaller food icon */
+.optimized-image-wrapper.virtual-parent-thumb .skeleton-food-icon,
+.optimized-image-wrapper.size-variant-image .skeleton-food-icon {
+  font-size: 1rem;
 }
 
 /* Size variant card image */
@@ -1771,4 +1827,65 @@ body,
   width: 100%;
   height: 120px;
   border-radius: 0;
+}
+
+/* ============================================
+   Combo vs Single Item Differentiation
+   ============================================ */
+
+/* Product card — combo variant */
+.product-card--combo {
+  border-left: 3px solid var(--color-combo);
+  background: linear-gradient(135deg, var(--color-surface) 92%, rgba(139, 92, 246, 0.06) 100%);
+}
+
+.product-card--combo:hover {
+  border-color: var(--color-combo);
+}
+
+/* Search card — combo variant */
+.search-card--combo {
+  border-left: 3px solid var(--color-combo);
+  background: linear-gradient(135deg, var(--color-surface) 92%, rgba(139, 92, 246, 0.06) 100%);
+}
+
+/* Sidebar — combo icon */
+.sidebar-combo-icon {
+  font-size: 0.65rem;
+  margin-right: 2px;
+  opacity: 0.8;
+}
+
+/* Product detail — combo banner */
+.combo-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.combo-banner-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.combo-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.combo-banner-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-combo);
+}
+
+.combo-banner-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
 }

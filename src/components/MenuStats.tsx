@@ -14,9 +14,10 @@ interface MenuStatsProps {
   menu: Menu;
   selectedCategoryRef: string | null;
   onProductSelect: (productRef: string, categoryName?: string) => void;
+  onCategorySelect?: (categoryRef: string) => void;
 }
 
-export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuStatsProps) {
+export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect }: MenuStatsProps) {
   const stats = useMemo(() => getMenuStats(menu), [menu]);
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
 
@@ -27,29 +28,28 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuSt
     if (!categoryData?.childRefs) return [];
     const products: Array<{ ref: string; product: Product; subCategory?: string }> = [];
 
-    for (const childRef of Object.keys(categoryData.childRefs)) {
-      if (isProductRef(childRef)) {
-        const product = resolveRef(menu, childRef) as Product;
-        if (product) products.push({ ref: childRef, product });
-      } else if (isCategoryRef(childRef)) {
-        const subCatProducts = categoryData.childRefs[childRef];
-        const subCat = resolveRef(menu, childRef);
-        if (subCatProducts && typeof subCatProducts === 'object') {
-          for (const prodRef of Object.keys(subCatProducts)) {
-            if (isProductRef(prodRef)) {
-              const product = resolveRef(menu, prodRef) as Product;
-              if (product) {
-                products.push({
-                  ref: prodRef,
-                  product,
-                  subCategory: subCat?.displayName || getRefId(childRef),
-                });
-              }
-            }
+    const collectProducts = (
+      childRefs: Record<string, unknown>,
+      parentCategoryName?: string,
+    ) => {
+      for (const childRef of Object.keys(childRefs)) {
+        if (isProductRef(childRef)) {
+          const product = resolveRef(menu, childRef) as Product;
+          if (product) products.push({ ref: childRef, product, subCategory: parentCategoryName });
+        } else if (isCategoryRef(childRef)) {
+          // Resolve the subcategory and read ITS childRefs — not the parent override value
+          const subCat = resolveRef(menu, childRef);
+          if (subCat?.childRefs) {
+            collectProducts(
+              subCat.childRefs as Record<string, unknown>,
+              subCat.displayName || getRefId(childRef),
+            );
           }
         }
       }
-    }
+    };
+
+    collectProducts(categoryData.childRefs as Record<string, unknown>);
     return products;
   }, [categoryData, menu]);
 
@@ -71,11 +71,11 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuSt
           {categoryProducts.map(({ ref, product, subCategory }) => (
             <div
               key={ref}
-              className="product-card"
+              className={`product-card ${product.isCombo ? 'product-card--combo' : ''}`}
               onClick={() => onProductSelect(ref, categoryData.displayName)}
             >
               {product.imageUrl && (
-                <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} />
+                <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
               )}
               <div className="product-card-body">
                 <div className="product-card-header">
@@ -139,7 +139,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuSt
             <div
               key={ref}
               className="category-card"
-              onClick={() => onProductSelect('', category.displayName)}
+              onClick={() => onCategorySelect?.(ref)}
             >
               {category.imageUrl && (
                 <OptimizedImage src={category.imageUrl} alt={category.displayName} className="category-card-image" width={280} height={100} />
