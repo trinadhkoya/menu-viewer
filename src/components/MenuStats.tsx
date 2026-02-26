@@ -1,0 +1,158 @@
+import { useMemo } from 'react';
+import type { Menu, Product } from '../types/menu';
+import {
+  getMenuStats,
+  getTopLevelCategories,
+  resolveRef,
+  isCategoryRef,
+  isProductRef,
+  getRefId,
+} from '../utils/menuHelpers';
+
+interface MenuStatsProps {
+  menu: Menu;
+  selectedCategoryRef: string | null;
+  onProductSelect: (productRef: string, categoryName?: string) => void;
+}
+
+export function MenuStats({ menu, selectedCategoryRef, onProductSelect }: MenuStatsProps) {
+  const stats = useMemo(() => getMenuStats(menu), [menu]);
+  const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
+
+  // If a category is selected, show its products
+  const categoryData = selectedCategoryRef ? resolveRef(menu, selectedCategoryRef) : null;
+
+  const categoryProducts = useMemo(() => {
+    if (!categoryData?.childRefs) return [];
+    const products: Array<{ ref: string; product: Product; subCategory?: string }> = [];
+
+    for (const childRef of Object.keys(categoryData.childRefs)) {
+      if (isProductRef(childRef)) {
+        const product = resolveRef(menu, childRef) as Product;
+        if (product) products.push({ ref: childRef, product });
+      } else if (isCategoryRef(childRef)) {
+        const subCatProducts = categoryData.childRefs[childRef];
+        const subCat = resolveRef(menu, childRef);
+        if (subCatProducts && typeof subCatProducts === 'object') {
+          for (const prodRef of Object.keys(subCatProducts)) {
+            if (isProductRef(prodRef)) {
+              const product = resolveRef(menu, prodRef) as Product;
+              if (product) {
+                products.push({
+                  ref: prodRef,
+                  product,
+                  subCategory: subCat?.displayName || getRefId(childRef),
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    return products;
+  }, [categoryData, menu]);
+
+  if (selectedCategoryRef && categoryData) {
+    return (
+      <div className="menu-stats">
+        <div className="category-overview">
+          <h2>{categoryData.displayName || getRefId(selectedCategoryRef)}</h2>
+          <p className="category-ref">
+            <code>{selectedCategoryRef}</code>
+          </p>
+          {categoryData.hasSubCategories && (
+            <span className="mini-badge">Has Subcategories</span>
+          )}
+          <span className="products-count">{categoryProducts.length} products</span>
+        </div>
+
+        <div className="product-grid">
+          {categoryProducts.map(({ ref, product, subCategory }) => (
+            <div
+              key={ref}
+              className="product-card"
+              onClick={() => onProductSelect(ref, categoryData.displayName)}
+            >
+              {product.imageUrl && (
+                <img src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" />
+              )}
+              <div className="product-card-body">
+                <div className="product-card-header">
+                  <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+                  <span className="product-card-name">{product.displayName || getRefId(ref)}</span>
+                </div>
+                <code className="product-card-ref">{getRefId(ref)}</code>
+                {subCategory && <span className="product-card-subcategory">{subCategory}</span>}
+                <div className="product-card-meta">
+                  {product.price != null && <span className="product-card-price">${product.price.toFixed(2)}</span>}
+                  {product.calories != null && <span className="product-card-cal">{product.calories} cal</span>}
+                </div>
+                {product.description && (
+                  <p className="product-card-desc">{product.description.slice(0, 80)}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Default: show menu overview
+  return (
+    <div className="menu-stats">
+      <h2>Menu Overview</h2>
+      <p className="menu-name">{stats.menuType}</p>
+      <span className={`badge ${stats.isAvailable ? 'badge--available' : 'badge--unavailable'}`}>
+        {stats.isAvailable ? '✓ Available' : '✗ Unavailable'}
+      </span>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-number">{stats.totalProducts}</span>
+          <span className="stat-label">Products</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.totalCategories}</span>
+          <span className="stat-label">Categories</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.totalModifiers}</span>
+          <span className="stat-label">Modifiers</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.totalModifierGroups}</span>
+          <span className="stat-label">Modifier Groups</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.totalProductGroups}</span>
+          <span className="stat-label">Product Groups</span>
+        </div>
+      </div>
+
+      <h3 className="categories-heading">Top-Level Categories</h3>
+      <div className="category-grid">
+        {topCategories.map(({ ref, category }) => {
+          const childCount = category.childRefs ? Object.keys(category.childRefs).length : 0;
+          return (
+            <div
+              key={ref}
+              className="category-card"
+              onClick={() => onProductSelect('', category.displayName)}
+            >
+              {category.imageUrl && (
+                <img src={category.imageUrl} alt={category.displayName} className="category-card-image" />
+              )}
+              <div className="category-card-body">
+                <strong>{category.displayName}</strong>
+                <code>{getRefId(ref)}</code>
+                <span>{childCount} items</span>
+                {category.hasSubCategories && <span className="mini-badge">Subcategories</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
