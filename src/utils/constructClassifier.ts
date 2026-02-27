@@ -481,28 +481,185 @@ export interface ClassifiedProduct {
   primaryConstruct: ConstructDef;
   behavioralTags: string[];
   flags: StructuralFlags;
+  /** Category ref this product belongs to (from rootCategoryRef tree) */
+  categoryRef?: string;
+  /** Category display name */
+  categoryName?: string;
+  /** For size variants: ref of the parent virtual product */
+  parentVirtualRef?: string;
+  /** For size variants: display name of the parent virtual product */
+  parentVirtualName?: string;
+  /** Top-level main category ref (direct child of root) */
+  mainCategoryRef?: string;
+  /** Top-level main category display name */
+  mainCategoryName?: string;
+}
+
+// ─────────────────────────────────────────────
+// Category-tree traversal
+// ─────────────────────────────────────────────
+
+/**
+ * Walk from rootCategoryRef collecting:
+ *   - { categoryRef, categoryName, productRef } for every product in the tree
+ *   - Recurses into sub-categories
+ */
+interface CategoryProductEntry {
+  categoryRef: string;
+  categoryName: string;
+  productRef: string;
+  /** The top-level main category (direct child of root) */
+  mainCategoryRef: string;
+  mainCategoryName: string;
+}
+
+function collectCategoryProducts(menu: Menu): CategoryProductEntry[] {
+  const entries: CategoryProductEntry[] = [];
+  const visited = new Set<string>();
+
+  function walk(catRef: string, mainCatRef: string, mainCatName: string): void {
+    if (visited.has(catRef)) return;
+    visited.add(catRef);
+
+    const cat = resolveRef(menu, catRef) as { displayName?: string; childRefs?: Record<string, unknown> } | undefined;
+    if (!cat?.childRefs) return;
+
+    const catName = cat.displayName ?? catRef;
+
+    for (const childRef of Object.keys(cat.childRefs)) {
+      if (childRef.startsWith('products.')) {
+        entries.push({
+          categoryRef: catRef,
+          categoryName: catName,
+          productRef: childRef,
+          mainCategoryRef: mainCatRef,
+          mainCategoryName: mainCatName,
+        });
+      } else if (childRef.startsWith('categories.')) {
+        walk(childRef, mainCatRef, mainCatName);
+      }
+    }
+  }
+
+  if (menu.rootCategoryRef) {
+    // Walk each top-level category (direct child of root)
+    const rootCat = resolveRef(menu, menu.rootCategoryRef) as { childRefs?: Record<string, unknown> } | undefined;
+    if (rootCat?.childRefs) {
+      for (const topRef of Object.keys(rootCat.childRefs)) {
+        if (topRef.startsWith('categories.')) {
+          const topCat = resolveRef(menu, topRef) as { displayName?: string } | undefined;
+          const topName = topCat?.displayName ?? topRef;
+          walk(topRef, topRef, topName);
+        } else if (topRef.startsWith('products.')) {
+          // Products directly under root (rare)
+          const rootDisplay = (resolveRef(menu, menu.rootCategoryRef) as { displayName?: string })?.displayName ?? 'Root';
+          entries.push({
+            categoryRef: menu.rootCategoryRef,
+            categoryName: rootDisplay,
+            productRef: topRef,
+            mainCategoryRef: menu.rootCategoryRef,
+            mainCategoryName: rootDisplay,
+          });
+        }
+      }
+    }
+  }
+
+  return entries;
 }
 
 // ─────────────────────────────────────────────
 // Classify all products in a menu
 // ─────────────────────────────────────────────
 
+function classifyOne(
+  ref: string,
+  product: Product,
+  menu: Menu,
+  extra?: Partial<ClassifiedProduct>,
+): ClassifiedProduct {
+  const flags = computeFlags(product);
+  const primaryType = classifyPrimaryType(flags);
+  const primaryConstruct = getConstruct(primaryType)!;
+  const behavioralTags = detectBehavioralTags(product, menu);
+  return {
+    ref,
+    product,
+    primaryType,
+    primaryConstruct,
+    behavioralTags,
+    flags,
+    ...extra,
+  };
+}
+
+/**
+ * Classify products reachable from rootCategoryRef.
+ *
+ * 1. Walk the category tree to find orderable products.
+ * 2. Classify each product.
+ * 3. For virtual products with relatedProducts.alternatives pointing to
+ *    productGroups, also traverse into those groups and classify every
+ *    size-variant child product (tagged with parentVirtualRef/Name).
+ */
 export function classifyAllProducts(menu: Menu): ClassifiedProduct[] {
   const products = menu.products ?? {};
-  return Object.entries(products).map(([id, product]) => {
-    const flags = computeFlags(product);
-    const primaryType = classifyPrimaryType(flags);
-    const primaryConstruct = getConstruct(primaryType)!;
-    const behavioralTags = detectBehavioralTags(product, menu);
-    return {
-      ref: `products.${id}`,
-      product,
-      primaryType,
-      primaryConstruct,
-      behavioralTags,
-      flags,
-    };
-  });
+  const catEntries = collectCategoryProducts(menu);
+  const result: ClassifiedProduct[] = [];
+  const seen = new Set<string>();
+
+  for (const { categoryRef, categoryName, productRef, mainCategoryRef, mainCategoryName } of catEntries) {
+    if (seen.has(productRef)) continue;
+    seen.add(productRef);
+
+    const id = productRef.substring('products.'.length);
+    const product = products[id];
+    if (!product) continue;
+
+    // Classify the category-level product itself
+    const classified = classifyOne(productRef, product, menu, {
+      categoryRef,
+      categoryName,
+      mainCategoryRef,
+      mainCategoryName,
+    });
+    result.push(classified);
+
+    // For virtual products: traverse into alternatives → productGroup → children
+    if (product.isVirtual === true) {
+      const rp = product.relatedProducts as Record<string, unknown> | undefined;
+      const alts = rp?.alternatives as Record<string, unknown> | undefined;
+      if (alts && typeof alts === 'object') {
+        for (const altRef of Object.keys(alts)) {
+          if (!altRef.startsWith('productGroups.')) continue;
+          const pg = resolveRef(menu, altRef) as ProductGroup | undefined;
+          if (!pg?.childRefs) continue;
+
+          for (const childRef of Object.keys(pg.childRefs)) {
+            if (!childRef.startsWith('products.') || seen.has(childRef)) continue;
+            seen.add(childRef);
+
+            const childId = childRef.substring('products.'.length);
+            const childProduct = products[childId];
+            if (!childProduct) continue;
+
+            result.push(
+              classifyOne(childRef, childProduct, menu, {
+                categoryRef,
+                categoryName,
+                mainCategoryRef,
+                mainCategoryName,
+                parentVirtualRef: productRef,
+                parentVirtualName: product.displayName ?? undefined,
+              }),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 // ─────────────────────────────────────────────
@@ -560,17 +717,360 @@ export function getExtraFlagStats(items: ClassifiedProduct[]): ExtraFlagStats {
   };
 }
 
-/** Filter products by primary type, behavioral tag, extra flag, search */
+/** Main category stats (products grouped by top-level category) */
+export interface MainCategoryStats {
+  ref: string;
+  name: string;
+  count: number;
+}
+
+export function getMainCategoryStats(items: ClassifiedProduct[]): MainCategoryStats[] {
+  const map = new Map<string, { name: string; count: number }>();
+  const order: string[] = [];
+  for (const item of items) {
+    const ref = item.mainCategoryRef ?? 'unknown';
+    const name = item.mainCategoryName ?? 'Unknown';
+    if (!map.has(ref)) {
+      map.set(ref, { name, count: 0 });
+      order.push(ref);
+    }
+    map.get(ref)!.count++;
+  }
+  return order.map((ref) => ({
+    ref,
+    name: map.get(ref)!.name,
+    count: map.get(ref)!.count,
+  }));
+}
+
+// ─────────────────────────────────────────────
+// Product Schema Skeleton — actual JSON structure analysis
+// ─────────────────────────────────────────────
+
+/** A single field in the product schema with presence stats */
+export interface SchemaField {
+  key: string;
+  /** How many products have this field (non-null, non-empty) */
+  presentCount: number;
+  /** Percentage of products in the group that have this field */
+  pct: number;
+  /** 'always' (100%), 'common' (≥60%), 'sometimes' (≥20%), 'rare' (<20%) */
+  frequency: 'always' | 'common' | 'sometimes' | 'rare';
+  /** Most common value type(s) — e.g. "string", "object(3)", "bool" */
+  valueTypes: { type: string; count: number }[];
+  /** Whether this field carries structural significance (refs, flags, nesting) */
+  isStructural: boolean;
+}
+
+/** A distinct schema shape derived from the structural keys present */
+export interface SchemaShape {
+  /** Fingerprint code, e.g. "I(3)+R(1)+N+T+Q" */
+  fingerprint: string;
+  /** Human-readable shape name, e.g. "Sized Customizable w/ Nutrition" */
+  shapeName: string;
+  /** Number of products with this exact fingerprint */
+  count: number;
+  /** Percentage of category products */
+  pct: number;
+  /** Example product names */
+  examples: string[];
+}
+
+/** Full skeleton analysis for one top-level category */
+export interface CategorySkeleton {
+  ref: string;
+  name: string;
+  productCount: number;
+  /** All fields present across products, sorted by frequency */
+  fields: SchemaField[];
+  /** Distinct schema shapes found in this category */
+  shapes: SchemaShape[];
+  /** The dominant (most common) shape */
+  dominantShape: SchemaShape;
+  /** Whether all products share the same shape */
+  isHomogeneous: boolean;
+  /** Short code for the dominant shape */
+  skeletonCode: string;
+  /** Human-readable skeleton name */
+  skeletonName: string;
+  /** Count of distinct shapes */
+  shapeCount: number;
+}
+
+/** Keys that define structural significance (affect product behavior) */
+const STRUCTURAL_KEYS = new Set([
+  'ingredientRefs',
+  'relatedProducts',
+  'modifierGroupRefs',
+  'productGroupIds',
+  'isVirtual',
+  'isCombo',
+  'isRecipe',
+  'nutrition',
+  'operationHours',
+  'quantity',
+  'tags',
+  'volumePrices',
+]);
+
+/** Keys used for fingerprinting (structural + behavioral markers) */
+const FINGERPRINT_KEYS = [
+  'ingredientRefs',
+  'relatedProducts',
+  'modifierGroupRefs',
+  'isVirtual',
+  'isCombo',
+  'nutrition',
+  'operationHours',
+  'tags',
+  'quantity',
+  'volumePrices',
+  'productGroupIds',
+] as const;
+
+/**
+ * Compute a schema fingerprint for a product based on which structural
+ * keys are present with meaningful (non-null, non-empty) values.
+ */
+function computeFingerprint(product: Product): string {
+  const parts: string[] = [];
+  const p = product as Record<string, unknown>;
+
+  for (const key of FINGERPRINT_KEYS) {
+    const v = p[key];
+    if (v == null) continue;
+
+    switch (key) {
+      case 'ingredientRefs':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push(`I(${Object.keys(v as object).length})`);
+        break;
+      case 'relatedProducts':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push(`R(${Object.keys(v as object).length})`);
+        break;
+      case 'modifierGroupRefs':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push(`M(${Object.keys(v as object).length})`);
+        break;
+      case 'isVirtual':
+        if (v === true) parts.push('V');
+        break;
+      case 'isCombo':
+        if (v === true) parts.push('C');
+        break;
+      case 'nutrition':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push('N');
+        break;
+      case 'operationHours':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push('OH');
+        break;
+      case 'tags':
+        if (Array.isArray(v) && v.length > 0) parts.push('T');
+        break;
+      case 'quantity':
+        if (typeof v === 'object' && Object.keys(v as object).length > 0)
+          parts.push('Q');
+        break;
+      case 'volumePrices':
+        if (Array.isArray(v) && v.length > 0) parts.push('VP');
+        break;
+      case 'productGroupIds':
+        if (Array.isArray(v) && v.length > 0) parts.push(`PG(${v.length})`);
+        break;
+    }
+  }
+
+  return parts.length > 0 ? parts.join('+') : 'BARE';
+}
+
+/** Fingerprint legend for readable names */
+const FP_LABELS: Record<string, string> = {
+  I: 'Ingredients',
+  R: 'Sizes/Alternatives',
+  M: 'Modifiers',
+  V: 'Virtual',
+  C: 'Combo',
+  N: 'Nutrition',
+  OH: 'Op Hours',
+  T: 'Tags',
+  Q: 'Quantity',
+  VP: 'Volume Pricing',
+  PG: 'Product Groups',
+};
+
+/**
+ * Convert a fingerprint code into a human-readable shape name.
+ * e.g. "I(3)+R(1)+N+T" → "Customizable + Sized + Nutrition + Tags"
+ */
+function fingerprintToName(fp: string): string {
+  if (fp === 'BARE') return 'Bare (minimal fields only)';
+
+  const segments = fp.split('+');
+  const labels: string[] = [];
+
+  for (const seg of segments) {
+    // Extract the key letter(s) — before any parenthesized count
+    const match = seg.match(/^([A-Z]+)/);
+    if (match) {
+      const key = match[1];
+      const label = FP_LABELS[key] ?? key;
+      // Include count if present
+      const countMatch = seg.match(/\((\d+)\)/);
+      if (countMatch) {
+        labels.push(`${label}(${countMatch[1]})`);
+      } else {
+        labels.push(label);
+      }
+    }
+  }
+
+  return labels.join(' + ');
+}
+
+/** Determine value type description for a product field value */
+function describeValueType(v: unknown): string {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return 'bool';
+  if (typeof v === 'number') return 'number';
+  if (typeof v === 'string') return 'string';
+  if (Array.isArray(v)) return `array(${v.length})`;
+  if (typeof v === 'object') return `object(${Object.keys(v).length})`;
+  return typeof v;
+}
+
+/**
+ * Analyze the actual JSON schema of products in each top-level category.
+ * Computes field presence, value types, schema fingerprints, and dominant shapes.
+ */
+export function getCategorySkeletons(items: ClassifiedProduct[]): CategorySkeleton[] {
+  // Group by mainCategoryRef
+  const grouped = new Map<string, { name: string; products: ClassifiedProduct[] }>();
+  const order: string[] = [];
+
+  for (const item of items) {
+    const ref = item.mainCategoryRef ?? 'unknown';
+    const name = item.mainCategoryName ?? 'Unknown';
+    if (!grouped.has(ref)) {
+      grouped.set(ref, { name, products: [] });
+      order.push(ref);
+    }
+    grouped.get(ref)!.products.push(item);
+  }
+
+  const skeletons: CategorySkeleton[] = [];
+
+  for (const ref of order) {
+    const { name, products } = grouped.get(ref)!;
+    const count = products.length;
+    if (count === 0) continue;
+
+    // ── Field presence analysis ──
+    const fieldPresence = new Map<string, number>();
+    const fieldTypes = new Map<string, Map<string, number>>();
+
+    for (const item of products) {
+      const raw = item.product as Record<string, unknown>;
+      for (const [key, value] of Object.entries(raw)) {
+        // Skip null/undefined for presence counting
+        if (value == null) continue;
+        // For objects/arrays, skip empty ones
+        if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) continue;
+        if (Array.isArray(value) && value.length === 0) continue;
+
+        fieldPresence.set(key, (fieldPresence.get(key) ?? 0) + 1);
+
+        if (!fieldTypes.has(key)) fieldTypes.set(key, new Map());
+        const typeDesc = describeValueType(value);
+        const bucket = fieldTypes.get(key)!;
+        bucket.set(typeDesc, (bucket.get(typeDesc) ?? 0) + 1);
+      }
+    }
+
+    const fields: SchemaField[] = [];
+    for (const [key, presentCount] of fieldPresence.entries()) {
+      const pct = Math.round((presentCount / count) * 100);
+      const frequency: SchemaField['frequency'] =
+        pct === 100 ? 'always' : pct >= 60 ? 'common' : pct >= 20 ? 'sometimes' : 'rare';
+
+      const types = fieldTypes.get(key)!;
+      const valueTypes = [...types.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([type, cnt]) => ({ type, count: cnt }));
+
+      fields.push({
+        key,
+        presentCount,
+        pct,
+        frequency,
+        valueTypes,
+        isStructural: STRUCTURAL_KEYS.has(key),
+      });
+    }
+    fields.sort((a, b) => b.pct - a.pct);
+
+    // ── Schema fingerprinting ──
+    const fpCounts = new Map<string, { count: number; examples: string[] }>();
+
+    for (const item of products) {
+      const fp = computeFingerprint(item.product);
+      if (!fpCounts.has(fp)) fpCounts.set(fp, { count: 0, examples: [] });
+      const entry = fpCounts.get(fp)!;
+      entry.count++;
+      if (entry.examples.length < 3) {
+        entry.examples.push(item.product.displayName ?? item.ref);
+      }
+    }
+
+    const shapes: SchemaShape[] = [...fpCounts.entries()]
+      .map(([fingerprint, { count: fpCount, examples }]) => ({
+        fingerprint,
+        shapeName: fingerprintToName(fingerprint),
+        count: fpCount,
+        pct: Math.round((fpCount / count) * 100),
+        examples,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const dominantShape = shapes[0];
+    const isHomogeneous = shapes.length === 1 || dominantShape.pct >= 80;
+
+    skeletons.push({
+      ref,
+      name,
+      productCount: count,
+      fields,
+      shapes,
+      dominantShape,
+      isHomogeneous,
+      skeletonCode: dominantShape.fingerprint,
+      skeletonName: dominantShape.shapeName,
+      shapeCount: shapes.length,
+    });
+  }
+
+  return skeletons;
+}
+
+/** Filter products by primary type, behavioral tag, extra flag, search, mainCategory */
 export function filterProducts(
   items: ClassifiedProduct[],
   opts: {
     primaryType?: string | null;
     behavioralTag?: string | null;
     extraFlag?: string | null;
+    mainCategory?: string | null;
     search?: string;
   },
 ): ClassifiedProduct[] {
   let result = items;
+
+  if (opts.mainCategory) {
+    result = result.filter((i) => i.mainCategoryRef === opts.mainCategory);
+  }
 
   if (opts.primaryType) {
     result = result.filter((i) => i.primaryType === opts.primaryType);

@@ -5,13 +5,15 @@ import {
   CONSTRUCTS,
   classifyAllProducts,
   getPrimaryTypeStats,
-  getBehavioralTagStats,
   getExtraFlagStats,
+  getMainCategoryStats,
+  getCategorySkeletons,
   filterProducts,
   getConstruct,
 } from '../utils/constructClassifier';
+import type { CategorySkeleton } from '../utils/constructClassifier';
 import { getRefId } from '../utils/menuHelpers';
-import { ConstructBadge, ConstructTypePill, BehavioralTag, FlagPills } from './ConstructBadge';
+import { ConstructTypePill } from './ConstructBadge';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
 
@@ -21,6 +23,7 @@ interface ConstructViewProps {
 }
 
 export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
+  const [activeMainCategory, setActiveMainCategory] = useState<string | null>(null);
   const [activePrimary, setActivePrimary] = useState<string | null>(null);
   const [activeBehavioral, setActiveBehavioral] = useState<string | null>(null);
   const [activeExtra, setActiveExtra] = useState<string | null>(null);
@@ -30,21 +33,38 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
 
   // Classify all products once
   const classified = useMemo(() => classifyAllProducts(menu), [menu]);
+  const mainCategoryStats = useMemo(() => getMainCategoryStats(classified), [classified]);
   const primaryStats = useMemo(() => getPrimaryTypeStats(classified), [classified]);
-  const behavioralStats = useMemo(() => getBehavioralTagStats(classified), [classified]);
   const extraStats = useMemo(() => getExtraFlagStats(classified), [classified]);
+  const categorySkeletons = useMemo(() => getCategorySkeletons(classified), [classified]);
+
+  // Build a lookup map from category ref → skeleton
+  const skeletonMap = useMemo(() => {
+    const map = new Map<string, CategorySkeleton>();
+    for (const sk of categorySkeletons) map.set(sk.ref, sk);
+    return map;
+  }, [categorySkeletons]);
+
+  // Which skeleton detail panel is expanded
+  const [expandedSkeleton, setExpandedSkeleton] = useState<string | null>(null);
 
   // Filtered products
   const filtered = useMemo(
     () =>
       filterProducts(classified, {
+        mainCategory: activeMainCategory,
         primaryType: activePrimary,
         behavioralTag: activeBehavioral,
         extraFlag: activeExtra,
         search: searchTerm.trim(),
       }),
-    [classified, activePrimary, activeBehavioral, activeExtra, searchTerm],
+    [classified, activeMainCategory, activePrimary, activeBehavioral, activeExtra, searchTerm],
   );
+
+  const toggleMainCategory = useCallback((ref: string) => {
+    setActiveMainCategory((prev) => (prev === ref ? null : ref));
+    setInspecting(null);
+  }, []);
 
   const togglePrimary = useCallback((id: string) => {
     setActivePrimary((prev) => (prev === id ? null : id));
@@ -68,6 +88,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
   }, []);
 
   const clearAll = useCallback(() => {
+    setActiveMainCategory(null);
     setActivePrimary(null);
     setActiveBehavioral(null);
     setActiveExtra(null);
@@ -94,16 +115,63 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
         </div>
         <p className="construct-view-desc">
           Products classified using the <strong>official MBDP construct system</strong> — 
-          5 primary types based on alternatives &amp; ingredientRefs,
-          plus behavioral sub-constructs (#6–#25).
+          5 primary types based on alternatives &amp; ingredientRefs.
         </p>
       </div>
 
       {/* ── Construct Reference (collapsible) ── */}
-      {showReference && <ConstructReference />}
+      {showReference && (
+        <ConstructReference
+          classified={classified}
+          activePrimary={activePrimary}
+          activeBehavioral={activeBehavioral}
+          onSelectPrimary={togglePrimary}
+          onSelectBehavioral={toggleBehavioral}
+        />
+      )}
 
       {/* ── Primary Type Filter ── */}
       <div className="construct-toolbar">
+        {/* ── Main Category (from menu tree) ── */}
+        <div className="construct-section-label">Category</div>
+        <div className="construct-pills-row construct-pills-row--wrap">
+          {mainCategoryStats.map((mc) => {
+            const skeleton = skeletonMap.get(mc.ref);
+            return (
+              <div key={mc.ref} className="construct-category-wrapper">
+                <button
+                  className={`construct-category-pill ${activeMainCategory === mc.ref ? 'construct-category-pill--active' : ''}`}
+                  onClick={() => toggleMainCategory(mc.ref)}
+                  title={skeleton ? `${mc.ref}\nSchema: ${skeleton.skeletonName}\n${skeleton.shapeCount} shape(s)` : mc.ref}
+                >
+                  {mc.name}
+                  <span className="construct-category-count">{mc.count}</span>
+                  {skeleton && (
+                    <span
+                      className={`skeleton-badge ${skeleton.isHomogeneous ? 'skeleton-badge--homo' : 'skeleton-badge--mixed'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedSkeleton((prev) => (prev === mc.ref ? null : mc.ref));
+                      }}
+                      title={`Click to ${expandedSkeleton === mc.ref ? 'hide' : 'show'} schema details\n${skeleton.shapeCount} shape(s)`}
+                    >
+                      🧬 {skeleton.skeletonCode}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Skeleton Detail Panel ── */}
+        {expandedSkeleton && skeletonMap.has(expandedSkeleton) && (
+          <SkeletonDetailPanel
+            skeleton={skeletonMap.get(expandedSkeleton)!}
+            onClose={() => setExpandedSkeleton(null)}
+          />
+        )}
+
         <div className="construct-section-label">Primary Type</div>
         <div className="construct-pills-row">
           {primaryStats.map((s) => (
@@ -145,27 +213,6 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
           )}
         </div>
 
-        {/* ── Behavioral Tags (only show those with matches) ── */}
-        {behavioralStats.length > 0 && (
-          <>
-            <div className="construct-section-label">Detected Behaviors</div>
-            <div className="construct-pills-row">
-              {behavioralStats.map((s) => (
-                <button
-                  key={s.constructId}
-                  className={`construct-behavioral-pill ${activeBehavioral === s.constructId ? 'construct-behavioral-pill--active' : ''}`}
-                  style={{ '--construct-color': s.construct.color } as React.CSSProperties}
-                  onClick={() => toggleBehavioral(s.constructId)}
-                  title={`${s.construct.name}\n${s.construct.engineeringTerm}`}
-                >
-                  {s.construct.icon} {s.construct.shortName}
-                  <span className="construct-behavioral-count">{s.count}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
         {/* ── Search & Clear ── */}
         <div className="construct-filter-row">
           <div className="construct-search-bar">
@@ -177,7 +224,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
               className="construct-search-input"
             />
           </div>
-          {(activePrimary || activeBehavioral || activeExtra || searchTerm) && (
+          {(activeMainCategory || activePrimary || activeBehavioral || activeExtra || searchTerm) && (
             <button className="construct-clear-btn" onClick={clearAll}>
               Clear All
             </button>
@@ -219,30 +266,100 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
 // Construct Reference Table — shows all 25 MBDP constructs
 // ─────────────────────────────────────────────
 
-function ConstructReference() {
+interface ConstructReferenceProps {
+  classified: ClassifiedProduct[];
+  activePrimary: string | null;
+  activeBehavioral: string | null;
+  onSelectPrimary: (id: string) => void;
+  onSelectBehavioral: (id: string) => void;
+}
+
+function ConstructReference({
+  classified,
+  activePrimary,
+  activeBehavioral,
+  onSelectPrimary,
+  onSelectBehavioral,
+}: ConstructReferenceProps) {
+  // Compute counts for primary types
+  const primaryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of classified) {
+      counts.set(item.primaryType, (counts.get(item.primaryType) ?? 0) + 1);
+    }
+    return counts;
+  }, [classified]);
+
+  // Compute counts for behavioral tags
+  const behavioralCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of classified) {
+      for (const tag of item.behavioralTags) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [classified]);
+
   return (
     <div className="construct-reference">
       <div className="construct-reference-section">
         <h3>Single Product Constructs</h3>
         <div className="construct-reference-grid">
-          {CONSTRUCTS.filter((c) => c.category === 'single').map((c) => (
-            <div
-              key={c.id}
-              className="construct-reference-card"
-              style={{ '--construct-color': c.color } as React.CSSProperties}
-            >
-              <div className="construct-ref-card-header">
-                <span className="construct-ref-card-icon">{c.icon}</span>
-                <span className="construct-ref-card-id">{c.id}</span>
-                <span className="construct-ref-card-short">{c.shortName}</span>
-              </div>
-              <div className="construct-ref-card-name">{c.name}</div>
-              <div className="construct-ref-card-eng">
-                <span className="construct-ref-card-eng-label">Eng:</span> {c.engineeringTerm}
-              </div>
-              <div className="construct-ref-card-desc">{c.description}</div>
-            </div>
-          ))}
+          {CONSTRUCTS.filter((c) => c.category === 'single' && !c.id.startsWith('#')).map((c) => {
+            const count = primaryCounts.get(c.id) ?? 0;
+            const isActive = activePrimary === c.id;
+            return (
+              <button
+                key={c.id}
+                className={`construct-reference-card ${isActive ? 'construct-reference-card--active' : ''} ${count === 0 ? 'construct-reference-card--empty' : ''}`}
+                onClick={() => count > 0 && onSelectPrimary(c.id)}
+                type="button"
+              >
+                <div className="construct-ref-card-header">
+                  <span className="construct-ref-card-icon">{c.icon}</span>
+                  <span className="construct-ref-card-id">{c.id}</span>
+                  <span className="construct-ref-card-short">{c.shortName}</span>
+                  {count > 0 && <span className="construct-ref-card-count">{count}</span>}
+                </div>
+                <div className="construct-ref-card-name">{c.name}</div>
+                <div className="construct-ref-card-eng">
+                  <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
+                </div>
+                <div className="construct-ref-card-desc">{c.description}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="construct-reference-section">
+        <h3>Behavioral Sub-Constructs</h3>
+        <div className="construct-reference-grid">
+          {CONSTRUCTS.filter((c) => c.category === 'single' && c.id.startsWith('#')).map((c) => {
+            const count = behavioralCounts.get(c.id) ?? 0;
+            const isActive = activeBehavioral === c.id;
+            return (
+              <button
+                key={c.id}
+                className={`construct-reference-card construct-reference-card--behavioral ${isActive ? 'construct-reference-card--active' : ''} ${count === 0 ? 'construct-reference-card--empty' : ''}`}
+                onClick={() => count > 0 && onSelectBehavioral(c.id)}
+                type="button"
+              >
+                <div className="construct-ref-card-header">
+                  <span className="construct-ref-card-icon">{c.icon}</span>
+                  <span className="construct-ref-card-id">{c.id}</span>
+                  <span className="construct-ref-card-short">{c.shortName}</span>
+                  {count > 0 && <span className="construct-ref-card-count">{count}</span>}
+                </div>
+                <div className="construct-ref-card-name">{c.name}</div>
+                <div className="construct-ref-card-eng">
+                  <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
+                </div>
+                <div className="construct-ref-card-desc">{c.description}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -252,8 +369,7 @@ function ConstructReference() {
           {CONSTRUCTS.filter((c) => c.category === 'combo').map((c) => (
             <div
               key={c.id}
-              className="construct-reference-card"
-              style={{ '--construct-color': c.color } as React.CSSProperties}
+              className="construct-reference-card construct-reference-card--combo"
             >
               <div className="construct-ref-card-header">
                 <span className="construct-ref-card-icon">{c.icon}</span>
@@ -262,7 +378,7 @@ function ConstructReference() {
               </div>
               <div className="construct-ref-card-name">{c.name}</div>
               <div className="construct-ref-card-eng">
-                <span className="construct-ref-card-eng-label">Eng:</span> {c.engineeringTerm}
+                <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
               </div>
               <div className="construct-ref-card-desc">{c.description}</div>
             </div>
@@ -295,8 +411,6 @@ function ProductCard({
           src={product.imageUrl}
           alt={product.displayName ?? ''}
           className="construct-card-image"
-          width={240}
-          height={100}
           isCombo={product.isCombo}
         />
       )}
@@ -323,13 +437,6 @@ function ProductCard({
           {product.calories != null && (
             <span className="construct-card-cal">{product.calories} cal</span>
           )}
-        </div>
-        <div className="construct-card-bottom">
-          <ConstructBadge constructId={item.primaryType} compact />
-          <FlagPills item={item} />
-          {item.behavioralTags.map((tag) => (
-            <BehavioralTag key={tag} constructId={tag} compact />
-          ))}
         </div>
         <button
           className="construct-inspect-btn"
@@ -505,6 +612,138 @@ function DataItem({ label, value }: { label: string; value: string }) {
     <div className="inspector-data-item">
       <span className="inspector-data-label">{label}</span>
       <span className="inspector-data-value">{value}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Skeleton Detail Panel — shows product schema analysis for a category
+// ─────────────────────────────────────────────
+
+const FREQ_COLORS: Record<string, string> = {
+  always: '#22c55e',
+  common: '#3b82f6',
+  sometimes: '#f59e0b',
+  rare: '#ef4444',
+};
+
+function SkeletonDetailPanel({
+  skeleton,
+  onClose,
+}: {
+  skeleton: CategorySkeleton;
+  onClose: () => void;
+}) {
+  const [showAllFields, setShowAllFields] = useState(false);
+  const visibleFields = showAllFields ? skeleton.fields : skeleton.fields.slice(0, 12);
+
+  return (
+    <div className="skeleton-detail-panel">
+      <div className="skeleton-detail-header">
+        <div className="skeleton-detail-title">
+          <span className="skeleton-detail-icon">🧬</span>
+          <div>
+            <h4>{skeleton.name} — Product Schema</h4>
+            <span className="skeleton-detail-code">{skeleton.skeletonCode}</span>
+          </div>
+        </div>
+        <button className="skeleton-detail-close" onClick={onClose}>✕</button>
+      </div>
+
+      <div className="skeleton-detail-name">
+        <span className={`skeleton-name-tag ${skeleton.isHomogeneous ? 'skeleton-name-tag--homo' : 'skeleton-name-tag--mixed'}`}>
+          {skeleton.isHomogeneous ? '✓ Homogeneous' : `⚠ ${skeleton.shapeCount} distinct shapes`}
+        </span>
+        <span className="skeleton-product-count">{skeleton.productCount} products</span>
+        <span className="skeleton-product-count">{skeleton.fields.length} fields detected</span>
+      </div>
+
+      {/* ── Schema Shapes ── */}
+      <div className="skeleton-section">
+        <div className="skeleton-section-label">Schema Shapes (product fingerprints)</div>
+        <div className="skeleton-shapes">
+          {skeleton.shapes.slice(0, 8).map((shape) => (
+            <div
+              key={shape.fingerprint}
+              className={`skeleton-shape-row ${shape.fingerprint === skeleton.dominantShape.fingerprint ? 'skeleton-shape-row--dominant' : ''}`}
+            >
+              <div className="skeleton-shape-header">
+                <code className="skeleton-shape-fp">{shape.fingerprint}</code>
+                <span className="skeleton-shape-pct-badge">{shape.pct}%</span>
+                <span className="skeleton-shape-count">{shape.count} products</span>
+              </div>
+              <div className="skeleton-shape-name">{shape.shapeName}</div>
+              <div className="skeleton-shape-bar-track">
+                <div
+                  className="skeleton-shape-bar-fill"
+                  style={{ width: `${shape.pct}%` }}
+                />
+              </div>
+              <div className="skeleton-shape-examples">
+                {shape.examples.map((ex, i) => (
+                  <span key={i} className="skeleton-shape-example">{ex}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+          {skeleton.shapes.length > 8 && (
+            <div className="skeleton-shape-more">+{skeleton.shapes.length - 8} more shapes</div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Field Presence Table ── */}
+      <div className="skeleton-section">
+        <div className="skeleton-section-label">Field Presence</div>
+        <div className="skeleton-field-table">
+          <div className="skeleton-field-header-row">
+            <span className="skeleton-field-col-name">Field</span>
+            <span className="skeleton-field-col-freq">Frequency</span>
+            <span className="skeleton-field-col-bar">Presence</span>
+            <span className="skeleton-field-col-type">Type(s)</span>
+          </div>
+          {visibleFields.map((f) => (
+            <div
+              key={f.key}
+              className={`skeleton-field-row ${f.isStructural ? 'skeleton-field-row--structural' : ''}`}
+            >
+              <span className="skeleton-field-name">
+                {f.isStructural && <span className="skeleton-structural-dot" />}
+                {f.key}
+              </span>
+              <span
+                className="skeleton-field-freq"
+                style={{ color: FREQ_COLORS[f.frequency] }}
+              >
+                {f.frequency}
+              </span>
+              <div className="skeleton-field-bar-track">
+                <div
+                  className="skeleton-field-bar-fill"
+                  style={{
+                    width: `${f.pct}%`,
+                    backgroundColor: FREQ_COLORS[f.frequency],
+                  }}
+                />
+                <span className="skeleton-field-pct-label">{f.pct}%</span>
+              </div>
+              <span className="skeleton-field-types">
+                {f.valueTypes.map((vt, i) => (
+                  <code key={i} className="skeleton-type-tag">{vt.type}</code>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+        {skeleton.fields.length > 12 && (
+          <button
+            className="skeleton-show-more-btn"
+            onClick={() => setShowAllFields((p) => !p)}
+          >
+            {showAllFields ? 'Show Less' : `Show All ${skeleton.fields.length} Fields`}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

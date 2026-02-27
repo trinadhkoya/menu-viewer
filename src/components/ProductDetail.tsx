@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
@@ -270,7 +270,22 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                   <tr>
                     <td className="info-label">Quantity</td>
                     <td>
-                      Min: {product.quantity.min ?? '-'} | Max: {product.quantity.max ?? '-'} | Default: {product.quantity.default ?? '-'}
+                      <span className="qty-chips">
+                        <span className="qty-chip">
+                          <span className="qty-chip-label">min</span>
+                          <span className="qty-chip-value">{product.quantity.min ?? 0}</span>
+                        </span>
+                        <span className="qty-chip">
+                          <span className="qty-chip-label">max</span>
+                          <span className="qty-chip-value">{product.quantity.max ?? '∞'}</span>
+                        </span>
+                        {product.quantity.default != null && (
+                          <span className="qty-chip qty-chip--default">
+                            <span className="qty-chip-label">default</span>
+                            <span className="qty-chip-value">{product.quantity.default}</span>
+                          </span>
+                        )}
+                      </span>
                     </td>
                   </tr>
                 )}
@@ -478,7 +493,7 @@ function ModifierGroupCard({
       </div>
       {expanded && (
         <div className="modifier-list">
-          {modifiers
+          {[...modifiers]
             .sort((a, b) => (a.modifier.displayOrder ?? 0) - (b.modifier.displayOrder ?? 0))
             .map(({ ref, modifier }) => (
               <div key={ref} className="modifier-item">
@@ -498,38 +513,108 @@ function ModifierGroupCard({
   );
 }
 
+let _overrideBadgeCounter = 0;
+
 function OverrideBadge({ overrides }: { overrides: ChildRefOverride }) {
   const [showDetail, setShowDetail] = useState(false);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
   const badgeRef = useRef<HTMLSpanElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const instanceId = useRef(`ob-${++_overrideBadgeCounter}`);
   const keys = Object.keys(overrides);
+
+  const positionPopover = useCallback(() => {
+    if (!badgeRef.current) return;
+    const rect = badgeRef.current.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    // Position above if enough room, else below
+    if (spaceAbove > 120 || spaceAbove > spaceBelow) {
+      setPopoverStyle({
+        position: 'fixed',
+        top: rect.top - 8,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 280)),
+        transform: 'translateY(-100%)',
+      });
+    } else {
+      setPopoverStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 280)),
+      });
+    }
+  }, []);
+
+  // Close this popover when another OverrideBadge opens
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      if (id !== instanceId.current) setShowDetail(false);
+    };
+    window.addEventListener('override-badge-open', handler);
+    return () => window.removeEventListener('override-badge-open', handler);
+  }, []);
+
+  // Close on outside click + escape key + scroll tracking
+  useEffect(() => {
+    if (!showDetail) return;
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        badgeRef.current && !badgeRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
+        setShowDetail(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowDetail(false);
+    };
+    const handleScroll = () => positionPopover();
+
+    document.addEventListener('mousedown', handleOutsideClick, true);
+    document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick, true);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [showDetail, positionPopover]);
 
   const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!showDetail && badgeRef.current) {
-      const rect = badgeRef.current.getBoundingClientRect();
-      setPopoverStyle({
-        top: rect.top - 8,
-        left: rect.left,
-        transform: 'translateY(-100%)',
-      });
+    e.preventDefault();
+    if (!showDetail) {
+      positionPopover();
+      window.dispatchEvent(new CustomEvent('override-badge-open', { detail: instanceId.current }));
     }
     setShowDetail((prev) => !prev);
-  }, [showDetail]);
+  }, [showDetail, positionPopover]);
+
+  // Stop the wrapper from letting clicks through to parent cards
+  const stopProp = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
 
   return (
-    <span className="override-badge-wrapper">
+    <span className="override-badge-wrapper" onClick={stopProp}>
       <span
         ref={badgeRef}
         className="mini-badge override"
+        role="button"
+        tabIndex={0}
         onClick={handleToggle}
-        title={`Overrides: ${keys.join(', ')}`}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(e as unknown as React.MouseEvent); } }}
+        title={`Click to see overrides: ${keys.join(', ')}`}
       >
         ⚡ {keys.length} override{keys.length > 1 ? 's' : ''}
       </span>
       {showDetail && (
-        <div className="override-detail" style={popoverStyle} onClick={(e) => e.stopPropagation()}>
-          <div className="override-detail-title">Overridden Properties</div>
+        <div ref={popoverRef} className="override-detail" style={popoverStyle} onClick={stopProp}>
+          <div className="override-detail-header">
+            <span className="override-detail-title">Overridden Properties</span>
+            <button className="override-detail-close" onClick={() => setShowDetail(false)}>✕</button>
+          </div>
           {keys.map((key) => (
             <div key={key} className="override-detail-row">
               <span className="override-key">{key}</span>

@@ -175,14 +175,15 @@ function EnvPicker({
 // Status Badge
 // ─────────────────────────────────────────────
 
+const STATUS_CONFIG: Record<DiffStatus, { label: string; icon: string; cls: string }> = {
+  added: { label: 'Added', icon: '+', cls: 'diff-badge--added' },
+  removed: { label: 'Removed', icon: '−', cls: 'diff-badge--removed' },
+  changed: { label: 'Changed', icon: '~', cls: 'diff-badge--changed' },
+  unchanged: { label: 'Same', icon: '=', cls: 'diff-badge--unchanged' },
+};
+
 function StatusBadge({ status }: { status: DiffStatus }) {
-  const config: Record<DiffStatus, { label: string; icon: string; cls: string }> = {
-    added: { label: 'Added', icon: '+', cls: 'diff-badge--added' },
-    removed: { label: 'Removed', icon: '−', cls: 'diff-badge--removed' },
-    changed: { label: 'Changed', icon: '~', cls: 'diff-badge--changed' },
-    unchanged: { label: 'Same', icon: '=', cls: 'diff-badge--unchanged' },
-  };
-  const { label, icon, cls } = config[status];
+  const { label, icon, cls } = STATUS_CONFIG[status];
   return <span className={`diff-badge ${cls}`}><span className="diff-badge-icon">{icon}</span>{label}</span>;
 }
 

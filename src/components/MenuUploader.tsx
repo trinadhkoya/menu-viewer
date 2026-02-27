@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
 import { MenupediaLogo } from './MenupediaLogo';
 import { BRAND_ICONS } from './BrandIcons';
+import { detectBrand } from '../utils/detectBrand';
 
 const PASTE_WARN_BYTES = 10 * 1024 * 1024;
 const PASTE_MAX_BYTES = 50 * 1024 * 1024;
@@ -27,7 +28,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 // ── Brand / Environment endpoint registry ──────
-export type BrandId = 'arbys' | 'bww' | 'sonic' | 'dunkin' | 'inspire';
+export type BrandId = 'arbys' | 'bww' | 'sonic' | 'dunkin';
 
 export interface BrandInfo {
   id: BrandId;
@@ -71,15 +72,7 @@ export const BRANDS: BrandInfo[] = [
       { env: 'UAT',        api: 'https://menu2-arb.uat.irb.digital' },
     ],
   },
-  {
-    id: 'inspire', label: 'Inspire',
-    envs: [
-      { env: 'Production', api: 'https://ignite-menu.irb.digital' },
-      { env: 'QA',         api: 'https://menu2-snc.qa.irb.digital' },
-      { env: 'UAT',        api: 'https://bww-menu.uat.irb.digital' },
-      { env: 'Demo',       api: 'https://ignite-menu.demo.irb.digital' },
-    ],
-  },
+
 ];
 
 interface MenuUploaderProps { onMenuLoad: (menu: Menu, brand?: BrandId) => void }
@@ -133,7 +126,18 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
           return;
         }
         setError(null);
-        onMenuLoad(parsed as Menu, brand);
+        // Auto-detect brand when not explicitly provided (upload / paste / URL)
+        let resolvedBrand = brand;
+        if (!resolvedBrand) {
+          const detected = detectBrand(parsed as Menu);
+          if (detected) {
+            resolvedBrand = detected.brand;
+            console.info(
+              `[menupedia] Auto-detected brand: ${detected.brand} (${detected.confidence}) — ${detected.reason}`,
+            );
+          }
+        }
+        onMenuLoad(parsed as Menu, resolvedBrand);
       } catch (e) {
         setError(`Parse error${source ? ` (${source})` : ''}: ${(e as Error).message}`);
       }
@@ -234,7 +238,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
     setHeaders((p) => [...p, { key: '', value: '' }]);
   }, []);
 
-  const pasteBytes = new Blob([jsonText]).size;
+  const pasteBytes = useMemo(() => new Blob([jsonText]).size, [jsonText]);
   const pasteWarn = pasteBytes > PASTE_WARN_BYTES;
 
   // ── Shared headers panel ─────────────────────
@@ -362,18 +366,21 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
 
           {tab === 'brand' && (
             <>
-              {/* Brand pills */}
-              <div className="brand-pills">
-                {BRANDS.map((b) => (
-                  <button
-                    key={b.id}
-                    className={`brand-pill ${selectedBrand === b.id ? 'brand-pill--active' : ''}`}
-                    onClick={() => handleBrandChange(b.id)}
-                  >
-                    {BRAND_ICONS[b.id] && (() => { const Icon = BRAND_ICONS[b.id]; return <Icon size={20} className="brand-pill-icon" />; })()}
-                    {b.label}
-                  </button>
-                ))}
+              {/* Brand cards */}
+              <div className="brand-card-grid">
+                {BRANDS.map((b) => {
+                  const Icon = BRAND_ICONS[b.id];
+                  return (
+                    <button
+                      key={b.id}
+                      className={`brand-card ${selectedBrand === b.id ? 'brand-card--active' : ''}`}
+                      onClick={() => handleBrandChange(b.id)}
+                    >
+                      {Icon && <Icon size={44} className="brand-card-icon" />}
+                      <span className="brand-card-label">{b.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Env pills */}

@@ -50,10 +50,10 @@ export function ConstructTypePill({
       className={`construct-type-badge ${isActive ? 'construct-type-badge--active' : ''}`}
       style={{ '--construct-color': construct.color } as React.CSSProperties}
       onClick={onClick}
-      title={`${construct.name}\n${construct.engineeringTerm}`}
+      title={`${construct.id}: ${construct.name}\n${construct.engineeringTerm}`}
     >
       <span className="construct-type-icon">{construct.icon}</span>
-      <span className="construct-type-label">{construct.id}: {construct.shortName}</span>
+      <span className="construct-type-label">{construct.shortName}</span>
       <span className="construct-type-count">{count}</span>
     </button>
   );

@@ -202,20 +202,23 @@ function App() {
             >
               🧬 Constructs
             </button>
-            <button
-              className={`view-mode-btn ${viewMode === 'diff' ? 'active' : ''}`}
-              onClick={() => { setViewMode('diff'); setSelectedProductRef(null); }}
-              title="Compare menus across environments"
-            >
-              🔍 Diff
-            </button>
           </div>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <button className="reset-btn" onClick={handleReset} title="Load different menu">
-            ↻ New Menu
-          </button>
         </div>
       </header>
+
+      {/* Floating Diff button */}
+      {menu && viewMode !== 'diff' && (
+        <button
+          className="fab-diff"
+          onClick={() => { setViewMode('diff'); setSelectedProductRef(null); }}
+          title="Compare menus across environments"
+        >
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 3.5A1.5 1.5 0 013.5 2h3A1.5 1.5 0 018 3.5V5h1.5A1.5 1.5 0 0111 6.5v6A1.5 1.5 0 019.5 14h-3A1.5 1.5 0 015 12.5V11H3.5A1.5 1.5 0 012 9.5v-6zM3.5 3a.5.5 0 00-.5.5v6a.5.5 0 00.5.5H5V6.5A1.5 1.5 0 016.5 5H7V3.5a.5.5 0 00-.5-.5h-3zM6 6.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v6a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-6z"/>
+          </svg>
+        </button>
+      )}
 
       <div className={`app-body${showRefs ? '' : ' hide-refs'}`}>
         <aside className="app-sidebar">
