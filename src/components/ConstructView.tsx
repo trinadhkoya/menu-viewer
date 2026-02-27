@@ -1,11 +1,8 @@
 import { useMemo, useState, useCallback } from 'react';
 import type { Menu } from '../types/menu';
-import type { ClassifiedProduct, ConstructStats } from '../utils/constructClassifier';
+import type { ClassifiedProduct } from '../utils/constructClassifier';
 import {
   CONSTRUCTS,
-  PRIMARY_TYPES,
-  BEHAVIORAL_CONSTRUCTS,
-  COMBO_CONSTRUCTS,
   classifyAllProducts,
   getPrimaryTypeStats,
   getBehavioralTagStats,
@@ -289,7 +286,7 @@ function ProductCard({
   onSelect: () => void;
   onInspect: () => void;
 }) {
-  const { product, primaryConstruct } = item;
+  const { product } = item;
 
   return (
     <div className="construct-product-card" onClick={onSelect}>

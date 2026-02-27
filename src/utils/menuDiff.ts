@@ -9,7 +9,7 @@
  *   2. Fallback: match by displayName when IDs differ
  */
 
-import type { Menu, Product, Category, ProductGroup } from '../types/menu';
+import type { Menu, Product, Category } from '../types/menu';
 
 // ─────────────────────────────────────────────
 // Diff Result Types

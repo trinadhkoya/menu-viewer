@@ -5,14 +5,10 @@ import { BRANDS, DEFAULT_HEADERS } from './MenuUploader';
 import { OptimizedImage } from './OptimizedImage';
 import { getRefId } from '../utils/menuHelpers';
 import {
-  fmt,
   isBlock,
-  extractFields,
   buildCompareFields,
   diffModifierGroups,
-  FIELD_LABELS,
 } from '../utils/productCompareHelpers';
-import type { CompareField, ModGroupDiff } from '../utils/productCompareHelpers';
 
 interface ProductCompareProps {
   menu: Menu;
