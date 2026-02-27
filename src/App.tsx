@@ -39,6 +39,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'menu' | 'constructs'>('menu');
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(null);
+  const [showRefs, setShowRefs] = useState(true);
 
   const menuSizeBytes = useMemo(() => {
     if (!menu) return 0;
@@ -188,7 +189,7 @@ function App() {
         </div>
       </header>
 
-      <div className="app-body">
+      <div className={`app-body${showRefs ? '' : ' hide-refs'}`}>
         <aside className="app-sidebar">
           <Sidebar
             menu={menu}
@@ -198,14 +199,27 @@ function App() {
             onProductSelect={handleProductSelect}
           />
           <div className="sidebar-footer">
-            <span className="sidebar-footer-label">Menu size</span>
-            <span className="sidebar-footer-value">
-              {menuSizeBytes < 1024
-                ? `${menuSizeBytes} B`
-                : menuSizeBytes < 1048576
-                  ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
-                  : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
-            </span>
+            <div className="sidebar-toggle-row">
+              <label className="sidebar-toggle" title="Show/hide product IDs, category IDs, and ref codes">
+                <input
+                  type="checkbox"
+                  checked={showRefs}
+                  onChange={() => setShowRefs((v) => !v)}
+                />
+                <span className="sidebar-toggle-slider" />
+                <span className="sidebar-toggle-label">Show IDs</span>
+              </label>
+            </div>
+            <div className="sidebar-toggle-row">
+              <span className="sidebar-footer-label">Menu size</span>
+              <span className="sidebar-footer-value">
+                {menuSizeBytes < 1024
+                  ? `${menuSizeBytes} B`
+                  : menuSizeBytes < 1048576
+                    ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
+                    : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
+              </span>
+            </div>
           </div>
         </aside>
 

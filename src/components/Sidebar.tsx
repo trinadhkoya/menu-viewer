@@ -39,7 +39,7 @@ export function Sidebar({
     });
   };
 
-  const renderCategoryChildren = (category: Category, categoryRef: string, depth: number = 0) => {
+  const renderCategoryChildren = (category: Category, _categoryRef: string, depth: number = 0) => {
     if (!category.childRefs) return null;
     const childKeys = Object.keys(category.childRefs);
 

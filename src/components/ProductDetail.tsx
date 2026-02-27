@@ -5,7 +5,6 @@ import { CopyRef } from './CopyRef';
 import {
   getProductIngredients,
   getProductModifierGroups,
-  getProductGroups,
   getVirtualProductAlternatives,
   getParentVirtualProducts,
   getRefId,
@@ -37,11 +36,6 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
   const modifierGroups = useMemo(
     () => (product ? getProductModifierGroups(menu, product) : []),
     [menu, product],
-  );
-
-  const productGroups = useMemo(
-    () => (product ? getProductGroups(menu, product, productRef) : []),
-    [menu, product, productRef],
   );
 
   const sizeVariants = useMemo(
@@ -253,16 +247,6 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                     </td>
                   </tr>
                 )}
-                {product.productGroupIds && product.productGroupIds.length > 0 && (
-                  <tr>
-                    <td className="info-label">Product Groups</td>
-                    <td>
-                      {product.productGroupIds.map((id) => (
-                        <CopyRef key={id} value={id} className="ref-chip" />
-                      ))}
-                    </td>
-                  </tr>
-                )}
                 {product.quantity && (
                   <tr>
                     <td className="info-label">Quantity</td>
@@ -326,25 +310,6 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
             <div className="section-body">
               {modifierGroups.map(({ ref, group, modifiers }) => (
                 <ModifierGroupCard key={ref} ref_={ref} group={group} modifiers={modifiers} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Product Groups */}
-      {productGroups.length > 0 && (
-        <section className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('productGroups')}>
-            <h3>
-              {expandedSections.has('productGroups') ? '▼' : '▶'} Product Groups
-              <span className="section-count">{productGroups.length}</span>
-            </h3>
-          </div>
-          {expandedSections.has('productGroups') && (
-            <div className="section-body">
-              {productGroups.map(({ ref, group, children }) => (
-                <ProductGroupCard key={ref} ref_={ref} group={group} children_={children} />
               ))}
             </div>
           )}
@@ -508,78 +473,6 @@ function ModifierGroupCard({
                 <CopyRef value={String(modifier.PLU)} display={`PLU: ${modifier.PLU}`} className="modifier-plu" />
               </div>
             ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProductGroupCard({
-  ref_,
-  group,
-  children_,
-}: {
-  ref_: string;
-  group: ProductGroup;
-  children_: Array<{ ref: string; name: string; item: DisplayableItem | undefined; isCurrentProduct: boolean; overrides?: ChildRefOverride }>;
-}) {
-  const [expanded, setExpanded] = useState(true);
-
-  return (
-    <div className={`modifier-group-card ${isRecipeGroup(group) ? 'modifier-group-card--recipe' : ''}`}>
-      <div className="modifier-group-header" onClick={() => setExpanded(!expanded)}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <strong>{group.displayName}</strong>
-            {isRecipeGroup(group) && <span className="mini-badge recipe">🍳 Recipe</span>}
-          </div>
-          <CopyRef value={ref_} display={getRefId(ref_)} className="modifier-ref" />
-          {group.description && (
-            <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-              {group.description}
-            </div>
-          )}
-        </div>
-        <div className="modifier-group-meta">
-          {group.selectionQuantity && (
-            <span className="quantity-badge">
-              Select {group.selectionQuantity.min ?? 0}–{group.selectionQuantity.max ?? '∞'}
-            </span>
-          )}
-          <span className="sidebar-badge">{children_.length}</span>
-          <span>{expanded ? '▲' : '▼'}</span>
-        </div>
-      </div>
-      {expanded && (
-        <div className="modifier-list">
-          {children_.map(({ ref, name, item, isCurrentProduct, overrides }) => (
-            <div
-              key={ref}
-              className="modifier-item"
-              style={isCurrentProduct ? { background: 'rgba(99, 102, 241, 0.08)', borderLeft: '3px solid var(--color-accent)' } : {}}
-            >
-              {item?.isAvailable != null && (
-                <span className={`availability-dot ${item.isAvailable ? 'available' : 'unavailable'}`} />
-              )}
-              <div className="modifier-name">
-                <span>
-                  {name}
-                  {isCurrentProduct && <span className="mini-badge default" style={{ marginLeft: 6 }}>Current</span>}
-                </span>
-                <CopyRef value={ref} display={getRefId(ref)} className="modifier-plu" />
-              </div>
-              <div className="modifier-meta-right">
-                {item?.isDefault && <span className="mini-badge default">Default</span>}
-                {overrides && <OverrideBadge overrides={overrides} />}
-                {item?.price != null && item.price > 0 && (
-                  <span className="modifier-price">${item.price.toFixed(2)}</span>
-                )}
-                {item?.calories != null && (
-                  <span className="modifier-cal">{item.calories} cal</span>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>

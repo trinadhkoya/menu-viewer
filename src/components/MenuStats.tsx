@@ -23,7 +23,8 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
 
   // If a category is selected, show its products
-  const categoryData = selectedCategoryRef ? resolveRef(menu, selectedCategoryRef) : null;
+  const categoryEntity = selectedCategoryRef ? resolveRef(menu, selectedCategoryRef) : null;
+  const categoryData = categoryEntity as (import('../types/menu').Category | null);
 
   const categoryProducts = useMemo(() => {
     if (!categoryData?.childRefs) return [];
@@ -39,7 +40,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
           if (product) products.push({ ref: childRef, product, subCategory: parentCategoryName });
         } else if (isCategoryRef(childRef)) {
           // Resolve the subcategory and read ITS childRefs — not the parent override value
-          const subCat = resolveRef(menu, childRef);
+          const subCat = resolveRef(menu, childRef) as import('../types/menu').Category | undefined;
           if (subCat?.childRefs) {
             collectProducts(
               subCat.childRefs as Record<string, unknown>,
@@ -73,7 +74,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
             <div
               key={ref}
               className={`product-card ${product.isCombo ? 'product-card--combo' : ''}`}
-              onClick={() => onProductSelect(ref, categoryData.displayName)}
+              onClick={() => onProductSelect(ref, categoryData.displayName ?? undefined)}
             >
               {product.imageUrl && (
                 <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />

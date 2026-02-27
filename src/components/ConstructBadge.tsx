@@ -1,88 +1,133 @@
-import type { ConstructClassification, ConstructTag } from '../utils/constructClassifier';
-import { TAG_INFO } from '../utils/constructClassifier';
+import type { ConstructDef, ClassifiedProduct } from '../utils/constructClassifier';
+import { getConstruct } from '../utils/constructClassifier';
 
 // ─────────────────────────────────────────────
-// ConstructBadge – shows the primary + tag pills
+// ConstructBadge – shows construct id + name
 // ─────────────────────────────────────────────
 
 interface ConstructBadgeProps {
-  classification: ConstructClassification;
-  /** Show all detected tags (default: primary badge only) */
-  showAll?: boolean;
-  /** Compact: icon only */
+  constructId: string;
   compact?: boolean;
-  onClick?: (tag: ConstructTag) => void;
+  onClick?: () => void;
 }
 
-export function ConstructBadge({ classification, showAll = false, compact = false, onClick }: ConstructBadgeProps) {
-  if (!classification) return null;
-
-  // Primary badge is always shown
-  const primaryInfo = TAG_INFO[classification.primary === 'customizable' ? 'has-ingredients' : classification.primary];
+export function ConstructBadge({ constructId, compact = false, onClick }: ConstructBadgeProps) {
+  const c = getConstruct(constructId);
+  if (!c) return null;
 
   return (
-    <span className="construct-badge-group">
-      {/* Primary badge */}
-      <span
-        className={`construct-badge construct-badge--primary ${compact ? 'construct-badge--compact' : ''}`}
-        style={{ '--construct-color': classification.color } as React.CSSProperties}
-        title={classification.summary}
-      >
-        <span className="construct-badge-icon">{classification.icon}</span>
-        {!compact && <span className="construct-badge-label">{primaryInfo?.label ?? classification.primary}</span>}
+    <span
+      className={`construct-badge ${compact ? 'construct-badge--compact' : ''}`}
+      style={{ '--construct-color': c.color } as React.CSSProperties}
+      title={`${c.name}\n${c.engineeringTerm}`}
+      onClick={onClick}
+    >
+      <span className="construct-badge-icon">{c.icon}</span>
+      <span className="construct-badge-label">
+        {compact ? c.id : `${c.id}: ${c.shortName}`}
       </span>
-
-      {/* Extra tags */}
-      {showAll && classification.tags
-        .filter(t => TAG_INFO[t]?.isFilterable && t !== classification.primary && t !== 'has-ingredients')
-        .slice(0, 8)
-        .map(tag => {
-          const info = TAG_INFO[tag];
-          return (
-            <span
-              key={tag}
-              className={`construct-badge ${compact ? 'construct-badge--compact' : ''}`}
-              style={{ '--construct-color': info.color } as React.CSSProperties}
-              title={`${info.label}: ${info.description}`}
-              onClick={(e) => { e.stopPropagation(); onClick?.(tag); }}
-            >
-              <span className="construct-badge-icon">{info.icon}</span>
-              {!compact && <span className="construct-badge-label">{info.label}</span>}
-            </span>
-          );
-        })}
     </span>
   );
 }
 
 // ─────────────────────────────────────────────
-// ConstructTagBadge – single tag pill for filters
+// ConstructTypePill – primary type filter button
 // ─────────────────────────────────────────────
 
-export function ConstructTagBadge({
-  tag,
+export function ConstructTypePill({
+  construct,
   count,
   isActive,
   onClick,
 }: {
-  tag: ConstructTag;
-  count?: number;
-  isActive?: boolean;
-  onClick?: () => void;
+  construct: ConstructDef;
+  count: number;
+  isActive: boolean;
+  onClick: () => void;
 }) {
-  const info = TAG_INFO[tag];
-  if (!info) return null;
-
   return (
     <button
       className={`construct-type-badge ${isActive ? 'construct-type-badge--active' : ''}`}
-      style={{ '--construct-color': info.color } as React.CSSProperties}
+      style={{ '--construct-color': construct.color } as React.CSSProperties}
       onClick={onClick}
-      title={info.description}
+      title={`${construct.name}\n${construct.engineeringTerm}`}
     >
-      <span className="construct-type-icon">{info.icon}</span>
-      <span className="construct-type-label">{info.label}</span>
-      {count != null && <span className="construct-type-count">{count}</span>}
+      <span className="construct-type-icon">{construct.icon}</span>
+      <span className="construct-type-label">{construct.id}: {construct.shortName}</span>
+      <span className="construct-type-count">{count}</span>
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+// BehavioralTag – small tag for sub-constructs
+// ─────────────────────────────────────────────
+
+export function BehavioralTag({
+  constructId,
+  compact = false,
+  isActive = false,
+  onClick,
+}: {
+  constructId: string;
+  compact?: boolean;
+  isActive?: boolean;
+  onClick?: () => void;
+}) {
+  const c = getConstruct(constructId);
+  if (!c) return null;
+
+  return (
+    <span
+      className={`construct-mini-tag ${isActive ? 'construct-mini-tag--active' : ''}`}
+      style={
+        {
+          '--construct-color': c.color,
+          borderColor: c.color,
+          color: c.color,
+        } as React.CSSProperties
+      }
+      title={`${c.name}\n${c.engineeringTerm}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+    >
+      {c.icon} {compact ? c.id : c.shortName}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────
+// FlagPills – structural flag indicators
+// ─────────────────────────────────────────────
+
+export function FlagPills({ item }: { item: ClassifiedProduct }) {
+  const { flags } = item;
+  const pills: { label: string; color: string; title: string }[] = [];
+
+  if (flags.isCombo) {
+    pills.push({ label: '🍔 Combo', color: '#8b5cf6', title: 'isCombo = true' });
+  }
+  if (flags.hasModifierGroupRefs) {
+    pills.push({ label: '🔧 Modifiers', color: '#f59e0b', title: 'Has modifierGroupRefs' });
+  }
+  if (flags.hasBundleLink) {
+    pills.push({ label: '🔗 Bundle', color: '#6366f1', title: 'relatedProducts.bundle — links to combo/meal counterpart' });
+  }
+
+  if (pills.length === 0) return null;
+
+  return (
+    <span className="flag-pills">
+      {pills.map((p) => (
+        <span
+          key={p.label}
+          className="flag-pill"
+          style={{ '--pill-color': p.color } as React.CSSProperties}
+          title={p.title}
+        >
+          {p.label}
+        </span>
+      ))}
+    </span>
   );
 }
