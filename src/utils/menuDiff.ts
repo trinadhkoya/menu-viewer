@@ -116,20 +116,51 @@ function isEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
+/**
+ * Deep-sort object keys so that structurally identical objects produce
+ * the same JSON string regardless of insertion order.
+ */
+function sortKeys(val: unknown): unknown {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) return val.map(sortKeys);
+  if (typeof val === 'object') {
+    const sorted: Record<string, unknown> = {};
+    for (const k of Object.keys(val as Record<string, unknown>).sort()) {
+      sorted[k] = sortKeys((val as Record<string, unknown>)[k]);
+    }
+    return sorted;
+  }
+  return val;
+}
+
+/**
+ * Pretty-print any value as deterministic, formatted JSON.
+ * – Primitives render as simple strings.
+ * – Objects/arrays are serialised with 2-space indent and sorted keys
+ *   so that two structurally-equal values always produce the same text.
+ */
 function formatValue(v: unknown): string {
   if (v === undefined || v === null) return '—';
   if (typeof v === 'string') return v;
   if (typeof v === 'boolean') return v ? 'true' : 'false';
   if (typeof v === 'number') return String(v);
-  if (Array.isArray(v)) return `[${v.length} items]`;
+  // Arrays & objects → pretty JSON with sorted keys
   if (typeof v === 'object') {
-    const keys = Object.keys(v);
-    return `{${keys.length} keys}`;
+    try {
+      return JSON.stringify(sortKeys(v), null, 2);
+    } catch {
+      return String(v);
+    }
   }
   return String(v);
 }
 
-export { formatValue };
+/** Check whether a formatted string is multi-line (i.e. JSON block) */
+function isJsonBlock(s: string): boolean {
+  return s.includes('\n');
+}
+
+export { formatValue, isJsonBlock, sortKeys };
 
 // ─────────────────────────────────────────────
 // Entity-level diff

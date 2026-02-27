@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import type { Menu } from '../types/menu';
 import type { BrandId } from './MenuUploader';
 import { BRANDS, DEFAULT_HEADERS } from './MenuUploader';
-import { diffMenus, formatValue } from '../utils/menuDiff';
+import { diffMenus, formatValue, isJsonBlock } from '../utils/menuDiff';
 import type { MenuDiffResult, EntityDiff, DiffStatus } from '../utils/menuDiff';
 
 interface DiffViewProps {
@@ -116,13 +116,18 @@ function EnvPicker({
 
       {uploadMode === 'api' ? (
         <div className="diff-picker-form">
+          {/* Brand is locked to the currently loaded menu's brand */}
           <div className="diff-picker-row">
             <label>Brand</label>
-            <select value={brand} onChange={(e) => { setBrand(e.target.value as BrandId); setEnv(BRANDS.find(b => b.id === e.target.value)!.envs[0].env); }}>
-              {BRANDS.map((b) => (
-                <option key={b.id} value={b.id}>{b.label}</option>
-              ))}
-            </select>
+            {activeBrand ? (
+              <span className="diff-brand-locked">{currentBrand.label}</span>
+            ) : (
+              <select value={brand} onChange={(e) => { setBrand(e.target.value as BrandId); setEnv(BRANDS.find(b => b.id === e.target.value)!.envs[0].env); }}>
+                {BRANDS.map((b) => (
+                  <option key={b.id} value={b.id}>{b.label}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="diff-picker-row">
             <label>Environment</label>
@@ -252,13 +257,22 @@ function DiffDetail({
                 </tr>
               </thead>
               <tbody>
-                {item.fields.map((f) => (
-                  <tr key={f.field}>
-                    <td className="diff-field-name">{f.field}</td>
-                    <td className="diff-field-left">{formatValue(f.left)}</td>
-                    <td className="diff-field-right">{formatValue(f.right)}</td>
-                  </tr>
-                ))}
+                {item.fields.map((f) => {
+                  const lv = formatValue(f.left);
+                  const rv = formatValue(f.right);
+                  const isBlock = isJsonBlock(lv) || isJsonBlock(rv);
+                  return (
+                    <tr key={f.field} className={isBlock ? 'diff-row--json' : ''}>
+                      <td className="diff-field-name">{f.field}</td>
+                      <td className="diff-field-left">
+                        {isBlock ? <pre className="diff-json-block">{lv}</pre> : lv}
+                      </td>
+                      <td className="diff-field-right">
+                        {isBlock ? <pre className="diff-json-block">{rv}</pre> : rv}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

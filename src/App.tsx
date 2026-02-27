@@ -260,7 +260,7 @@ function App() {
               onCategorySelect={handleCategorySelect}
             />
           ) : selectedProductRef ? (
-            <ProductDetail menu={menu} productRef={selectedProductRef} onProductSelect={handleProductSelect} />
+            <ProductDetail menu={menu} productRef={selectedProductRef} activeBrand={activeBrand} onProductSelect={handleProductSelect} />
           ) : viewMode === 'constructs' ? (
             <ConstructView menu={menu} onProductSelect={handleProductSelect} />
           ) : viewMode === 'diff' ? (

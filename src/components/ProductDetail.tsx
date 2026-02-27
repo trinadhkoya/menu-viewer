@@ -2,6 +2,8 @@ import { useMemo, useState, useRef, useCallback } from 'react';
 import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
+import { ProductCompare } from './ProductCompare';
+import type { BrandId } from './MenuUploader';
 import {
   getProductIngredients,
   getProductModifierGroups,
@@ -18,15 +20,17 @@ import {
 interface ProductDetailProps {
   menu: Menu;
   productRef: string;
+  activeBrand?: BrandId | null;
   onProductSelect?: (productRef: string) => void;
 }
 
-export function ProductDetail({ menu, productRef, onProductSelect }: ProductDetailProps) {
+export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }: ProductDetailProps) {
   const productId = getRefId(productRef);
   const product = menu.products?.[productId] as Product | undefined;
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['info', 'ingredients', 'modifiers', 'nutrition', 'sizeVariants']),
   );
+  const [compareMode, setCompareMode] = useState(false);
 
   const ingredients = useMemo(
     () => (product ? getProductIngredients(menu, product) : []),
@@ -68,6 +72,17 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
     );
   }
 
+  if (compareMode) {
+    return (
+      <ProductCompare
+        menu={menu}
+        productRef={productRef}
+        activeBrand={activeBrand ?? null}
+        onClose={() => setCompareMode(false)}
+      />
+    );
+  }
+
   return (
     <div className="product-detail">
       {/* Header */}
@@ -87,6 +102,10 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
             {product.isVirtual && <span className="badge badge--virtual">Virtual</span>}
             {product.isExclusive && <span className="badge badge--exclusive">Exclusive</span>}
           </div>
+          <button className="detail-compare-btn" onClick={() => setCompareMode(true)} title="Compare this product across environments">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Compare
+          </button>
         </div>
       </div>
 
