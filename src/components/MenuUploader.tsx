@@ -10,7 +10,7 @@ type Tab = 'upload' | 'paste' | 'url' | 'brand';
 
 interface HeaderEntry { key: string; value: string }
 
-const DEFAULT_HEADERS: HeaderEntry[] = [
+export const DEFAULT_HEADERS: HeaderEntry[] = [
   { key: 'accept', value: 'application/json, text/plain, */*' },
   { key: 'x-session-id', value: '0b0d4a53-d150-4733-8d8b-a614d79426bd' },
   { key: 'x-device-id', value: '67B1B3DB-89BB-4C7F-8682-1151F983BCE5' },
@@ -29,13 +29,13 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 // ── Brand / Environment endpoint registry ──────
 export type BrandId = 'arbys' | 'bww' | 'sonic' | 'dunkin' | 'inspire';
 
-interface BrandInfo {
+export interface BrandInfo {
   id: BrandId;
   label: string;
   envs: { env: string; api: string }[];
 }
 
-const BRANDS: BrandInfo[] = [
+export const BRANDS: BrandInfo[] = [
   {
     id: 'arbys', label: "Arby's",
     envs: [

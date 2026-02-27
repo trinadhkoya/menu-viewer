@@ -2,11 +2,21 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Menu } from './types/menu';
 
 const STORAGE_KEY = 'menupedia-menu';
+const BRAND_KEY = 'menupedia-brand';
 
 function loadMenuFromStorage(): Menu | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as Menu) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadBrandFromStorage(): BrandId | null {
+  try {
+    const raw = localStorage.getItem(BRAND_KEY);
+    return raw as BrandId | null;
   } catch {
     return null;
   }
@@ -19,6 +29,7 @@ import { SearchBar } from './components/SearchBar';
 import { SearchResults } from './components/SearchResults';
 import { MenuStats } from './components/MenuStats';
 import { ConstructView } from './components/ConstructView';
+import { DiffView } from './components/DiffView';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
@@ -37,8 +48,8 @@ function App() {
   const [selectedProductRef, setSelectedProductRef] = useState<string | null>(null);
   const [selectedCategoryRef, setSelectedCategoryRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'menu' | 'constructs'>('menu');
-  const [activeBrand, setActiveBrand] = useState<BrandId | null>(null);
+  const [viewMode, setViewMode] = useState<'menu' | 'constructs' | 'diff'>('menu');
+  const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
   const [showRefs, setShowRefs] = useState(true);
 
   const menuSizeBytes = useMemo(() => {
@@ -61,6 +72,14 @@ function App() {
     setSelectedCategoryRef(null);
     setSearchQuery('');
     setActiveBrand(brand ?? null);
+    // Persist the brand for reload
+    try {
+      if (brand) {
+        localStorage.setItem(BRAND_KEY, brand);
+      } else {
+        localStorage.removeItem(BRAND_KEY);
+      }
+    } catch { /* ignore */ }
     // Load the new menu
     setMenu(loadedMenu);
     setBreadcrumbs([{ label: loadedMenu.displayName || 'Menu', type: 'root' }]);
@@ -138,8 +157,10 @@ function App() {
     setSelectedProductRef(null);
     setSelectedCategoryRef(null);
     setSearchQuery('');
+    setActiveBrand(null);
     setBreadcrumbs([{ label: 'Menu', type: 'root' }]);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(BRAND_KEY);
   }, []);
 
   const brandClass = activeBrand ? `brand-${activeBrand}` : '';
@@ -180,6 +201,13 @@ function App() {
               title="Browse by product construct"
             >
               🧬 Constructs
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'diff' ? 'active' : ''}`}
+              onClick={() => { setViewMode('diff'); setSelectedProductRef(null); }}
+              title="Compare menus across environments"
+            >
+              🔍 Diff
             </button>
           </div>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -235,6 +263,8 @@ function App() {
             <ProductDetail menu={menu} productRef={selectedProductRef} onProductSelect={handleProductSelect} />
           ) : viewMode === 'constructs' ? (
             <ConstructView menu={menu} onProductSelect={handleProductSelect} />
+          ) : viewMode === 'diff' ? (
+            <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />
           ) : (
             <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
           )}

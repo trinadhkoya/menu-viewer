@@ -3,62 +3,36 @@
    ============================================ */
 
 /* ---------- Brand fonts ---------- */
-@font-face {
-  font-family: 'ArbysSmoked';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/ArbysSmoked-Bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'ArbysSmoked';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/ArbysSmoked-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'BarlowSemiCondensed';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/BarlowSemiCondensed-Bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Barlow';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/Barlow-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'CarhopSans';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/CarhopSans2024-Bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'CarhopSans';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/CarhopSans2024-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DunkinSans';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/DunkinSans-Bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'ProximaNova';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('/fonts/ProximaNova-Regular.ttf') format('truetype');
-}
+
+/* Arby's — ArbysSmoked (heading + body) */
+@font-face { font-family: 'ArbysSmoked'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/ArbysSmoked-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'ArbysSmoked'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/ArbysSmoked-Bold.ttf') format('truetype'); }
+
+/* BWW — BarlowSemiCondensed (heading), Barlow (body) */
+@font-face { font-family: 'BarlowSemiCondensed'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/BarlowSemiCondensed-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'BarlowSemiCondensed'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/BarlowSemiCondensed-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'BarlowSemiCondensed'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/BarlowSemiCondensed-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/Barlow-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/Barlow-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/Barlow-SemiBold.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/Barlow-Bold.ttf') format('truetype'); }
+
+/* Sonic — CarhopSans (heading + body) */
+@font-face { font-family: 'CarhopSans'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/CarhopSans2024-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'CarhopSans'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/CarhopSans2024-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'CarhopSans'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/CarhopSans2024-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'CarhopSans'; font-weight: 800; font-style: normal; font-display: swap; src: url('/fonts/CarhopSans2024-ExtraBold.ttf') format('truetype'); }
+
+/* Dunkin — App uses MarkPro (unavailable); ProximaNova substitutes for body.
+   DunkinSans for brand headings. BarlowSemiCondensed for dropdowns. */
+@font-face { font-family: 'DunkinSans'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/DunkinSans-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'DunkinSans'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/DunkinSans-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'DunkinSans'; font-weight: 800; font-style: normal; font-display: swap; src: url('/fonts/DunkinSans-ExtraBold.ttf') format('truetype'); }
+@font-face { font-family: 'ProximaNova'; font-weight: 300; font-style: normal; font-display: swap; src: url('/fonts/ProximaNova-Light.ttf') format('truetype'); }
+@font-face { font-family: 'ProximaNova'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/ProximaNova-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'ProximaNova'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/ProximaNova-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'ProximaNova'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/ProximaNova-Semibold.ttf') format('truetype'); }
+@font-face { font-family: 'ProximaNova'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/ProximaNova-Bold.ttf') format('truetype'); }
 
 /* ---------- Brand font variables ---------- */
 .brand-arbys {
@@ -78,29 +52,178 @@
   --brand-font-body: 'ProximaNova', sans-serif;
 }
 .brand-inspire {
-  --brand-font-heading: 'Poppins', sans-serif;
-  --brand-font-body: 'Poppins', sans-serif;
+  --brand-font-heading: 'Inter', sans-serif;
+  --brand-font-body: 'Inter', sans-serif;
 }
 
-/* Apply brand fonts to content when a brand is active */
-[class*="brand-"] .sidebar-header h2,
-[class*="brand-"] .sidebar-item-name,
+/*
+ * Consistent font application rules across all brands.
+ * Every brand maps its heading + body font, but the *weight*
+ * stays the same so the visual hierarchy is identical.
+ *
+ * Base rule: everything inside a brand-* container inherits
+ * the brand body font at weight 400.  Then we selectively
+ * promote heading font + heavier weights where needed.
+ *
+ *   700  → headings, page titles, product names, category names
+ *   600  → badges, labels, section titles, prices
+ *   500  → medium emphasis: sub-labels, segment buttons, descriptions
+ *   400  → body text, form inputs, metadata, refs  (base rule)
+ */
+
+/* ── Base: apply brand body font to ALL elements ── */
+[class*="brand-"] {
+  font-family: var(--brand-font-body);
+}
+[class*="brand-"] *,
+[class*="brand-"] input,
+[class*="brand-"] textarea,
+[class*="brand-"] select,
+[class*="brand-"] button,
+[class*="brand-"] code {
+  font-family: inherit;
+}
+
+/* ── 700 Heading (Bold) — uses heading font ── */
+[class*="brand-"] h2,
+[class*="brand-"] h3,
 [class*="brand-"] .detail-title,
-[class*="brand-"] .sidebar-item--category,
-[class*="brand-"] .product-card-name {
+[class*="brand-"] .sidebar-item--category .sidebar-item-name,
+[class*="brand-"] .product-card-name,
+[class*="brand-"] .construct-group-title,
+[class*="brand-"] .construct-card-name,
+[class*="brand-"] .construct-inspector-title h3,
+[class*="brand-"] .construct-reference-section h3,
+[class*="brand-"] .construct-ref-card-name,
+[class*="brand-"] .diff-hero-title,
+[class*="brand-"] .diff-setup-loaded-name,
+[class*="brand-"] .diff-list-item-name,
+[class*="brand-"] .diff-summary-number,
+[class*="brand-"] .categories-heading,
+[class*="brand-"] .category-card strong,
+[class*="brand-"] .stat-number,
+[class*="brand-"] .cal-number,
+[class*="brand-"] .search-card-title,
+[class*="brand-"] .combo-banner-title,
+[class*="brand-"] .virtual-parent-name,
+[class*="brand-"] .ingredient-name,
+[class*="brand-"] .modifier-name,
+[class*="brand-"] .modifier-group-header strong,
+[class*="brand-"] .size-group-header strong,
+[class*="brand-"] .size-variant-label,
+[class*="brand-"] .override-detail-title {
   font-family: var(--brand-font-heading);
   font-weight: 700;
 }
 
-[class*="brand-"] .detail-section,
-[class*="brand-"] .sidebar-item--product,
-[class*="brand-"] .detail-value,
-[class*="brand-"] .product-card-desc,
-[class*="brand-"] .product-card-ref,
-[class*="brand-"] .product-card-meta,
-[class*="brand-"] .product-card-body {
-  font-family: var(--brand-font-body);
+/* ── 600 Semi-Bold (Labels & Badges) ── */
+[class*="brand-"] .sidebar-item-name,
+[class*="brand-"] .sidebar-count,
+[class*="brand-"] .sidebar-badge,
+[class*="brand-"] .sidebar-price,
+[class*="brand-"] .detail-section-title,
+[class*="brand-"] .stat-label,
+[class*="brand-"] .badge,
+[class*="brand-"] .mini-badge,
+[class*="brand-"] .tag,
+[class*="brand-"] .product-card-price,
+[class*="brand-"] .product-card-subcategory,
+[class*="brand-"] .info-label,
+[class*="brand-"] .info-price,
+[class*="brand-"] .ingredient-type-badge,
+[class*="brand-"] .ingredient-price,
+[class*="brand-"] .modifier-price,
+[class*="brand-"] .quantity-badge,
+[class*="brand-"] .size-variant-price,
+[class*="brand-"] .cal-label,
+[class*="brand-"] .section-count,
+[class*="brand-"] .breadcrumb-link,
+[class*="brand-"] .search-section-title,
+[class*="brand-"] .search-total,
+[class*="brand-"] .search-card-price,
+[class*="brand-"] .search-card-cal,
+[class*="brand-"] .construct-section-label,
+[class*="brand-"] .construct-badge-label,
+[class*="brand-"] .construct-type-label,
+[class*="brand-"] .construct-type-count,
+[class*="brand-"] .construct-extra-flag,
+[class*="brand-"] .construct-extra-count,
+[class*="brand-"] .construct-behavioral-pill,
+[class*="brand-"] .construct-behavioral-count,
+[class*="brand-"] .construct-card-price,
+[class*="brand-"] .construct-mini-tag,
+[class*="brand-"] .flag-pill,
+[class*="brand-"] .construct-ref-card-id,
+[class*="brand-"] .construct-ref-card-short,
+[class*="brand-"] .construct-ref-card-eng-label,
+[class*="brand-"] .inspector-construct-badge,
+[class*="brand-"] .inspector-flag-label,
+[class*="brand-"] .inspector-behavioral-badge,
+[class*="brand-"] .inspector-data-label,
+[class*="brand-"] .diff-badge,
+[class*="brand-"] .diff-env-label,
+[class*="brand-"] .diff-tab,
+[class*="brand-"] .diff-tab-count,
+[class*="brand-"] .diff-filter-chip,
+[class*="brand-"] .diff-filter-count,
+[class*="brand-"] .diff-setup-step,
+[class*="brand-"] .diff-setup-label,
+[class*="brand-"] .diff-summary-label,
+[class*="brand-"] .diff-picker-tab,
+[class*="brand-"] .diff-env-chip,
+[class*="brand-"] .diff-fetch-btn,
+[class*="brand-"] .up-tab,
+[class*="brand-"] .brand-pill,
+[class*="brand-"] .brand-label,
+[class*="brand-"] .view-mode-btn,
+[class*="brand-"] .up-action-btn,
+[class*="brand-"] .reset-btn {
+  font-weight: 600;
 }
+
+/* ── 500 Medium (Descriptions, Sub-text) ── */
+[class*="brand-"] .product-card-desc,
+[class*="brand-"] .product-card-meta,
+[class*="brand-"] .detail-value,
+[class*="brand-"] .sidebar-item--product .sidebar-item-name,
+[class*="brand-"] .diff-hero-sub,
+[class*="brand-"] .diff-setup-loaded-meta,
+[class*="brand-"] .diff-detail-message,
+[class*="brand-"] .menu-name,
+[class*="brand-"] .products-count,
+[class*="brand-"] .category-card span,
+[class*="brand-"] .search-card-desc,
+[class*="brand-"] .search-card-meta,
+[class*="brand-"] .combo-banner-desc,
+[class*="brand-"] .virtual-parent-label,
+[class*="brand-"] .size-variant-name,
+[class*="brand-"] .size-variant-cal,
+[class*="brand-"] .size-variants-hint,
+[class*="brand-"] .ingredient-children-count,
+[class*="brand-"] .construct-view-desc,
+[class*="brand-"] .construct-view-count,
+[class*="brand-"] .construct-ref-card-eng,
+[class*="brand-"] .construct-ref-card-desc,
+[class*="brand-"] .construct-card-cal,
+[class*="brand-"] .inspector-construct-name,
+[class*="brand-"] .inspector-construct-desc,
+[class*="brand-"] .inspector-construct-eng,
+[class*="brand-"] .inspector-behavioral-desc,
+[class*="brand-"] .inspector-behavioral-eng,
+[class*="brand-"] .inspector-flag-value,
+[class*="brand-"] .inspector-data-value,
+[class*="brand-"] .uploader-subtitle,
+[class*="brand-"] .drop-zone-text,
+[class*="brand-"] .drop-zone-hint,
+[class*="brand-"] .sidebar-toggle-label,
+[class*="brand-"] .sidebar-footer-label,
+[class*="brand-"] .construct-ref-toggle {
+  font-weight: 500;
+}
+
+/* ── 400 Regular (Body, Inputs, Meta) — inherited from base ── */
+/* These stay at weight 400 naturally via the base rule.        */
+/* List kept for documentation only — no override needed.       */
 
 /* ---------- Shared tokens ---------- */
 :root {
@@ -3630,6 +3753,915 @@ body,
   flex-wrap: wrap;
   gap: 5px;
   margin-top: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIFF VIEW
+   ══════════════════════════════════════════════════════════════ */
+
+.diff-view {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.diff-header {
+  margin-bottom: 24px;
+}
+
+.diff-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.diff-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.diff-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.diff-change-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: all 0.15s;
+}
+.diff-change-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.diff-env-labels {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.diff-env-label {
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.diff-env-label--left {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+.diff-env-label--right {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+}
+.diff-env-label-vs {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Diff Hero ── */
+.diff-hero {
+  text-align: center;
+  padding: 32px 20px 28px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(168, 85, 247, 0.06) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: 16px;
+}
+.diff-hero-icon {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+.diff-hero-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+  background: linear-gradient(135deg, var(--color-accent) 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.diff-hero-sub {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── Setup: A vs B layout ── */
+.diff-setup {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  align-items: start;
+}
+.diff-setup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.diff-setup-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.diff-setup-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.diff-setup-panel--left .diff-setup-step {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+.diff-setup-panel--right .diff-setup-step {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+}
+.diff-setup-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+/* ── VS Divider ── */
+.diff-setup-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  align-self: center;
+  margin-top: 40px;
+}
+.diff-setup-vs span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+/* ── Loaded card (Base menu) ── */
+.diff-setup-loaded {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  min-height: 80px;
+}
+.diff-setup-loaded-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.diff-setup-loaded-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.diff-setup-loaded-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diff-setup-loaded-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.diff-setup-change-btn {
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.diff-setup-change-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+.diff-setup-cancel-btn {
+  align-self: flex-end;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.06);
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diff-setup-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* ── Base changer animation ── */
+.diff-base-changer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: diff-slide-down 0.2s ease;
+}
+
+@media (max-width: 900px) {
+  .diff-setup {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .diff-setup-vs {
+    margin-top: 0;
+    padding: 0;
+  }
+  .diff-setup-vs span {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ── Intro (old — kept for fallback) ── */
+.diff-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@keyframes diff-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Picker Variants ── */
+.diff-env-picker--base {
+  border: 2px dashed #f59e0b;
+  background: color-mix(in srgb, #f59e0b 4%, var(--color-surface));
+}
+.diff-env-picker--base h3 {
+  color: #d97706;
+}
+.diff-env-picker--compare {
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 3%, var(--color-surface));
+}
+.diff-env-picker--compare h3 {
+  color: var(--color-accent);
+}
+.diff-fetch-btn--base {
+  background: #f59e0b;
+}
+.diff-fetch-btn--base:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+.diff-fetch-btn--compare {
+  background: var(--color-accent);
+}
+
+/* ── Env Picker Card ── */
+.diff-env-picker {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+.diff-env-picker h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.diff-picker-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  width: fit-content;
+}
+.diff-picker-tab {
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diff-picker-tab + .diff-picker-tab {
+  border-left: 1px solid var(--color-border);
+}
+.diff-picker-tab.active {
+  background: var(--color-accent);
+  color: white;
+}
+.diff-picker-tab:hover:not(.active) {
+  background: var(--color-border-subtle);
+}
+
+.diff-picker-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.diff-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.diff-picker-row > label {
+  width: 100px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+.diff-picker-row > select {
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 140px;
+}
+
+.diff-env-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.diff-env-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diff-env-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.diff-env-chip.active {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.diff-input {
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  width: 200px;
+}
+.diff-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.diff-fetch-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 10px 24px;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diff-fetch-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+.diff-fetch-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.diff-file-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  border: 2px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  transition: all 0.2s;
+}
+.diff-file-zone:hover {
+  border-color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.04);
+  color: var(--color-accent);
+}
+
+.diff-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* ── Summary Cards ── */
+.diff-summary-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.diff-summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.diff-summary-number {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+}
+.diff-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+.diff-summary-card--changed {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.diff-summary-card--changed .diff-summary-number { color: #f59e0b; }
+.diff-summary-card--changed .diff-summary-label { color: #b45309; }
+
+.diff-summary-card--added {
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.diff-summary-card--added .diff-summary-number { color: #22c55e; }
+.diff-summary-card--added .diff-summary-label { color: #15803d; }
+
+.diff-summary-card--removed {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.diff-summary-card--removed .diff-summary-number { color: #ef4444; }
+.diff-summary-card--removed .diff-summary-label { color: #b91c1c; }
+
+.diff-summary-card--unchanged {
+  border-color: rgba(107, 114, 128, 0.2);
+}
+.diff-summary-card--unchanged .diff-summary-number { color: var(--color-text-muted); }
+.diff-summary-card--unchanged .diff-summary-label { color: var(--color-text-muted); }
+
+/* ── Tabs ── */
+.diff-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 14px;
+  border-bottom: 2px solid var(--color-border);
+}
+.diff-tab {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+.diff-tab:hover {
+  color: var(--color-text);
+}
+.diff-tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+.diff-tab-count {
+  font-size: 0.72rem;
+  background: var(--color-border-subtle);
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-left: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.diff-tab.active .diff-tab-count {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-accent);
+}
+
+/* ── Toolbar: Filters + Search ── */
+.diff-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.diff-filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.diff-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diff-filter-chip:hover {
+  border-color: var(--color-accent);
+}
+.diff-filter-chip.active {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+.diff-filter-chip--changed.active { background: #f59e0b; border-color: #f59e0b; }
+.diff-filter-chip--added.active { background: #22c55e; border-color: #22c55e; }
+.diff-filter-chip--removed.active { background: #ef4444; border-color: #ef4444; }
+.diff-filter-chip--unchanged.active { background: #6b7280; border-color: #6b7280; }
+
+.diff-filter-count {
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.85;
+}
+
+.diff-search {
+  margin-left: auto;
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  width: 220px;
+  transition: border-color 0.15s;
+}
+.diff-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+}
+.diff-search::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── Content: List + Detail split ── */
+.diff-content {
+  display: flex;
+  gap: 16px;
+  min-height: 400px;
+}
+
+.diff-list {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow-y: auto;
+  max-height: calc(100vh - 420px);
+  background: var(--color-surface);
+}
+
+.diff-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.diff-list-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.diff-list-item:last-child {
+  border-bottom: none;
+}
+.diff-list-item:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+.diff-list-item--selected {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-left: 3px solid var(--color-accent);
+}
+
+.diff-list-item--changed {
+  border-left: 3px solid #f59e0b;
+}
+.diff-list-item--added {
+  border-left: 3px solid #22c55e;
+}
+.diff-list-item--removed {
+  border-left: 3px solid #ef4444;
+}
+.diff-list-item--unchanged {
+  border-left: 3px solid transparent;
+}
+
+.diff-list-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.diff-list-item-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.diff-list-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+.diff-list-item-id {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.diff-list-item-changes {
+  font-size: 0.7rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+.diff-list-item-fallback {
+  font-size: 0.65rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* ── Badges ── */
+.diff-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.diff-badge--changed {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+.diff-badge--added {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+.diff-badge--removed {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+.diff-badge--unchanged {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+/* ── Detail Panel ── */
+.diff-detail-panel {
+  width: 420px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  overflow-y: auto;
+  max-height: calc(100vh - 420px);
+}
+
+.diff-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 1;
+}
+.diff-detail-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  word-break: break-all;
+}
+.diff-detail-id {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  display: block;
+  margin-top: 2px;
+}
+.diff-detail-note {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.diff-detail-note code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+}
+.diff-detail-close {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.diff-detail-close:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.diff-detail-message {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.diff-detail-message--added {
+  background: rgba(34, 197, 94, 0.06);
+  color: #15803d;
+}
+.diff-detail-message--removed {
+  background: rgba(239, 68, 68, 0.06);
+  color: #b91c1c;
+}
+.diff-detail-message--unchanged {
+  background: rgba(107, 114, 128, 0.04);
+  color: var(--color-text-muted);
+}
+
+/* ── Field Diff Table ── */
+.diff-field-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.diff-field-table thead th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 56px;
+  z-index: 1;
+}
+.diff-field-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+  word-break: break-word;
+}
+.diff-field-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.diff-field-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.diff-field-left {
+  color: #3b82f6;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  background: rgba(59, 130, 246, 0.04);
+}
+.diff-field-right {
+  color: #a855f7;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  background: rgba(168, 85, 247, 0.04);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .diff-summary-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .diff-content {
+    flex-direction: column;
+  }
+  .diff-detail-panel {
+    width: 100%;
+    max-height: 360px;
+  }
+  .diff-search {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
