@@ -87,7 +87,7 @@ interface MenuUploaderProps { onMenuLoad: (menu: Menu, brand?: BrandId) => void 
 export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [tab, setTab] = useState<Tab>('upload');
+  const [tab, setTab] = useState<Tab>('brand');
   const [jsonText, setJsonText] = useState('');
   const [remoteUrl, setRemoteUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -96,9 +96,9 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Brand tab state
-  const [selectedBrand, setSelectedBrand] = useState<BrandId>('bww');
+  const [selectedBrand, setSelectedBrand] = useState<BrandId>('arbys');
   const [selectedEnv, setSelectedEnv] = useState('QA');
-  const [locationId, setLocationId] = useState('MASTER');
+  const [locationId, setLocationId] = useState('0');
 
   const switchTab = useCallback((t: Tab) => { setTab(t); setError(null); }, []);
 
@@ -118,7 +118,8 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   const handleBrandChange = useCallback((id: BrandId) => {
     setSelectedBrand(id);
     const brand = BRANDS.find((b) => b.id === id)!;
-    setSelectedEnv(brand.envs[0].env);
+    const qaEnv = brand.envs.find((e) => e.env === 'QA');
+    setSelectedEnv(qaEnv ? 'QA' : brand.envs[0].env);
     setError(null);
   }, []);
 
