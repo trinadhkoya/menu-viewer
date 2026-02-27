@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Menu, Product } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
+import { CopyRef } from './CopyRef';
 import {
   getMenuStats,
   getTopLevelCategories,
@@ -59,7 +60,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
         <div className="category-overview">
           <h2>{categoryData.displayName || getRefId(selectedCategoryRef)}</h2>
           <p className="category-ref">
-            <code>{selectedCategoryRef}</code>
+            <CopyRef value={selectedCategoryRef} />
           </p>
           {categoryData.hasSubCategories && (
             <span className="mini-badge">Has Subcategories</span>
@@ -82,7 +83,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
                   <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
                   <span className="product-card-name">{product.displayName || getRefId(ref)}</span>
                 </div>
-                <code className="product-card-ref">{getRefId(ref)}</code>
+                <CopyRef value={ref} display={getRefId(ref)} className="product-card-ref" />
                 {subCategory && <span className="product-card-subcategory">{subCategory}</span>}
                 <div className="product-card-meta">
                   {product.price != null && <span className="product-card-price">${product.price.toFixed(2)}</span>}
@@ -146,7 +147,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
               )}
               <div className="category-card-body">
                 <strong>{category.displayName}</strong>
-                <code>{getRefId(ref)}</code>
+                <CopyRef value={ref} display={getRefId(ref)} />
                 <span>{childCount} items</span>
                 {category.hasSubCategories && <span className="mini-badge">Subcategories</span>}
               </div>

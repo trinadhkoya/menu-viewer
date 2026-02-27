@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
+import { CopyRef } from './CopyRef';
 import {
   getProductIngredients,
   getProductModifierGroups,
@@ -78,11 +79,11 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
       {/* Header */}
       <div className="detail-header">
         {product.imageUrl && (
-          <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} />
+          <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} isCombo={product.isCombo} />
         )}
         <div className="detail-title-area">
           <h2 className="detail-title">{product.displayName}</h2>
-          <code className="detail-ref">{productRef}</code>
+          <CopyRef value={productRef} className="detail-ref" />
           <div className="detail-badges">
             <span className={`badge ${product.isAvailable ? 'badge--available' : 'badge--unavailable'}`}>
               {product.isAvailable ? '✓ Available' : '✗ Unavailable'}
@@ -95,13 +96,24 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
         </div>
       </div>
 
+      {/* Combo info banner */}
+      {product.isCombo && (
+        <div className="combo-banner">
+          <span className="combo-banner-icon">🍔+🍟</span>
+          <div className="combo-banner-content">
+            <span className="combo-banner-title">Combo Meal</span>
+            <span className="combo-banner-desc">This product is a combo — it bundles multiple items together at a combined price.</span>
+          </div>
+        </div>
+      )}
+
       {/* Parent Virtual Product Banner (sized product → virtual) */}
       {parentVirtualProducts.length > 0 && (
         <div className="virtual-parent-banner">
           <span className="virtual-parent-icon">↩</span>
           <div className="virtual-parent-content">
             <span className="virtual-parent-label">Size variant of</span>
-            {parentVirtualProducts.map(({ virtualRef, virtualProduct, groupName }) => (
+            {parentVirtualProducts.map(({ virtualRef, virtualProduct }) => (
               <button
                 key={virtualRef}
                 className="virtual-parent-link"
@@ -140,7 +152,7 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                 <div key={groupRef} className="size-group">
                   <div className="size-group-header">
                     <strong>{group.displayName || 'Size'}</strong>
-                    <code className="modifier-ref">{getRefId(groupRef)}</code>
+                    <CopyRef value={groupRef} display={getRefId(groupRef)} className="modifier-ref" />
                     {group.selectionQuantity && (
                       <span className="quantity-badge">
                         Select {group.selectionQuantity.min ?? 0}–{group.selectionQuantity.max ?? '∞'}
@@ -222,13 +234,13 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                 {product.PLU != null && (
                   <tr>
                     <td className="info-label">PLU</td>
-                    <td><code>{product.PLU}</code></td>
+                    <td><CopyRef value={String(product.PLU)} /></td>
                   </tr>
                 )}
                 {product.id && (
                   <tr>
                     <td className="info-label">ID</td>
-                    <td><code>{product.id}</code></td>
+                    <td><CopyRef value={product.id} /></td>
                   </tr>
                 )}
                 {product.tags && product.tags.length > 0 && (
@@ -246,7 +258,7 @@ export function ProductDetail({ menu, productRef, onProductSelect }: ProductDeta
                     <td className="info-label">Product Groups</td>
                     <td>
                       {product.productGroupIds.map((id) => (
-                        <code key={id} className="ref-chip">{id}</code>
+                        <CopyRef key={id} value={id} className="ref-chip" />
                       ))}
                     </td>
                   </tr>
@@ -412,7 +424,7 @@ function IngredientCard({
         {type === 'productGroups' && item && 'isRecipe' in item && isRecipeGroup(item as ProductGroup) && (
           <span className="mini-badge recipe">🍳 Recipe</span>
         )}
-        <code className="ingredient-ref">{getRefId(ref_)}</code>
+        <CopyRef value={ref_} display={getRefId(ref_)} className="ingredient-ref" />
       </div>
       {item && (
         <div className="ingredient-meta">
@@ -437,11 +449,13 @@ function IngredientCard({
               <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
               <div className="ingredient-child-info">
                 <span>{product.displayName || getRefId(ref)}</span>
-                <code className="ingredient-child-id">{getRefId(ref)}</code>
+                <CopyRef value={ref} display={getRefId(ref)} className="ingredient-child-id" />
               </div>
-              {product.price != null && <span className="ingredient-price">${product.price.toFixed(2)}</span>}
-              {product.isDefault && <span className="mini-badge default">Default</span>}
-              {overrides && <OverrideBadge overrides={overrides} />}
+              <div className="ingredient-child-meta">
+                {product.isDefault && <span className="mini-badge default">Default</span>}
+                {overrides && <OverrideBadge overrides={overrides} />}
+                {product.price != null && <span className="ingredient-price">${product.price.toFixed(2)}</span>}
+              </div>
             </div>
           ))}
         </div>
@@ -466,7 +480,7 @@ function ModifierGroupCard({
       <div className="modifier-group-header" onClick={() => setExpanded(!expanded)}>
         <div>
           <strong>{group.displayName}</strong>
-          <code className="modifier-ref">{getRefId(ref_)}</code>
+          <CopyRef value={ref_} display={getRefId(ref_)} className="modifier-ref" />
         </div>
         <div className="modifier-group-meta">
           {group.selectionQuantity && (
@@ -491,7 +505,7 @@ function ModifierGroupCard({
                 {modifier.nutrition?.totalCalories != null && (
                   <span className="modifier-cal">{modifier.nutrition.totalCalories} cal</span>
                 )}
-                <code className="modifier-plu">PLU: {modifier.PLU}</code>
+                <CopyRef value={String(modifier.PLU)} display={`PLU: ${modifier.PLU}`} className="modifier-plu" />
               </div>
             ))}
         </div>
@@ -519,7 +533,7 @@ function ProductGroupCard({
             <strong>{group.displayName}</strong>
             {isRecipeGroup(group) && <span className="mini-badge recipe">🍳 Recipe</span>}
           </div>
-          <code className="modifier-ref">{getRefId(ref_)}</code>
+          <CopyRef value={ref_} display={getRefId(ref_)} className="modifier-ref" />
           {group.description && (
             <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
               {group.description}
@@ -547,19 +561,23 @@ function ProductGroupCard({
               {item?.isAvailable != null && (
                 <span className={`availability-dot ${item.isAvailable ? 'available' : 'unavailable'}`} />
               )}
-              <span className="modifier-name">
-                {name}
-                {isCurrentProduct && <span className="mini-badge default" style={{ marginLeft: 6 }}>Current</span>}
-              </span>
-              {item?.isDefault && <span className="mini-badge default">Default</span>}
-              {item?.price != null && item.price > 0 && (
-                <span className="modifier-price">${item.price.toFixed(2)}</span>
-              )}
-              {item?.calories != null && (
-                <span className="modifier-cal">{item.calories} cal</span>
-              )}
-              {overrides && <OverrideBadge overrides={overrides} />}
-              <code className="modifier-plu">{getRefId(ref)}</code>
+              <div className="modifier-name">
+                <span>
+                  {name}
+                  {isCurrentProduct && <span className="mini-badge default" style={{ marginLeft: 6 }}>Current</span>}
+                </span>
+                <CopyRef value={ref} display={getRefId(ref)} className="modifier-plu" />
+              </div>
+              <div className="modifier-meta-right">
+                {item?.isDefault && <span className="mini-badge default">Default</span>}
+                {overrides && <OverrideBadge overrides={overrides} />}
+                {item?.price != null && item.price > 0 && (
+                  <span className="modifier-price">${item.price.toFixed(2)}</span>
+                )}
+                {item?.calories != null && (
+                  <span className="modifier-cal">{item.calories} cal</span>
+                )}
+              </div>
             </div>
           ))}
         </div>

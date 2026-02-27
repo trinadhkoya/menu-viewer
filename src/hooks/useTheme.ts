@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'mbdp-menu-viewer-theme';
+const STORAGE_KEY = 'menupedia-theme';
 
 function getInitialTheme(): Theme {
   // 1. Check localStorage

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { Menu } from './types/menu';
 
-const STORAGE_KEY = 'mbdp-menu-viewer-menu';
+const STORAGE_KEY = 'menupedia-menu';
 
 function loadMenuFromStorage(): Menu | null {
   try {
@@ -12,14 +12,17 @@ function loadMenuFromStorage(): Menu | null {
   }
 }
 import { MenuUploader } from './components/MenuUploader';
+import type { BrandId } from './components/MenuUploader';
 import { Sidebar } from './components/Sidebar';
 import { ProductDetail } from './components/ProductDetail';
 import { SearchBar } from './components/SearchBar';
 import { SearchResults } from './components/SearchResults';
 import { MenuStats } from './components/MenuStats';
+import { ConstructView } from './components/ConstructView';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
+import { MenupediaLogo } from './components/MenupediaLogo';
 import './App.css';
 
 interface BreadcrumbItem {
@@ -34,6 +37,8 @@ function App() {
   const [selectedProductRef, setSelectedProductRef] = useState<string | null>(null);
   const [selectedCategoryRef, setSelectedCategoryRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'menu' | 'constructs'>('menu');
+  const [activeBrand, setActiveBrand] = useState<BrandId | null>(null);
 
   const menuSizeBytes = useMemo(() => {
     if (!menu) return 0;
@@ -48,12 +53,13 @@ function App() {
     return [{ label: stored?.displayName || 'Menu', type: 'root' }];
   });
 
-  const handleMenuLoad = useCallback((loadedMenu: Menu) => {
+  const handleMenuLoad = useCallback((loadedMenu: Menu, brand?: BrandId) => {
     // Clear any existing menu state first
     localStorage.removeItem(STORAGE_KEY);
     setSelectedProductRef(null);
     setSelectedCategoryRef(null);
     setSearchQuery('');
+    setActiveBrand(brand ?? null);
     // Load the new menu
     setMenu(loadedMenu);
     setBreadcrumbs([{ label: loadedMenu.displayName || 'Menu', type: 'root' }]);
@@ -135,6 +141,8 @@ function App() {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const brandClass = activeBrand ? `brand-${activeBrand}` : '';
+
   if (!menu) {
     return (
       <div className="app">
@@ -147,16 +155,32 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${brandClass}`}>
       <header className="app-header">
         <div className="header-left">
           <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
-            🍔 Menu Viewer
+            <MenupediaLogo size={22} />
           </h1>
           <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
         <div className="header-right">
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <div className="view-mode-toggle">
+            <button
+              className={`view-mode-btn ${viewMode === 'menu' ? 'active' : ''}`}
+              onClick={() => { setViewMode('menu'); setSelectedProductRef(null); }}
+              title="Browse by category"
+            >
+              📂 Menu
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'constructs' ? 'active' : ''}`}
+              onClick={() => { setViewMode('constructs'); setSelectedProductRef(null); }}
+              title="Browse by product construct"
+            >
+              🧬 Constructs
+            </button>
+          </div>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <button className="reset-btn" onClick={handleReset} title="Load different menu">
             ↻ New Menu
@@ -195,6 +219,8 @@ function App() {
             />
           ) : selectedProductRef ? (
             <ProductDetail menu={menu} productRef={selectedProductRef} onProductSelect={handleProductSelect} />
+          ) : viewMode === 'constructs' ? (
+            <ConstructView menu={menu} onProductSelect={handleProductSelect} />
           ) : (
             <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
           )}
