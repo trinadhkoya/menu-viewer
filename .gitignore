@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 inspect_virtual.py
 response.json
+
+# Menu data files
+*-menu-response.json
+*-menu.json
+*.py
