@@ -18,6 +18,7 @@ import { resolveRef, getRefId } from '../utils/menuHelpers';
 import { OptimizedImage } from './OptimizedImage';
 import {
   type SelectedModifiers,
+  type SelectedGroupItem,
   type ComboSelection,
   type ComboOptions,
   type FullPriceResult,
@@ -39,6 +40,8 @@ import {
   getComboOptions,
   getInitialComboSelection,
   getModifierPriceAndCalories,
+  getVirtualSizeAlternatives,
+  getInitialVirtualSizeState,
 } from '../utils/productCustomization';
 
 /**
@@ -169,11 +172,53 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
     });
   }, [menu]);
 
+  // ── Nested drill-down state (for virtual products with size variants) ──
+  const [drillDown, setDrillDown] = useState<{ groupRef: string; itemRef: string } | null>(null);
+
+  const handleDrillDownOpen = useCallback((groupRef: string, itemRef: string) => {
+    setDrillDown({ groupRef, itemRef });
+  }, []);
+
+  const handleDrillDownClose = useCallback(() => {
+    setDrillDown(null);
+  }, []);
+
+  /** Called when the nested customizer saves size + modifier selections back. */
+  const handleDrillDownSave = useCallback((
+    groupRef: string,
+    itemRef: string,
+    selectedSizeRef: string,
+    sizeModifiers: SelectedModifiers,
+  ) => {
+    setSelectedIngredients((prev) => {
+      const groupState = prev[groupRef] ?? {};
+      const itemState = groupState[itemRef] ?? { quantity: 1 };
+      return {
+        ...prev,
+        [groupRef]: {
+          ...groupState,
+          [itemRef]: {
+            ...itemState,
+            quantity: Math.max(itemState.quantity, 1), // ensure selected
+            subItemId: selectedSizeRef,
+            selection: sizeModifiers,
+          },
+        },
+      };
+    });
+    setDrillDown(null);
+  }, []);
+
   // ── Detect if modified ──
   const isModified = useMemo(() => {
     return JSON.stringify(selectedIngredients) !== JSON.stringify(initialIngredients) ||
            JSON.stringify(comboSelection) !== JSON.stringify(initialComboSelection);
   }, [selectedIngredients, initialIngredients, comboSelection, initialComboSelection]);
+
+  // ── Resolve drill-down target ──
+  const drillDownProduct = drillDown
+    ? resolveRef(menu, drillDown.itemRef) as Product | undefined
+    : undefined;
 
   return (
     <div className="customizer">
@@ -230,9 +275,19 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
         </div>
       )}
 
-      {/* Body — Single PDP or Combo PDP */}
+      {/* Body — Single PDP, Combo PDP, or Nested Drill-down */}
       <div className="customizer-body">
-        {isCombo ? (
+        {drillDown && drillDownProduct ? (
+          <NestedSizeCustomizer
+            menu={menu}
+            parentGroupRef={drillDown.groupRef}
+            parentItemRef={drillDown.itemRef}
+            virtualProduct={drillDownProduct}
+            existingState={selectedIngredients[drillDown.groupRef]?.[drillDown.itemRef]}
+            onSave={handleDrillDownSave}
+            onBack={handleDrillDownClose}
+          />
+        ) : isCombo ? (
           <ComboCustomizer
             menu={menu}
             comboOptions={comboOptions}
@@ -254,6 +309,7 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
             onDecrease={handleDecrease}
             onIntensityChange={handleIntensityChange}
             onProductSelect={onProductSelect}
+            onDrillDown={handleDrillDownOpen}
           />
         )}
       </div>
@@ -288,6 +344,7 @@ interface SingleCustomizerProps {
   onDecrease: (groupRef: string, itemRef: string) => void;
   onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
+  onDrillDown?: (groupRef: string, itemRef: string) => void;
 }
 
 function SingleCustomizer({
@@ -300,6 +357,7 @@ function SingleCustomizer({
   onDecrease,
   onIntensityChange,
   onProductSelect,
+  onDrillDown,
 }: SingleCustomizerProps) {
   return (
     <div className="customizer-groups">
@@ -316,6 +374,7 @@ function SingleCustomizer({
           onDecrease={onDecrease}
           onIntensityChange={onIntensityChange}
           onProductSelect={onProductSelect}
+          onDrillDown={onDrillDown}
         />
       ))}
 
@@ -349,6 +408,7 @@ interface ModifierGroupSectionProps {
   onDecrease: (groupRef: string, itemRef: string) => void;
   onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
+  onDrillDown?: (groupRef: string, itemRef: string) => void;
 }
 
 function ModifierGroupSection({
@@ -362,6 +422,7 @@ function ModifierGroupSection({
   onDecrease,
   onIntensityChange,
   onProductSelect,
+  onDrillDown,
 }: ModifierGroupSectionProps) {
   const [expanded, setExpanded] = useState(true);
   const groupEntity = resolveRef(menu, groupRef) as ProductGroup | ModifierGroup | undefined;
@@ -413,6 +474,7 @@ function ModifierGroupSection({
               onDecrease={onDecrease}
               onIntensityChange={onIntensityChange}
               onProductSelect={onProductSelect}
+              onDrillDown={onDrillDown}
             />
           ))}
         </div>
@@ -437,6 +499,7 @@ interface ModifierItemCardProps {
   onDecrease: (groupRef: string, itemRef: string) => void;
   onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
+  onDrillDown?: (groupRef: string, itemRef: string) => void;
 }
 
 function ModifierItemCard({
@@ -451,6 +514,7 @@ function ModifierItemCard({
   onDecrease,
   onIntensityChange,
   onProductSelect,
+  onDrillDown,
 }: ModifierItemCardProps) {
   const menuItem = resolveRef(menu, itemRef) as Product | Modifier | undefined;
   const groupEntity = resolveRef(menu, groupRef) as ProductGroup | ModifierGroup | undefined;
@@ -465,6 +529,20 @@ function ModifierItemCard({
   const isChanged = item.quantity !== (initialItem?.quantity ?? 0) || item.subItemId !== initialItem?.subItemId;
   const hasIntensities = productHasIntensities(menuItem as Product, menu);
   const maxQty = getMaxSelectionQuantity(menu, groupRef, itemRef, group);
+
+  // Virtual product with size alternatives → show drill-down button
+  const virtualAlts = useMemo(
+    () => getVirtualSizeAlternatives(menu, menuItem),
+    [menu, menuItem],
+  );
+  const hasDrillDown = virtualAlts != null && onDrillDown != null;
+
+  // Currently selected size name (for subtitle)
+  const selectedSizeName = useMemo(() => {
+    if (!item.subItemId || !virtualAlts) return null;
+    const variant = virtualAlts.variants.find((v) => v.ref === item.subItemId);
+    return variant?.product?.displayName ?? null;
+  }, [item.subItemId, virtualAlts]);
 
   // Group-level capacity check: disable unselected items when group max is reached
   const groupSQ = getGroupSelectionQuantity(menu, groupRef);
@@ -528,10 +606,13 @@ function ModifierItemCard({
           {isDefault && <span className="customizer-item-default-badge">Default</span>}
           {isExclusive && <span className="customizer-item-exclusive-badge">None</span>}
         </div>
-        {intensityName && isSelected && (
+        {intensityName && isSelected && !hasDrillDown && (
           <span className="customizer-item-intensity">{intensityName}</span>
         )}
-        {hasIntensities && isSelected && (
+        {selectedSizeName && isSelected && hasDrillDown && (
+          <span className="customizer-item-intensity">{selectedSizeName}</span>
+        )}
+        {hasIntensities && isSelected && !hasDrillDown && (
           <IntensitySelector
             menu={menu}
             itemRef={itemRef}
@@ -547,8 +628,20 @@ function ModifierItemCard({
         </div>
       </div>
 
+      {/* Drill-down Customize button for virtual products with sizes */}
+      {hasDrillDown && isSelected && (
+        <button
+          className="customizer-item-drilldown"
+          onClick={() => onDrillDown!(groupRef, itemRef)}
+          title={`Customize ${name}`}
+        >
+          <span>Customize</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      )}
+
       {/* Quantity Stepper */}
-      {isSelected && actionType === ActionType.CHECK_BOX && maxQty > 1 && (
+      {isSelected && actionType === ActionType.CHECK_BOX && maxQty > 1 && !hasDrillDown && (
         <div className="customizer-item-stepper">
           <button
             className="customizer-stepper-btn"
@@ -565,7 +658,7 @@ function ModifierItemCard({
       )}
 
       {/* Navigate to product detail */}
-      {onProductSelect && !isExclusive && (
+      {onProductSelect && !isExclusive && !hasDrillDown && (
         <button
           className="customizer-item-navigate"
           onClick={() => onProductSelect(itemRef)}
@@ -574,6 +667,195 @@ function ModifierItemCard({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
       )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Nested Size Customizer (drill-down for virtual products)
+   ────────────────────────────────────────────── */
+
+interface NestedSizeCustomizerProps {
+  menu: Menu;
+  parentGroupRef: string;
+  parentItemRef: string;
+  virtualProduct: Product;
+  existingState?: SelectedGroupItem;
+  onSave: (groupRef: string, itemRef: string, selectedSizeRef: string, sizeModifiers: SelectedModifiers) => void;
+  onBack: () => void;
+}
+
+function NestedSizeCustomizer({
+  menu,
+  parentGroupRef,
+  parentItemRef,
+  virtualProduct,
+  existingState,
+  onSave,
+  onBack,
+}: NestedSizeCustomizerProps) {
+  const alternatives = useMemo(
+    () => getVirtualSizeAlternatives(menu, virtualProduct),
+    [menu, virtualProduct],
+  );
+
+  // Determine the initial size ref: from existing state, or default variant, or first
+  const initialSizeRef = useMemo(() => {
+    if (existingState?.subItemId) return existingState.subItemId;
+    if (!alternatives) return '';
+    const def = alternatives.variants.find((v) => v.isDefault);
+    return def?.ref ?? alternatives.variants[0]?.ref ?? '';
+  }, [existingState, alternatives]);
+
+  const [selectedSizeRef, setSelectedSizeRef] = useState(initialSizeRef);
+
+  // Build initial modifiers for each size variant, or use existing
+  const [sizeModifiers, setSizeModifiers] = useState<SelectedModifiers>(() => {
+    if (existingState?.selection && existingState.subItemId === initialSizeRef) {
+      return existingState.selection;
+    }
+    const variant = alternatives?.variants.find((v) => v.ref === initialSizeRef);
+    return variant ? getInitialSelectedIngredients(menu, variant.product) : {};
+  });
+
+  // Cache initial modifiers per size ref for comparison
+  const initialMods = useMemo(() => {
+    const variant = alternatives?.variants.find((v) => v.ref === selectedSizeRef);
+    return variant ? getInitialSelectedIngredients(menu, variant.product) : {};
+  }, [menu, alternatives, selectedSizeRef]);
+
+  const currentVariant = alternatives?.variants.find((v) => v.ref === selectedSizeRef);
+
+  // When size tab changes, swap modifiers
+  const handleSizeChange = useCallback((ref: string) => {
+    setSelectedSizeRef(ref);
+    // Load existing or default modifiers for the new size
+    if (existingState?.subItemId === ref && existingState.selection) {
+      setSizeModifiers(existingState.selection);
+    } else {
+      const variant = alternatives?.variants.find((v) => v.ref === ref);
+      if (variant) {
+        setSizeModifiers(getInitialSelectedIngredients(menu, variant.product));
+      }
+    }
+  }, [menu, alternatives, existingState]);
+
+  // Ingredient handlers for the selected size
+  const handleToggle = useCallback((groupRef: string, itemRef: string) => {
+    setSizeModifiers((prev) =>
+      toggleIngredientSelection(prev, menu, groupRef, itemRef, initialMods),
+    );
+  }, [menu, initialMods]);
+
+  const handleIncrease = useCallback((groupRef: string, itemRef: string) => {
+    setSizeModifiers((prev) => increaseQuantity(prev, menu, groupRef, itemRef));
+  }, [menu]);
+
+  const handleDecrease = useCallback((groupRef: string, itemRef: string) => {
+    setSizeModifiers((prev) => decreaseQuantity(prev, groupRef, itemRef));
+  }, []);
+
+  const handleIntensityChange = useCallback((groupRef: string, itemRef: string, subItemId: string) => {
+    setSizeModifiers((prev) => {
+      const groupState = prev[groupRef];
+      if (!groupState?.[itemRef]) return prev;
+      return {
+        ...prev,
+        [groupRef]: {
+          ...groupState,
+          [itemRef]: { ...groupState[itemRef], subItemId },
+        },
+      };
+    });
+  }, []);
+
+  if (!alternatives || alternatives.variants.length === 0) {
+    return (
+      <div className="customizer-nested">
+        <button className="customizer-nested-back" onClick={onBack}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
+        <p className="customizer-empty">No size options available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="customizer-nested">
+      {/* Nested Header */}
+      <div className="customizer-nested-header">
+        <button className="customizer-nested-back" onClick={onBack}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
+        <div className="customizer-nested-title">
+          <strong>{virtualProduct.displayName}</strong>
+          <span className="customizer-nested-subtitle">{alternatives.groupName}</span>
+        </div>
+      </div>
+
+      {/* Size Pills */}
+      <div className="customizer-nested-sizes">
+        {alternatives.variants.map((v) => {
+          const isActive = v.ref === selectedSizeRef;
+          const upcharge = v.product.price != null && alternatives.variants[0]?.product.price != null
+            ? Math.max(v.product.price - (alternatives.variants.find((d) => d.isDefault)?.product.price ?? 0), 0)
+            : 0;
+          return (
+            <button
+              key={v.ref}
+              className={`customizer-nested-size-pill ${isActive ? 'active' : ''}`}
+              onClick={() => handleSizeChange(v.ref)}
+            >
+              <span className="customizer-nested-size-name">{v.product.displayName ?? getRefId(v.ref)}</span>
+              {v.isDefault && <span className="customizer-nested-size-default">Default</span>}
+              {upcharge > 0 && <span className="customizer-nested-size-upcharge">+${upcharge.toFixed(2)}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Current size's ingredient groups */}
+      {currentVariant && (
+        <div className="customizer-nested-body">
+          {currentVariant.product.imageUrl && (
+            <div className="customizer-nested-hero">
+              <OptimizedImage
+                src={currentVariant.product.imageUrl}
+                alt={currentVariant.product.displayName ?? ''}
+                width={80}
+                height={80}
+              />
+              <span className="customizer-nested-hero-name">{currentVariant.product.displayName}</span>
+              {currentVariant.product.calories != null && (
+                <span className="customizer-nested-hero-cal">{currentVariant.product.calories} cal</span>
+              )}
+            </div>
+          )}
+
+          <SingleCustomizer
+            menu={menu}
+            selectedIngredients={sizeModifiers}
+            initialIngredients={initialMods}
+            unsatisfiedGroups={getUnsatisfiedGroups(menu, sizeModifiers)}
+            onToggle={handleToggle}
+            onIncrease={handleIncrease}
+            onDecrease={handleDecrease}
+            onIntensityChange={handleIntensityChange}
+          />
+        </div>
+      )}
+
+      {/* Save / Done button */}
+      <div className="customizer-nested-footer">
+        <button
+          className="customizer-nested-done"
+          onClick={() => onSave(parentGroupRef, parentItemRef, selectedSizeRef, sizeModifiers)}
+        >
+          Done — Apply {currentVariant?.product.displayName ?? 'Selection'}
+        </button>
+      </div>
     </div>
   );
 }
