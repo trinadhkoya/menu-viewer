@@ -162,6 +162,21 @@ export function getCategoryProducts(
 }
 
 /**
+ * Returns true when a product offers customisation.
+ * A product is customisable when it has at least one non-empty
+ * `ingredientRefs` *or* `modifierGroupRefs` map, or is a combo.
+ */
+export function isCustomizable(product: Product): boolean {
+  const hasIngredients =
+    !!product.ingredientRefs &&
+    Object.keys(product.ingredientRefs).length > 0;
+  const hasModifiers =
+    !!product.modifierGroupRefs &&
+    Object.keys(product.modifierGroupRefs).length > 0;
+  return hasIngredients || hasModifiers || !!product.isCombo;
+}
+
+/**
  * Gets the ingredient details for a product
  */
 export function getProductIngredients(

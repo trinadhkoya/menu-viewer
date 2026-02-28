@@ -17,7 +17,7 @@
 
 import { useRef, useMemo, useState, useCallback, useEffect } from 'react';
 import type { Menu, Product, Modifier, ModifierGroup, ProductGroup, ChildRefOverride, Quantity } from '../types/menu';
-import { resolveRef, getRefId } from '../utils/menuHelpers';
+import { resolveRef, getRefId, isCustomizable } from '../utils/menuHelpers';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
 import {
@@ -492,6 +492,9 @@ function ModifierOptionRow({
           <span className="customizer-option-name">{name}</span>
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
+          {!isExclusive && menuItem && 'ingredientRefs' in menuItem && isCustomizable(menuItem as Product) && (
+            <span className="customizer-option-badge customizable">Customizable</span>
+          )}
         </div>
         <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && !hasDrillDown && (
@@ -1024,6 +1027,9 @@ function NestedOptionRow({
           <span className="customizer-option-name">{name}</span>
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
+          {!isExclusive && menuItem && 'ingredientRefs' in menuItem && isCustomizable(menuItem as Product) && (
+            <span className="customizer-option-badge customizable">Customizable</span>
+          )}
         </div>
         <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && (

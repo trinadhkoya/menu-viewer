@@ -9388,6 +9388,11 @@ body,
   color: #6b7280;
 }
 
+.customizer-option-badge.customizable {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
 .customizer-option-sub {
   font-size: 0.72rem;
   color: #7c3aed;
