@@ -13,7 +13,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import type { Menu, Product, Modifier, ModifierGroup, ProductGroup, ChildRefOverride } from '../types/menu';
+import type { Menu, Product, Modifier, ModifierGroup, ProductGroup, ChildRefOverride, Quantity } from '../types/menu';
 import { resolveRef, getRefId } from '../utils/menuHelpers';
 import { OptimizedImage } from './OptimizedImage';
 import {
@@ -40,6 +40,23 @@ import {
   getInitialComboSelection,
   getModifierPriceAndCalories,
 } from '../utils/productCustomization';
+
+/**
+ * Convert selectionQuantity { min, max } into human-readable text.
+ */
+function formatSelectionQty(sq: Quantity): string {
+  const min = sq.min ?? 0;
+  const max = sq.max ?? null;
+
+  if (min === 0 && max === null) return 'Optional';
+  if (min === 0 && max === 1) return 'Select up to 1';
+  if (min === 0 && max != null) return `Select up to ${max}`;
+  if (min === 1 && max === 1) return 'Select exactly 1';
+  if (min === max && min != null) return `Select exactly ${min}`;
+  if (min >= 1 && max != null) return `Select ${min}–${max}`;
+  if (min >= 1 && max === null) return `Select at least ${min}`;
+  return `Select ${min}–${max ?? '∞'}`;
+}
 
 interface ProductCustomizerProps {
   menu: Menu;
@@ -363,11 +380,9 @@ function ModifierGroupSection({
           {isRecipe && <span className="customizer-group-badge recipe">Recipe</span>}
         </div>
         <div className="customizer-group-header-right">
-          {sq.min != null && sq.max != null && (
+          {(sq.min != null || sq.max != null) && (
             <span className="customizer-group-qty-hint">
-              {sq.min === sq.max
-                ? `Select ${sq.min}`
-                : `${sq.min ?? 0}–${sq.max ?? '∞'}`}
+              {formatSelectionQty(sq)}
             </span>
           )}
           <span className={`customizer-group-count ${selectedCount > 0 ? 'active' : ''} ${isAtMax ? 'at-max' : ''}`}>
@@ -713,8 +728,8 @@ function ComboCustomizer({
               <div key={groupRef} className="customizer-combo-mod-group">
                 <div className="customizer-combo-mod-group-header">
                   <strong>{groupName}</strong>
-                  {sq.min != null && sq.max != null && (
-                    <span className="customizer-group-qty-hint">{sq.min}–{sq.max}</span>
+                  {(sq.min != null || sq.max != null) && (
+                    <span className="customizer-group-qty-hint">{formatSelectionQty(sq)}</span>
                   )}
                   <span className={`customizer-group-count ${selectedCount > 0 ? 'active' : ''}`}>{selectedCount}</span>
                 </div>

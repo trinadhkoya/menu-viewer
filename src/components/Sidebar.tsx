@@ -6,6 +6,8 @@ import {
   isProductRef,
   resolveRef,
   getRefId,
+  getVirtualProductAlternatives,
+  resolveVirtualToDefault,
 } from '../utils/menuHelpers';
 
 interface SidebarProps {
@@ -71,17 +73,29 @@ export function Sidebar({
               </li>
             );
           } else if (isProductRef(childRef)) {
-            const product = resolveRef(menu, childRef) as Product;
-            if (!product) return null;
+            const rawProduct = resolveRef(menu, childRef) as Product;
+            if (!rawProduct) return null;
+
+            // Resolve virtual products to their default sized variant
+            let displayRef = childRef;
+            let product = rawProduct;
+            if (rawProduct.isVirtual) {
+              const resolved = resolveVirtualToDefault(menu, rawProduct);
+              if (resolved) {
+                displayRef = resolved.ref;
+                product = resolved.product;
+              }
+            }
+
             return (
               <li
                 key={childRef}
-                className={`sidebar-item sidebar-item--product ${selectedProductRef === childRef ? 'sidebar-item--active' : ''}`}
-                onClick={() => onProductSelect(childRef, category.displayName)}
+                className={`sidebar-item sidebar-item--product ${selectedProductRef === displayRef ? 'sidebar-item--active' : ''}`}
+                onClick={() => onProductSelect(displayRef, category.displayName)}
               >
                 <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
                 {product.isCombo && <span className="sidebar-combo-icon">🍔+🍟</span>}
-                <span className="sidebar-item-name">{product.displayName || getRefId(childRef)}</span>
+                <span className="sidebar-item-name">{product.displayName || getRefId(displayRef)}</span>
                 {product.price != null && <span className="sidebar-price">${product.price.toFixed(2)}</span>}
               </li>
             );

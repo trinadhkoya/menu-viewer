@@ -399,6 +399,28 @@ function resolveAlternativeChildren(
 }
 
 /**
+ * For a virtual product, resolve to the default sized product (or the first child).
+ * Returns { ref, product } of the real product to display, or null if resolution fails.
+ */
+export function resolveVirtualToDefault(
+  menu: Menu,
+  product: Product,
+): { ref: string; product: Product } | null {
+  const alternatives = getVirtualProductAlternatives(menu, product);
+  if (alternatives.length === 0) return null;
+
+  // Look for a variant marked isDefault across all groups
+  for (const { variants } of alternatives) {
+    const defaultVariant = variants.find((v) => v.isDefault);
+    if (defaultVariant) return { ref: defaultVariant.ref, product: defaultVariant.product };
+  }
+
+  // Fallback: return the first variant from the first group
+  const firstVariant = alternatives[0]?.variants[0];
+  return firstVariant ? { ref: firstVariant.ref, product: firstVariant.product } : null;
+}
+
+/**
  * Get the bundle target for a product.
  * Products can have relatedProducts.bundle = "products.<id>" pointing to a meal/combo counterpart.
  * Returns the target product ref, product, and display name, or null if no bundle link.

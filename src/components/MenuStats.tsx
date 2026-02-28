@@ -9,6 +9,7 @@ import {
   isCategoryRef,
   isProductRef,
   getRefId,
+  resolveVirtualToDefault,
 } from '../utils/menuHelpers';
 
 interface MenuStatsProps {
@@ -36,8 +37,21 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
     ) => {
       for (const childRef of Object.keys(childRefs)) {
         if (isProductRef(childRef)) {
-          const product = resolveRef(menu, childRef) as Product;
-          if (product) products.push({ ref: childRef, product, subCategory: parentCategoryName });
+          const rawProduct = resolveRef(menu, childRef) as Product;
+          if (!rawProduct) continue;
+
+          // Resolve virtual products to their default sized variant
+          let finalRef = childRef;
+          let product = rawProduct;
+          if (rawProduct.isVirtual) {
+            const resolved = resolveVirtualToDefault(menu, rawProduct);
+            if (resolved) {
+              finalRef = resolved.ref;
+              product = resolved.product;
+            }
+          }
+
+          products.push({ ref: finalRef, product, subCategory: parentCategoryName });
         } else if (isCategoryRef(childRef)) {
           // Resolve the subcategory and read ITS childRefs — not the parent override value
           const subCat = resolveRef(menu, childRef) as import('../types/menu').Category | undefined;
@@ -204,6 +218,16 @@ function ProductCard({ ref_, product, onClick }: ProductCardProps) {
       )}
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+        {(product.price != null || product.calories != null) && (
+          <div className="product-card-meta">
+            {product.price != null && (
+              <span className="product-card-price">${product.price.toFixed(2)}</span>
+            )}
+            {product.calories != null && (
+              <span className="product-card-cal">{product.calories} cal</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Hover preview tooltip */}
