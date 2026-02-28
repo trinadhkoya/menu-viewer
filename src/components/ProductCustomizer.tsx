@@ -38,6 +38,7 @@ import {
   productHasIntensities,
   getComboOptions,
   getInitialComboSelection,
+  getModifierPriceAndCalories,
 } from '../utils/productCustomization';
 
 interface ProductCustomizerProps {
@@ -417,7 +418,6 @@ function ModifierItemCard({
 
   const name = menuItem?.displayName ?? getRefId(itemRef);
   const imageUrl = (menuItem as Product)?.imageUrl;
-  const price = override?.price ?? (menuItem as Product)?.price ?? 0;
   const isDefault = override?.isDefault ?? (menuItem as Product)?.isDefault ?? false;
   const isExclusive = isExclusiveRef(menu, itemRef);
   const isSelected = item.quantity >= 1;
@@ -431,11 +431,13 @@ function ModifierItemCard({
   const groupAtMax = groupSQ.max != null && groupTotal >= groupSQ.max;
   const isDisabledByCapacity = !isSelected && groupAtMax && actionType === ActionType.CHECK_BOX;
 
-  // Upcharge display
+  // Upcharge display — uses proper IDP tech doc delta pricing
+  const pricingInfo = getModifierPriceAndCalories(menu, groupRef, itemRef, item.subItemId, item.quantity);
   let upchargeDisplay: string | null = null;
-  if (!isDefault && price > 0) {
-    upchargeDisplay = `+$${price.toFixed(2)}`;
+  if (pricingInfo.price > 0 && !isExclusive) {
+    upchargeDisplay = `+$${pricingInfo.price.toFixed(2)}`;
   }
+  const itemCalories = pricingInfo.calories;
 
   // Intensity display
   let intensityName: string | null = null;
@@ -501,11 +503,8 @@ function ModifierItemCard({
         )}
         <div className="customizer-item-meta">
           {upchargeDisplay && <span className="customizer-item-upcharge">{upchargeDisplay}</span>}
-          {(menuItem as Modifier)?.nutrition?.totalCalories != null && (
-            <span className="customizer-item-cal">{(menuItem as Modifier).nutrition.totalCalories} cal</span>
-          )}
-          {(menuItem as Product)?.nutrition?.totalCalories != null && (
-            <span className="customizer-item-cal">{(menuItem as Product).nutrition!.totalCalories} cal</span>
+          {itemCalories != null && itemCalories > 0 && (
+            <span className="customizer-item-cal">{itemCalories} cal</span>
           )}
         </div>
       </div>
