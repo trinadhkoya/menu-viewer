@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import type { Menu } from './types/menu';
 
 const STORAGE_KEY = 'menupedia-menu';
@@ -45,13 +46,22 @@ interface BreadcrumbItem {
 
 function App() {
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [menu, setMenu] = useState<Menu | null>(loadMenuFromStorage);
   const [selectedProductRef, setSelectedProductRef] = useState<string | null>(null);
   const [selectedCategoryRef, setSelectedCategoryRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'menu' | 'constructs' | 'diff'>('menu');
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
   const [showRefs, setShowRefs] = useState(true);
+
+  // Derive active tab from current route path
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/constructs')) return 'constructs' as const;
+    if (path.startsWith('/diff')) return 'diff' as const;
+    return 'menu' as const;
+  }, [location.pathname]);
 
   const menuSizeBytes = useMemo(() => {
     if (!menu) return 0;
@@ -89,7 +99,8 @@ function App() {
     } catch {
       // Storage full or unavailable — continue without persistence
     }
-  }, []);
+    navigate('/menu');
+  }, [navigate]);
 
   const handleProductSelect = useCallback(
     (productRef: string, categoryName?: string) => {
@@ -116,8 +127,10 @@ function App() {
         type: 'product',
       });
       setBreadcrumbs(crumbs);
+      // Ensure we're on the menu route when selecting a product
+      if (activeTab !== 'menu') navigate('/menu');
     },
-    [menu, selectedCategoryRef],
+    [menu, selectedCategoryRef, activeTab, navigate],
   );
 
   const handleCategorySelect = useCallback(
@@ -131,8 +144,9 @@ function App() {
         { label: menu?.displayName || 'Menu', type: 'root' },
         { label: cat?.displayName || categoryRef, ref: categoryRef, type: 'category' },
       ]);
+      if (activeTab !== 'menu') navigate('/menu');
     },
-    [menu],
+    [menu, activeTab, navigate],
   );
 
   const handleBreadcrumbClick = useCallback(
@@ -162,7 +176,8 @@ function App() {
     setBreadcrumbs([{ label: 'Menu', type: 'root' }]);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(BRAND_KEY);
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const brandClass = activeBrand ? `brand-${activeBrand}` : '';
 
@@ -176,6 +191,18 @@ function App() {
       </div>
     );
   }
+
+  // Content for the main area — search + product overlay on top of routed view
+  const mainContent = searchQuery ? (
+    <SearchResults
+      menu={menu}
+      query={searchQuery}
+      onProductSelect={handleProductSelect}
+      onCategorySelect={handleCategorySelect}
+    />
+  ) : selectedProductRef ? (
+    <ProductDetail menu={menu} productRef={selectedProductRef} activeBrand={activeBrand} onProductSelect={handleProductSelect} />
+  ) : null;
 
   return (
     <div className={`app ${brandClass}`}>
@@ -195,15 +222,15 @@ function App() {
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
           <div className="view-mode-toggle">
             <button
-              className={`view-mode-btn ${viewMode === 'menu' ? 'active' : ''}`}
-              onClick={() => { setViewMode('menu'); setSelectedProductRef(null); }}
+              className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
+              onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
               title="Browse by category"
             >
               📂 Menu
             </button>
             <button
-              className={`view-mode-btn ${viewMode === 'constructs' ? 'active' : ''}`}
-              onClick={() => { setViewMode('constructs'); setSelectedProductRef(null); }}
+              className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
+              onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
               title="Browse by product construct"
             >
               🧬 Constructs
@@ -223,10 +250,10 @@ function App() {
       </header>
 
       {/* Floating Diff button */}
-      {menu && viewMode !== 'diff' && (
+      {menu && activeTab !== 'diff' && (
         <button
           className="fab-diff"
-          onClick={() => { setViewMode('diff'); setSelectedProductRef(null); }}
+          onClick={() => { navigate('/diff'); setSelectedProductRef(null); }}
           title="Compare menus across environments"
         >
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
@@ -259,21 +286,19 @@ function App() {
         </aside>
 
         <main className="app-main">
-          {searchQuery ? (
-            <SearchResults
-              menu={menu}
-              query={searchQuery}
-              onProductSelect={handleProductSelect}
-              onCategorySelect={handleCategorySelect}
-            />
-          ) : selectedProductRef ? (
-            <ProductDetail menu={menu} productRef={selectedProductRef} activeBrand={activeBrand} onProductSelect={handleProductSelect} />
-          ) : viewMode === 'constructs' ? (
-            <ConstructView menu={menu} onProductSelect={handleProductSelect} />
-          ) : viewMode === 'diff' ? (
-            <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />
-          ) : (
-            <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
+          {mainContent ?? (
+            <Routes>
+              <Route path="/menu" element={
+                <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
+              } />
+              <Route path="/constructs" element={
+                <ConstructView menu={menu} onProductSelect={handleProductSelect} />
+              } />
+              <Route path="/diff" element={
+                <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />
+              } />
+              <Route path="*" element={<Navigate to="/menu" replace />} />
+            </Routes>
           )}
         </main>
       </div>
