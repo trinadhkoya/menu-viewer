@@ -1,7 +1,8 @@
 /**
  * Menupedia wordmark logo — clean text-only.
- * Uses Poppins 800.  Accepts an optional colour override
- * so the welcome page can tint the logo to the active brand.
+ * Uses the active brand's heading font (falls back to Poppins).
+ * Accepts an optional colour override so the welcome page can
+ * tint the logo to the active brand.
  */
 
 interface MenupediaLogoProps {
@@ -20,7 +21,7 @@ export function MenupediaLogo({ size = 28, color, className = '' }: MenupediaLog
       className={`menupedia-logo ${className}`}
       aria-label="menupedia"
       style={{
-        fontFamily: '"Poppins", sans-serif',
+        fontFamily: 'var(--brand-font-heading, "Poppins"), sans-serif',
         fontWeight: 800,
         fontSize: size,
         color: color ?? INSPIRE_RED,
