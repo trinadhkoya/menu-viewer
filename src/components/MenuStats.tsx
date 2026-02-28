@@ -115,9 +115,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
     <div className="menu-stats">
       <h2>Menu Overview</h2>
       <p className="menu-name">{stats.menuType}</p>
-      <span className={`badge ${stats.isAvailable ? 'badge--available' : 'badge--unavailable'}`}>
-        {stats.isAvailable ? '✓ Available' : '✗ Unavailable'}
-      </span>
+      <span className={`availability-dot ${stats.isAvailable ? 'available' : 'unavailable'}`} title={stats.isAvailable ? 'Menu Available' : 'Menu Unavailable'} />
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -238,7 +236,7 @@ function ProductCard({ ref_, product, onClick }: ProductCardProps) {
         >
           <div className="product-tooltip-row">
             {product.isAvailable != null && (
-              <span className={`tooltip-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+              <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
             )}
             {product.price != null && (
               <span className="tooltip-price">${product.price.toFixed(2)}</span>

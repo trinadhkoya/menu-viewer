@@ -138,15 +138,11 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
           <h2 className="detail-title">{product.displayName}</h2>
           <CopyRef value={productRef} className="detail-ref" />
           <div className="detail-badges">
-            <span className={`badge ${product.isAvailable ? 'badge--available' : 'badge--unavailable'}`}>
-              {product.isAvailable ? '✓ Available' : '✗ Unavailable'}
-            </span>
+            <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} title={product.isAvailable ? 'Available' : 'Unavailable'} />
             {product.isCombo && <span className="badge badge--combo">Combo</span>}
             {product.isRecipe && <span className="badge badge--recipe">Recipe</span>}
             {product.isVirtual && <span className="badge badge--virtual">Virtual</span>}
             {product.isExclusive && <span className="badge badge--exclusive">Exclusive</span>}
-          </div>
-          <div className="detail-header-actions">
             <button className="detail-compare-btn" onClick={() => setCompareMode(true)} title="Compare this product across environments">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Compare
@@ -251,9 +247,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                           <div className="size-variant-badges">
                             {isDefault && <span className="mini-badge default">Default</span>}
                             {sizeProduct.isAvailable != null && (
-                              <span className={`mini-badge ${sizeProduct.isAvailable ? 'available' : 'unavailable'}`}>
-                                {sizeProduct.isAvailable ? '✓' : '✗'}
-                              </span>
+                              <span className={`availability-dot ${sizeProduct.isAvailable ? 'available' : 'unavailable'}`} title={sizeProduct.isAvailable ? 'Available' : 'Unavailable'} />
                             )}
                             {overrides && <OverrideBadge overrides={overrides} />}
                           </div>
@@ -545,9 +539,7 @@ function IngredientCard({
       {item && (
         <div className="ingredient-meta">
           {item.isAvailable != null && (
-            <span className={`mini-badge ${item.isAvailable ? 'available' : 'unavailable'}`}>
-              {item.isAvailable ? '✓' : '✗'}
-            </span>
+            <span className={`availability-dot ${item.isAvailable ? 'available' : 'unavailable'}`} title={item.isAvailable ? 'Available' : 'Unavailable'} />
           )}
           {item.price != null && item.price > 0 && (
             <span className="ingredient-price">+${item.price.toFixed(2)}</span>
