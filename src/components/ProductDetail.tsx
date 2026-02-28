@@ -427,7 +427,22 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
         </div>
         {expandedSections.has('raw') && (
           <div className="section-body">
-            <pre className="raw-json">{JSON.stringify(product, null, 2)}</pre>
+            <div className="raw-json-wrapper">
+              <button
+                className="raw-json-copy"
+                title="Copy JSON to clipboard"
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(product, null, 2));
+                  const btn = document.activeElement as HTMLButtonElement;
+                  const prev = btn.innerHTML;
+                  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                  setTimeout(() => { btn.innerHTML = prev; }, 1200);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>
+              </button>
+              <pre className="raw-json">{JSON.stringify(product, null, 2)}</pre>
+            </div>
           </div>
         )}
       </section>
