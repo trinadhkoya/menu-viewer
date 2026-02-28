@@ -47,7 +47,6 @@ import {
   CustomizerContext,
   useCustomizerStore,
   selectPriceResult,
-  selectSelectionComplete,
   selectUnsatisfiedGroups,
   selectIsModified,
   selectDrillDownProduct,
@@ -126,7 +125,6 @@ function CustomizerInner({
   const product = useCustomizerStore((s) => s.product);
   const isCombo = useCustomizerStore((s) => s.isCombo);
   const priceResult = useCustomizerStore(selectPriceResult);
-  const selectionComplete = useCustomizerStore(selectSelectionComplete);
   const unsatisfied = useCustomizerStore(selectUnsatisfiedGroups);
   const isModified = useCustomizerStore(selectIsModified);
   const drillDown = useCustomizerStore((s) => s.drillDown);
@@ -172,7 +170,7 @@ function CustomizerInner({
       {/* ── Hero Header (collapses on scroll) ── */}
       <div className={`customizer-hero-header ${heroCollapsed ? 'customizer-hero-header--collapsed' : ''}`}>
         <div className="customizer-hero-nav">
-          <button className="customizer-back" onClick={handleDone} title="Back">
+          <button className="customizer-back" onClick={onClose} title="Back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
 
@@ -183,41 +181,64 @@ function CustomizerInner({
                 <OptimizedImage src={product.imageUrl} alt="" width={32} height={32} />
               </div>
             )}
-            <span className="customizer-hero-collapsed-name">{product.displayName}</span>
-            <span className="customizer-hero-collapsed-price">${priceResult.totalPrice.toFixed(2)}</span>
+            <div className="customizer-hero-collapsed-text">
+              <span className="customizer-hero-collapsed-name">{product.displayName}</span>
+              <div className="customizer-hero-collapsed-meta">
+                <span className="customizer-hero-collapsed-price">${priceResult.totalPrice.toFixed(2)}</span>
+                {priceResult.totalCalories != null && (
+                  <span className="customizer-hero-collapsed-cal">{priceResult.totalCalories} cal</span>
+                )}
+                <CopyRef value={productRef} display={getRefId(productRef)} className="customizer-hero-collapsed-ref" />
+              </div>
+            </div>
           </div>
 
-          {isModified && (
-            <button className="customizer-reset" onClick={reset} title="Reset to defaults">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 105.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <div className="customizer-hero-nav-right">
+            {isModified && (
+              <button className="customizer-reset" onClick={reset} title="Reset to defaults">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 105.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
+            <button
+              className={`customizer-save${!isModified ? ' customizer-save--disabled' : ''}`}
+              disabled={!isModified}
+              onClick={handleDone}
+            >
+              Save
             </button>
-          )}
+          </div>
         </div>
 
         {/* Expanded hero content — hides when scrolled */}
         <div className="customizer-hero-expanded">
-          {product.imageUrl && (
-            <div className="customizer-hero-image">
-              <OptimizedImage src={product.imageUrl} alt="" width={96} height={96} />
+          <div className="customizer-hero-card">
+            {product.imageUrl && (
+              <div className="customizer-hero-image">
+                <OptimizedImage src={product.imageUrl} alt="" width={80} height={80} />
+              </div>
+            )}
+            <div className="customizer-hero-text">
+              <h2 className="customizer-hero-name">{product.displayName}</h2>
+              <div className="customizer-hero-meta">
+                <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
+                <span className="customizer-hero-meta-sep">·</span>
+                {priceResult.totalCalories != null && (
+                  <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
+                )}
+                {priceResult.modifierUpcharge !== 0 && (
+                  <span className={`customizer-hero-delta ${priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
+                    {priceResult.modifierUpcharge > 0 ? '+' : ''}${Math.abs(priceResult.modifierUpcharge).toFixed(2)}
+                  </span>
+                )}
+              </div>
+              <CopyRef value={productRef} display={getRefId(productRef)} className="customizer-hero-ref" />
             </div>
-          )}
-          <h2 className="customizer-hero-name">{product.displayName}</h2>
-          <CopyRef value={productRef} display={getRefId(productRef)} className="customizer-hero-ref" />
-          <div className="customizer-hero-meta">
-            <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
-            {priceResult.totalCalories != null && (
-              <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
-            )}
-            {priceResult.modifierUpcharge !== 0 && (
-              <span className={`customizer-hero-delta ${priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
-                {priceResult.modifierUpcharge > 0 ? '+' : ''}{priceResult.modifierUpcharge.toFixed(2)}
-              </span>
-            )}
           </div>
           {unsatisfied.length > 0 && (
-            <span className="customizer-hero-required-hint">
+            <div className="customizer-hero-required-hint">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               {unsatisfied.length} required {unsatisfied.length === 1 ? 'selection' : 'selections'} remaining
-            </span>
+            </div>
           )}
         </div>
       </div>
@@ -230,26 +251,6 @@ function CustomizerInner({
           <SingleCustomizer onProductSelect={onProductSelect} />
         )}
       </div>
-
-      {/* ── Floating Footer CTA ── */}
-      {!isDrillDown && (
-        <div className="customizer-footer-glass">
-          <button
-            className={`customizer-cta ${!selectionComplete ? 'customizer-cta--disabled' : ''}`}
-            disabled={!selectionComplete}
-            onClick={handleDone}
-          >
-            {!selectionComplete ? (
-              <span className="customizer-cta-label">Complete {unsatisfied.length} required {unsatisfied.length === 1 ? 'group' : 'groups'}</span>
-            ) : (
-              <>
-                <span className="customizer-cta-label">Done</span>
-                <span className="customizer-cta-price">${priceResult.totalPrice.toFixed(2)}</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* ── Nested drill-down overlay ── */}
       {isDrillDown && <NestedSizeCustomizer />}
@@ -635,6 +636,12 @@ function NestedSizeCustomizerInner({
 
   const currentVariant = alternatives?.variants.find((v) => v.ref === selectedSizeRef);
 
+  // Track whether nested state has changed from its initial snapshot
+  const isNestedModified = useMemo(() => {
+    if (selectedSizeRef !== initialSizeRef) return true;
+    return JSON.stringify(sizeModifiers) !== JSON.stringify(initialMods);
+  }, [selectedSizeRef, initialSizeRef, sizeModifiers, initialMods]);
+
   const handleSizeChange = useCallback((ref: string) => {
     setSelectedSizeRef(ref);
     if (existingState?.subItemId === ref && existingState.selection) {
@@ -678,8 +685,8 @@ function NestedSizeCustomizerInner({
   if (!alternatives || alternatives.variants.length === 0) {
     return (
       <div className="customizer-nested">
-        <button className="customizer-nested-back" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <button className="customizer-back" onClick={onBack}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Back
         </button>
         <p className="customizer-empty">No size options available</p>
@@ -689,56 +696,91 @@ function NestedSizeCustomizerInner({
 
   return (
     <div className="customizer-nested">
-      {/* Nested Header */}
+      {/* Nested Header — close + save */}
       <div className="customizer-nested-header">
-        <button className="customizer-nested-back" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Back
+        <button className="customizer-back" onClick={onBack} title="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
+        {currentVariant?.product.imageUrl && (
+          <div className="customizer-nested-img">
+            <OptimizedImage src={currentVariant.product.imageUrl} alt="" width={32} height={32} />
+          </div>
+        )}
         <div className="customizer-nested-title">
-          <strong>{virtualProduct.displayName}</strong>
-          <span className="customizer-nested-subtitle">{alternatives.groupName}</span>
+          <strong>{currentVariant?.product.displayName ?? virtualProduct.displayName}</strong>
+          <div className="customizer-nested-meta">
+            {currentVariant?.product.price != null && (
+              <span className="customizer-nested-meta-price">${currentVariant.product.price.toFixed(2)}</span>
+            )}
+            {(currentVariant?.product.calories ?? currentVariant?.product.nutrition?.totalCalories) != null && (
+              <span className="customizer-nested-meta-cal">
+                {currentVariant!.product.calories ?? currentVariant!.product.nutrition?.totalCalories} cal
+              </span>
+            )}
+            <CopyRef value={selectedSizeRef} display={getRefId(selectedSizeRef)} className="customizer-nested-meta-ref" />
+          </div>
         </div>
+        <button
+          className={`customizer-save${!isNestedModified ? ' customizer-save--disabled' : ''}`}
+          disabled={!isNestedModified}
+          onClick={() => onSave(parentGroupRef, parentItemRef, selectedSizeRef, sizeModifiers)}
+        >
+          Save
+        </button>
       </div>
 
-      {/* Size Pills */}
-      <div className="customizer-nested-sizes">
-        {alternatives.variants.map((v) => {
-          const isActive = v.ref === selectedSizeRef;
-          // Case 3: Size variant upcharge = selected size price - default size price
-          const upcharge = getSizeVariantUpcharge(menu, virtualProduct, v.ref);
-          return (
-            <button
-              key={v.ref}
-              className={`customizer-nested-size-pill ${isActive ? 'active' : ''}`}
-              onClick={() => handleSizeChange(v.ref)}
-            >
-              <span className="customizer-nested-size-name">{v.product.displayName ?? getRefId(v.ref)}</span>
-              {v.isDefault && <span className="customizer-nested-size-default">Default</span>}
-              {upcharge > 0 && <span className="customizer-nested-size-upcharge">+${upcharge.toFixed(2)}</span>}
-            </button>
-          );
-        })}
-      </div>
+      {/* Scrollable body */}
+      <div className="customizer-nested-body">
+        {/* Hero — product image */}
+        {currentVariant?.product.imageUrl && (
+          <div className="customizer-nested-hero">
+            <OptimizedImage
+              src={currentVariant.product.imageUrl}
+              alt={currentVariant.product.displayName ?? ''}
+              width={120}
+              height={120}
+            />
+          </div>
+        )}
 
-      {/* Current size's ingredient groups */}
-      {currentVariant && (
-        <div className="customizer-nested-body">
-          {currentVariant.product.imageUrl && (
-            <div className="customizer-nested-hero">
-              <OptimizedImage
-                src={currentVariant.product.imageUrl}
-                alt={currentVariant.product.displayName ?? ''}
-                width={80}
-                height={80}
-              />
-              <span className="customizer-nested-hero-name">{currentVariant.product.displayName}</span>
-              {currentVariant.product.calories != null && (
-                <span className="customizer-nested-hero-cal">{currentVariant.product.calories} cal</span>
-              )}
-            </div>
-          )}
+        {/* Size — Segmented Tab Control */}
+        <div className="customizer-segment-section">
+          <span className="customizer-segment-label">{alternatives.groupName || 'Size'}</span>
+          <div
+            className="customizer-segment"
+            style={{ '--segment-count': alternatives.variants.length } as React.CSSProperties}
+          >
+            {/* Sliding indicator */}
+            <div
+              className="customizer-segment-indicator"
+              style={{
+                width: `${100 / alternatives.variants.length}%`,
+                transform: `translateX(${alternatives.variants.findIndex((v) => v.ref === selectedSizeRef) * 100}%)`,
+              }}
+            />
+            {alternatives.variants.map((v) => {
+              const isActive = v.ref === selectedSizeRef;
+              const upcharge = getSizeVariantUpcharge(menu, virtualProduct, v.ref);
+              return (
+                <button
+                  key={v.ref}
+                  className={`customizer-segment-tab ${isActive ? 'active' : ''}`}
+                  onClick={() => handleSizeChange(v.ref)}
+                >
+                  <span className="customizer-segment-tab-name">
+                    {v.product.displayName ?? getRefId(v.ref)}
+                  </span>
+                  {upcharge > 0 && (
+                    <span className="customizer-segment-tab-upcharge">+${upcharge.toFixed(2)}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
+        {/* Modifier groups for the selected size */}
+        {currentVariant && (
           <NestedSingleCustomizer
             menu={menu}
             selectedIngredients={sizeModifiers}
@@ -748,17 +790,7 @@ function NestedSizeCustomizerInner({
             onDecrease={handleDecrease}
             onIntensityChange={handleIntensityChange}
           />
-        </div>
-      )}
-
-      {/* Save / Done button */}
-      <div className="customizer-nested-footer">
-        <button
-          className="customizer-nested-done"
-          onClick={() => onSave(parentGroupRef, parentItemRef, selectedSizeRef, sizeModifiers)}
-        >
-          Done — Apply {currentVariant?.product.displayName ?? 'Selection'}
-        </button>
+        )}
       </div>
     </div>
   );
@@ -846,6 +878,7 @@ function NestedGroupSection({
       <button className="customizer-section-header" onClick={() => setExpanded(!expanded)}>
         <div className="customizer-section-title-row">
           <h3 className="customizer-section-name">{groupName}</h3>
+          <CopyRef value={groupRef} display={getRefId(groupRef)} className="customizer-section-ref" />
           {isUnsatisfied && <span className="customizer-section-tag required">Required</span>}
           {isRecipe && <span className="customizer-section-tag recipe">Recipe</span>}
         </div>
@@ -990,6 +1023,7 @@ function NestedOptionRow({
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
         </div>
+        <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && (
           <span className="customizer-option-sub">{intensityName}</span>
         )}
@@ -1168,6 +1202,7 @@ function ComboCustomizer({ onProductSelect }: { onProductSelect?: (ref: string) 
                     <OptimizedImage src={p.imageUrl} alt={p.displayName ?? ''} width={64} height={64} />
                   )}
                   <span className="customizer-combo-product-name">{p.displayName ?? getRefId(p._ref)}</span>
+                  <CopyRef value={p._ref} display={getRefId(p._ref)} className="customizer-combo-product-ref" />
                   {p.isDefault && <span className="customizer-combo-default-badge">Default</span>}
                   {upcharge > 0 && (
                     <span className="customizer-combo-upcharge">+${upcharge.toFixed(2)}</span>
@@ -1187,6 +1222,7 @@ function ComboCustomizer({ onProductSelect }: { onProductSelect?: (ref: string) 
           )}
           <div>
             <strong>{activeOption.products[0].displayName}</strong>
+            <CopyRef value={activeOption.products[0]._ref} display={getRefId(activeOption.products[0]._ref)} className="customizer-combo-entree-ref" />
             <span className="customizer-combo-entree-note">Included in combo</span>
           </div>
         </div>
