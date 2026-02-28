@@ -422,6 +422,28 @@ function ModifierOptionRow({
     return variant?.product?.displayName ?? null;
   }, [item?.subItemId, virtualAlts]);
 
+  // Adjustment summary — shows what was modified in the nested customizer
+  const adjustmentSummary = useMemo(() => {
+    if (!item?.selection || !isSelected) return null;
+
+    // Ingredient drill-down: compare against the item's own initial ingredients
+    if (hasIngredientDrillDown && menuItem) {
+      const initial = getInitialSelectedIngredients(menu, menuItem as Product);
+      return getModificationSummary(menu, item.selection, initial);
+    }
+
+    // Virtual drill-down: compare against the selected size variant's initial ingredients
+    if (hasVirtualDrillDown && item.subItemId) {
+      const sizeProduct = resolveRef(menu, item.subItemId) as Product | undefined;
+      if (sizeProduct) {
+        const initial = getInitialSelectedIngredients(menu, sizeProduct);
+        return getModificationSummary(menu, item.selection, initial);
+      }
+    }
+
+    return null;
+  }, [hasIngredientDrillDown, hasVirtualDrillDown, item?.selection, item?.subItemId, isSelected, menu, menuItem]);
+
   // Group-level capacity check
   const groupSQ = getGroupSelectionQuantity(menu, groupRef);
   const groupTotal = getGroupSelectedCount(group);
@@ -510,6 +532,16 @@ function ModifierOptionRow({
         )}
         {selectedSizeName && isSelected && hasDrillDown && (
           <span className="customizer-option-sub">{selectedSizeName}</span>
+        )}
+        {adjustmentSummary && adjustmentSummary.length > 0 && isSelected && (
+          <div className="customizer-option-adjustments">
+            {adjustmentSummary.map((mod, i) => (
+              <span key={i} className={`customizer-adjustment-chip ${mod.action.toLowerCase()}`}>
+                {mod.action === 'ADD' ? '+' : mod.action === 'REMOVE' ? '−' : '⇄'}
+                {' '}{mod.displayName}{mod.quantity > 1 ? ` ×${mod.quantity}` : ''}
+              </span>
+            ))}
+          </div>
         )}
         {hasIntensities && isSelected && !hasDrillDown && (
           <div onClick={(e) => e.stopPropagation()}>

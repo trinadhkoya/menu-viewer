@@ -9396,6 +9396,58 @@ body,
   display: block;
 }
 
+/* Adjustment summary chips shown on parent row after nested customization */
+.customizer-option-adjustments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.customizer-adjustment-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.customizer-adjustment-chip.add {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.customizer-adjustment-chip.remove {
+  background: #fee2e2;
+  color: #991b1b;
+  text-decoration: line-through;
+  text-decoration-color: #991b1b40;
+}
+
+.customizer-adjustment-chip.change {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Dark theme */
+[data-theme="dark"] .customizer-adjustment-chip.add {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .customizer-adjustment-chip.remove {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .customizer-adjustment-chip.change {
+  background: #1e1b4b;
+  color: #a5b4fc;
+}
+
 .customizer-option-meta {
   display: flex;
   gap: 8px;
