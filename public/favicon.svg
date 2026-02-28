@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Outer red circle -->
+  <circle cx="256" cy="256" r="256" fill="#D63B3B"/>
+  <!-- White ring -->
+  <circle cx="256" cy="256" r="222" fill="none" stroke="#fff" stroke-width="18"/>
+  <!-- Inner red fill -->
+  <circle cx="256" cy="256" r="213" fill="#D63B3B"/>
+  <!-- Crossed fork & spoon -->
+  <g fill="#fff">
+    <!-- Fork — rotated -30° -->
+    <g transform="rotate(-30 256 256)">
+      <!-- Tines -->
+      <rect x="236" y="80" width="8" height="60" rx="4"/>
+      <rect x="252" y="80" width="8" height="60" rx="4"/>
+      <rect x="268" y="80" width="8" height="60" rx="4"/>
+      <!-- Bridge -->
+      <rect x="233" y="136" width="46" height="14" rx="7"/>
+      <!-- Neck -->
+      <rect x="249" y="148" width="14" height="40" rx="7"/>
+      <!-- Handle -->
+      <rect x="245" y="186" width="22" height="160" rx="11"/>
+    </g>
+    <!-- Spoon — rotated +30° -->
+    <g transform="rotate(30 256 256)">
+      <!-- Bowl -->
+      <ellipse cx="256" cy="112" rx="38" ry="46"/>
+      <!-- Neck -->
+      <rect x="249" y="154" width="14" height="32" rx="7"/>
+      <!-- Handle -->
+      <rect x="245" y="184" width="22" height="164" rx="11"/>
+    </g>
+  </g>
+</svg>
