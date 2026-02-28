@@ -110,6 +110,23 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
     setSelectedIngredients((prev) => decreaseQuantity(prev, groupRef, itemRef));
   }, []);
 
+  const handleIntensityChange = useCallback((groupRef: string, itemRef: string, subItemId: string) => {
+    setSelectedIngredients((prev) => {
+      const groupState = prev[groupRef];
+      if (!groupState?.[itemRef]) return prev;
+      return {
+        ...prev,
+        [groupRef]: {
+          ...groupState,
+          [itemRef]: {
+            ...groupState[itemRef],
+            subItemId,
+          },
+        },
+      };
+    });
+  }, []);
+
   const handleReset = useCallback(() => {
     setSelectedIngredients(initialIngredients);
     setComboSelection(initialComboSelection);
@@ -218,6 +235,7 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
             onToggle={handleToggle}
             onIncrease={handleIncrease}
             onDecrease={handleDecrease}
+            onIntensityChange={handleIntensityChange}
             onProductSelect={onProductSelect}
           />
         )}
@@ -251,6 +269,7 @@ interface SingleCustomizerProps {
   onToggle: (groupRef: string, itemRef: string) => void;
   onIncrease: (groupRef: string, itemRef: string) => void;
   onDecrease: (groupRef: string, itemRef: string) => void;
+  onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
 }
 
@@ -262,6 +281,7 @@ function SingleCustomizer({
   onToggle,
   onIncrease,
   onDecrease,
+  onIntensityChange,
   onProductSelect,
 }: SingleCustomizerProps) {
   return (
@@ -277,6 +297,7 @@ function SingleCustomizer({
           onToggle={onToggle}
           onIncrease={onIncrease}
           onDecrease={onDecrease}
+          onIntensityChange={onIntensityChange}
           onProductSelect={onProductSelect}
         />
       ))}
@@ -309,6 +330,7 @@ interface ModifierGroupSectionProps {
   onToggle: (groupRef: string, itemRef: string) => void;
   onIncrease: (groupRef: string, itemRef: string) => void;
   onDecrease: (groupRef: string, itemRef: string) => void;
+  onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
 }
 
@@ -321,6 +343,7 @@ function ModifierGroupSection({
   onToggle,
   onIncrease,
   onDecrease,
+  onIntensityChange,
   onProductSelect,
 }: ModifierGroupSectionProps) {
   const [expanded, setExpanded] = useState(true);
@@ -373,6 +396,7 @@ function ModifierGroupSection({
               onToggle={onToggle}
               onIncrease={onIncrease}
               onDecrease={onDecrease}
+              onIntensityChange={onIntensityChange}
               onProductSelect={onProductSelect}
             />
           ))}
@@ -396,6 +420,7 @@ interface ModifierItemCardProps {
   onToggle: (groupRef: string, itemRef: string) => void;
   onIncrease: (groupRef: string, itemRef: string) => void;
   onDecrease: (groupRef: string, itemRef: string) => void;
+  onIntensityChange: (groupRef: string, itemRef: string, subItemId: string) => void;
   onProductSelect?: (ref: string) => void;
 }
 
@@ -409,6 +434,7 @@ function ModifierItemCard({
   onToggle,
   onIncrease,
   onDecrease,
+  onIntensityChange,
   onProductSelect,
 }: ModifierItemCardProps) {
   const menuItem = resolveRef(menu, itemRef) as Product | Modifier | undefined;
@@ -495,10 +521,7 @@ function ModifierItemCard({
             menu={menu}
             itemRef={itemRef}
             currentSubItemId={item.subItemId}
-            onSelect={() => {
-              // Direct intensity change via clicking a pill
-              // TODO: wire up intensity selection to state
-            }}
+            onSelect={(subItemId) => onIntensityChange(groupRef, itemRef, subItemId)}
           />
         )}
         <div className="customizer-item-meta">
@@ -551,7 +574,7 @@ interface IntensitySelectorProps {
   onSelect: (subItemId: string) => void;
 }
 
-function IntensitySelector({ menu, itemRef, currentSubItemId }: IntensitySelectorProps) {
+function IntensitySelector({ menu, itemRef, currentSubItemId, onSelect }: IntensitySelectorProps) {
   const product = resolveRef(menu, itemRef) as Product | undefined;
   if (!product?.modifierGroupRefs) return null;
 
@@ -566,13 +589,18 @@ function IntensitySelector({ menu, itemRef, currentSubItemId }: IntensitySelecto
         const isActive = modRef === currentSubItemId;
         const isExclusive = isExclusiveRef(menu, modRef);
         return (
-          <span
+          <button
             key={modRef}
+            type="button"
             className={`customizer-intensity-pill ${isActive ? 'active' : ''} ${isExclusive ? 'exclusive' : ''}`}
             title={mod?.displayName}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(modRef);
+            }}
           >
             {mod?.displayName ?? getRefId(modRef)}
-          </span>
+          </button>
         );
       })}
     </div>
