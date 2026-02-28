@@ -34,6 +34,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { MenupediaLogo } from './components/MenupediaLogo';
+import { BRAND_ICONS } from './components/BrandIcons';
 import './App.css';
 
 interface BreadcrumbItem {
@@ -181,7 +182,12 @@ function App() {
       <header className="app-header">
         <div className="header-left">
           <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
-            <MenupediaLogo size={22} />
+            {activeBrand && BRAND_ICONS[activeBrand] && (
+              <span className="header-brand-icon">
+                {(() => { const Icon = BRAND_ICONS[activeBrand]; return <Icon size={26} />; })()}
+              </span>
+            )}
+            <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
           </h1>
           <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
@@ -203,6 +209,15 @@ function App() {
               🧬 Constructs
             </button>
           </div>
+          <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
+            <input
+              type="checkbox"
+              checked={!showRefs}
+              onChange={() => setShowRefs((v) => !v)}
+            />
+            <span className="header-toggle-slider" />
+            <span className="header-toggle-label">Hide IDs</span>
+          </label>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
       </header>
@@ -230,17 +245,6 @@ function App() {
             onProductSelect={handleProductSelect}
           />
           <div className="sidebar-footer">
-            <div className="sidebar-toggle-row">
-              <label className="sidebar-toggle" title="Show/hide product IDs, category IDs, and ref codes">
-                <input
-                  type="checkbox"
-                  checked={showRefs}
-                  onChange={() => setShowRefs((v) => !v)}
-                />
-                <span className="sidebar-toggle-slider" />
-                <span className="sidebar-toggle-label">Show IDs</span>
-              </label>
-            </div>
             <div className="sidebar-toggle-row">
               <span className="sidebar-footer-label">Menu size</span>
               <span className="sidebar-footer-value">

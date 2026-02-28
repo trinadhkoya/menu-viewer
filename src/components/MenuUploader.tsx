@@ -267,10 +267,19 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
     </details>
   );
 
+  const BrandIcon = BRAND_ICONS[selectedBrand];
+
   return (
-    <div className="uploader-container">
+    <div className={`uploader-container brand-${selectedBrand}`}>
       <div className="uploader-card">
-        <MenupediaLogo size={42} />
+        {/* Brand hero — icon + logo morph on selection */}
+        <div className="uploader-hero">
+          <div className="uploader-hero-icon" key={selectedBrand}>
+            {BrandIcon && <BrandIcon size={56} />}
+          </div>
+          <MenupediaLogo size={38} color="var(--color-accent)" />
+          <p className="uploader-hero-brand">{currentBrand.label}</p>
+        </div>
         <p className="uploader-subtitle">
           Load your <code>menu.json</code> to explore categories, products &amp; modifiers.
         </p>

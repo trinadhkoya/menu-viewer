@@ -73,26 +73,14 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
           {categoryProducts.map(({ ref, product, subCategory }) => (
             <div
               key={ref}
-              className={`product-card ${product.isCombo ? 'product-card--combo' : ''}`}
+              className="product-card"
               onClick={() => onProductSelect(ref, categoryData.displayName ?? undefined)}
             >
               {product.imageUrl && (
                 <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
               )}
               <div className="product-card-body">
-                <div className="product-card-header">
-                  <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
-                  <span className="product-card-name">{product.displayName || getRefId(ref)}</span>
-                </div>
-                <CopyRef value={ref} display={getRefId(ref)} className="product-card-ref" />
-                {subCategory && <span className="product-card-subcategory">{subCategory}</span>}
-                <div className="product-card-meta">
-                  {product.price != null && <span className="product-card-price">${product.price.toFixed(2)}</span>}
-                  {product.calories != null && <span className="product-card-cal">{product.calories} cal</span>}
-                </div>
-                {product.description && (
-                  <p className="product-card-desc">{product.description.slice(0, 80)}</p>
-                )}
+                <span className="product-card-name">{product.displayName || getRefId(ref)}</span>
               </div>
             </div>
           ))}

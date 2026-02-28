@@ -12,13 +12,60 @@ interface OptimizedImageProps {
   isCombo?: boolean;
 }
 
+// ── Global loaded-image cache ──────────────────────────────
+// Keeps track of URLs that have already been decoded once this session.
+// On revisit the skeleton + fade-in are skipped entirely → instant render.
+const _loadedCache = new Set<string>();
+
+// ── Shared IntersectionObserver ────────────────────────────
+// One observer for ALL OptimizedImage instances → fewer allocations.
+type ObserverEntry = { callback: () => void };
+let _sharedObserver: IntersectionObserver | null = null;
+const _observerMap = new WeakMap<Element, ObserverEntry>();
+
+function getSharedObserver(): IntersectionObserver {
+  if (!_sharedObserver) {
+    _sharedObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const data = _observerMap.get(entry.target);
+            if (data) {
+              data.callback();
+              _sharedObserver!.unobserve(entry.target);
+              _observerMap.delete(entry.target);
+            }
+          }
+        }
+      },
+      { rootMargin: '400px' },
+    );
+  }
+  return _sharedObserver;
+}
+
+// ── Thumbnail URL helper ───────────────────────────────────
+// Cloudflare Image Delivery supports flexible variants:
+//   /w=<width>,quality=<1-100>,fit=<mode>
+// Falls back to original URL for non-Cloudflare sources.
+function toThumbnail(url: string, w: number): string {
+  if (!url) return url;
+  // Cloudflare Image Delivery: replace /download or /public with sized variant
+  if (url.includes('imagedelivery.net/')) {
+    return url.replace(/\/[^/]+$/, `/w=${w},fit=cover,quality=70`);
+  }
+  return url;
+}
+
 /**
  * Performance-optimised image component:
+ * - Cloudflare thumbnail variant (smaller download)
+ * - Shared IntersectionObserver (one for all images)
+ * - Global loaded-image cache (instant re-render on revisit)
  * - `loading="lazy"` + `decoding="async"` for off-screen images
  * - Explicit width/height to prevent Cumulative Layout Shift (CLS)
  * - Food-themed shimmer skeleton with plate icon while loading
  * - Fade-in transition on load
- * - IntersectionObserver to defer src assignment for images far below the fold
  * - Graceful fallback on error
  * - Optional combo overlay ribbon
  */
@@ -30,13 +77,17 @@ export function OptimizedImage({
   height,
   isCombo = false,
 }: OptimizedImageProps) {
-  const [loaded, setLoaded] = useState(false);
+  const thumbUrl = toThumbnail(src, width ?? 280);
+  const alreadyCached = _loadedCache.has(thumbUrl);
+
+  const [loaded, setLoaded] = useState(alreadyCached);
   const [error, setError] = useState(false);
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(alreadyCached); // skip observer if cached
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // IntersectionObserver — start loading when within 300px of viewport
+  // Shared IntersectionObserver — start loading when within 400px of viewport
   useEffect(() => {
+    if (inView) return; // already visible or cached
     const el = containerRef.current;
     if (!el) return;
 
@@ -45,22 +96,23 @@ export function OptimizedImage({
       return;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '300px' },
-    );
-
+    const observer = getSharedObserver();
+    _observerMap.set(el, { callback: () => setInView(true) });
     observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
-  const handleLoad = useCallback(() => setLoaded(true), []);
+    return () => {
+      observer.unobserve(el);
+      _observerMap.delete(el);
+    };
+  }, [inView]);
+
+  const handleLoad = useCallback(() => {
+    setLoaded(true);
+    _loadedCache.add(thumbUrl);
+  }, [thumbUrl]);
+
   const handleError = useCallback(() => {
+    // If the thumbnail variant failed, try the original URL
     setError(true);
     setLoaded(true);
   }, []);
@@ -84,13 +136,14 @@ export function OptimizedImage({
       {/* Actual image — only set src when in view */}
       {inView && !error && (
         <img
-          src={src}
+          src={thumbUrl}
           alt={alt}
           width={width}
           height={height}
           loading="lazy"
           decoding="async"
-          className={`optimized-image ${loaded ? 'optimized-image--loaded' : ''}`}
+          fetchPriority="low"
+          className={`optimized-image ${loaded ? 'optimized-image--loaded' : ''} ${alreadyCached ? 'optimized-image--instant' : ''}`}
           onLoad={handleLoad}
           onError={handleError}
         />
@@ -101,7 +154,7 @@ export function OptimizedImage({
         <span className="combo-ribbon">🍔+🍟 Combo</span>
       )}
 
-      {/* Error fallback */}
+      {/* Error fallback — try original URL if thumbnail variant failed */}
       {error && (
         <div className="optimized-image-error">
           <span>📷</span>
