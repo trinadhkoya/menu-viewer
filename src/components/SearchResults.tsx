@@ -106,8 +106,13 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
 
       {totalResults === 0 && (
         <div className="search-empty">
-          <p>No results found for "{query}"</p>
-          <p className="search-empty-hint">Try searching by product name, modifier name, or category</p>
+          <svg className="search-empty-icon" viewBox="0 0 64 64" fill="none" width="64" height="64">
+            <circle cx="28" cy="28" r="20" stroke="currentColor" strokeWidth="2.5" />
+            <line x1="42" y1="42" x2="56" y2="56" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            <line x1="20" y1="28" x2="36" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+          </svg>
+          <p className="search-empty-title">No results for &ldquo;{query}&rdquo;</p>
+          <p className="search-empty-hint">Try a different spelling, a product name, modifier, or category keyword.</p>
         </div>
       )}
     </div>

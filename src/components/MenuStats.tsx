@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import type { Menu, Product } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
@@ -69,22 +69,29 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
           <span className="products-count">{categoryProducts.length} products</span>
         </div>
 
+        {categoryProducts.length === 0 ? (
+          <div className="category-empty">
+            <svg className="category-empty-icon" viewBox="0 0 64 64" fill="none" width="56" height="56">
+              <rect x="8" y="14" width="48" height="36" rx="4" stroke="currentColor" strokeWidth="2" />
+              <path d="M8 24h48" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+              <circle cx="32" cy="38" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+              <line x1="29" y1="38" x2="35" y2="38" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+            </svg>
+            <p className="category-empty-title">No products in this category</p>
+            <p className="category-empty-hint">This category may only contain subcategories, or it&rsquo;s currently empty.</p>
+          </div>
+        ) : (
         <div className="product-grid">
-          {categoryProducts.map(({ ref, product, subCategory }) => (
-            <div
+          {categoryProducts.map(({ ref, product }) => (
+            <ProductCard
               key={ref}
-              className="product-card"
+              ref_={ref}
+              product={product}
               onClick={() => onProductSelect(ref, categoryData.displayName ?? undefined)}
-            >
-              {product.imageUrl && (
-                <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
-              )}
-              <div className="product-card-body">
-                <span className="product-card-name">{product.displayName || getRefId(ref)}</span>
-              </div>
-            </div>
+            />
           ))}
         </div>
+        )}
       </div>
     );
   }
@@ -144,6 +151,78 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ── Product card with hover preview tooltip ── */
+interface ProductCardProps {
+  ref_: string;
+  product: Product;
+  onClick: () => void;
+}
+
+function ProductCard({ ref_, product, onClick }: ProductCardProps) {
+  const [showTip, setShowTip] = useState(false);
+  const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTipPos({ x: rect.left + rect.width / 2, y: rect.top });
+    setShowTip(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    hideTimer.current = setTimeout(() => setShowTip(false), 120);
+  }, []);
+
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+
+  const hasInfo = product.price != null || product.calories != null || product.isAvailable != null || product.isCombo;
+
+  return (
+    <div
+      ref={cardRef}
+      className="product-card"
+      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {product.imageUrl && (
+        <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
+      )}
+      <div className="product-card-body">
+        <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+      </div>
+
+      {/* Hover preview tooltip */}
+      {showTip && hasInfo && tipPos && (
+        <div
+          className="product-tooltip"
+          style={{ left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <div className="product-tooltip-row">
+            {product.isAvailable != null && (
+              <span className={`tooltip-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+            )}
+            {product.price != null && (
+              <span className="tooltip-price">${product.price.toFixed(2)}</span>
+            )}
+            {product.calories != null && (
+              <span className="tooltip-cal">{product.calories} cal</span>
+            )}
+            {product.isCombo && (
+              <span className="tooltip-combo">Combo</span>
+            )}
+          </div>
+          {product.description && (
+            <p className="tooltip-desc">{product.description.slice(0, 90)}{product.description.length > 90 ? '…' : ''}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

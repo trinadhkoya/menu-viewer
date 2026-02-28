@@ -82,8 +82,12 @@ export function OptimizedImage({
 
   const [loaded, setLoaded] = useState(alreadyCached);
   const [error, setError] = useState(false);
+  // When the thumbnail variant fails, retry with the original src before giving up
+  const [useFallback, setUseFallback] = useState(false);
   const [inView, setInView] = useState(alreadyCached); // skip observer if cached
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const activeSrc = useFallback ? src : thumbUrl;
 
   // Shared IntersectionObserver — start loading when within 400px of viewport
   useEffect(() => {
@@ -108,14 +112,19 @@ export function OptimizedImage({
 
   const handleLoad = useCallback(() => {
     setLoaded(true);
-    _loadedCache.add(thumbUrl);
-  }, [thumbUrl]);
+    _loadedCache.add(activeSrc);
+  }, [activeSrc]);
 
   const handleError = useCallback(() => {
-    // If the thumbnail variant failed, try the original URL
+    // If the thumbnail variant failed, retry with original URL
+    if (!useFallback && thumbUrl !== src) {
+      setUseFallback(true);
+      return;
+    }
+    // Both failed — show error state
     setError(true);
     setLoaded(true);
-  }, []);
+  }, [useFallback, thumbUrl, src]);
 
   return (
     <div
@@ -136,7 +145,7 @@ export function OptimizedImage({
       {/* Actual image — only set src when in view */}
       {inView && !error && (
         <img
-          src={thumbUrl}
+          src={activeSrc}
           alt={alt}
           width={width}
           height={height}
@@ -154,11 +163,15 @@ export function OptimizedImage({
         <span className="combo-ribbon">🍔+🍟 Combo</span>
       )}
 
-      {/* Error fallback — try original URL if thumbnail variant failed */}
+      {/* Error fallback — both thumbnail and original failed */}
       {error && (
         <div className="optimized-image-error">
-          <span>📷</span>
-          <span className="optimized-image-error-text">No image</span>
+          <svg className="optimized-image-error-icon" viewBox="0 0 48 48" fill="none" width="36" height="36">
+            <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="16" cy="20" r="4" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path d="M4 34 l12-10 6 5 10-12 12 17" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" />
+          </svg>
+          <span className="optimized-image-error-text">Image unavailable</span>
         </div>
       )}
     </div>
