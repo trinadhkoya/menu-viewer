@@ -220,58 +220,76 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
     ? resolveRef(menu, drillDown.itemRef) as Product | undefined
     : undefined;
 
+  // ── Progress tracking ──
+  const totalRequiredGroups = unsatisfiedGroups.length + Object.keys(selectedIngredients).filter(
+    (g) => !unsatisfiedGroups.includes(g) && (() => {
+      const sq = getGroupSelectionQuantity(menu, g);
+      return sq.min != null && sq.min > 0;
+    })()
+  ).length;
+  const satisfiedRequired = totalRequiredGroups - unsatisfiedGroups.length;
+  const progressPct = totalRequiredGroups > 0 ? (satisfiedRequired / totalRequiredGroups) * 100 : 100;
+
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
   return (
     <div className="customizer">
       {/* Header */}
       <div className="customizer-header">
         <button className="customizer-back" onClick={onClose} title="Back to detail view">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
+        {product.imageUrl && (
+          <img src={product.imageUrl} alt="" className="customizer-header-avatar" />
+        )}
         <div className="customizer-header-info">
-          <h2 className="customizer-title">Customize</h2>
-          <span className="customizer-product-name">{product.displayName}</span>
+          <h2 className="customizer-title">{product.displayName}</h2>
+          <span className="customizer-product-name">
+            ${priceResult.totalPrice.toFixed(2)}
+            {priceResult.totalCalories != null && <> &middot; {priceResult.totalCalories} cal</>}
+          </span>
         </div>
         {isModified && (
           <button className="customizer-reset" onClick={handleReset} title="Reset to defaults">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 105.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Reset
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 105.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         )}
       </div>
 
-      {/* Product Hero */}
-      <div className="customizer-hero">
-        {product.imageUrl && (
-          <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="customizer-hero-image" width={120} height={120} />
-        )}
-        <div className="customizer-hero-info">
-          <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
-          {priceResult.totalCalories != null && (
-            <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
-          )}
-          {priceResult.modifierUpcharge !== 0 && (
-            <span className={`customizer-upcharge ${priceResult.modifierUpcharge > 0 ? 'positive' : 'negative'}`}>
-              {priceResult.modifierUpcharge > 0 ? '+' : ''}{priceResult.modifierUpcharge.toFixed(2)} customization
-            </span>
-          )}
+      {/* Progress bar for required groups */}
+      {totalRequiredGroups > 0 && (
+        <div className="customizer-progress">
+          <div className="customizer-progress-bar" style={{ width: `${progressPct}%` }} />
         </div>
-      </div>
+      )}
 
-      {/* Modification Summary Pills */}
+      {/* Modification Summary — collapsible chip */}
       {modSummary.length > 0 && (
         <div className="customizer-summary">
-          {modSummary.map((mod, i) => (
-            <span
-              key={i}
-              className={`customizer-mod-pill customizer-mod-pill--${mod.action.toLowerCase()}`}
-            >
-              {mod.action === 'ADD' && '+ '}
-              {mod.action === 'REMOVE' && '− '}
-              {mod.action === 'CHANGE' && '↻ '}
-              {mod.displayName}
-              {mod.quantity > 1 && ` ×${mod.quantity}`}
-            </span>
-          ))}
+          <button
+            className="customizer-summary-toggle"
+            onClick={() => setSummaryExpanded(!summaryExpanded)}
+          >
+            <span className="customizer-summary-count">{modSummary.length}</span>
+            {modSummary.length === 1 ? 'modification' : 'modifications'}
+            <svg className={`customizer-summary-chevron ${summaryExpanded ? 'open' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          {summaryExpanded && (
+            <div className="customizer-summary-pills">
+              {modSummary.map((mod, i) => (
+                <span
+                  key={i}
+                  className={`customizer-mod-pill customizer-mod-pill--${mod.action.toLowerCase()}`}
+                >
+                  {mod.action === 'ADD' && '+ '}
+                  {mod.action === 'REMOVE' && '− '}
+                  {mod.action === 'CHANGE' && '↻ '}
+                  {mod.displayName}
+                  {mod.quantity > 1 && ` ×${mod.quantity}`}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -314,17 +332,27 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
         )}
       </div>
 
-      {/* Sticky Footer */}
+      {/* Sticky Footer with CTA */}
       <div className="customizer-footer">
-        <div className="customizer-footer-price">
-          <span className="customizer-footer-label">Total</span>
+        <div className="customizer-footer-left">
           <span className="customizer-footer-amount">${priceResult.totalPrice.toFixed(2)}</span>
+          {priceResult.modifierUpcharge !== 0 && (
+            <span className={`customizer-footer-upcharge ${priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
+              {priceResult.modifierUpcharge > 0 ? '+' : ''}{priceResult.modifierUpcharge.toFixed(2)}
+            </span>
+          )}
         </div>
-        {!selectionComplete && (
-          <span className="customizer-footer-warning">
-            Required selections incomplete
-          </span>
-        )}
+        <button
+          className={`customizer-footer-cta ${!selectionComplete ? 'disabled' : ''}`}
+          disabled={!selectionComplete}
+          onClick={onClose}
+        >
+          {!selectionComplete ? (
+            <>{unsatisfiedGroups.length} required left</>
+          ) : (
+            <>Done<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -433,12 +461,13 @@ function ModifierGroupSection({
   const isAtMax = sq.max != null && selectedCount >= sq.max;
 
   return (
-    <div className={`customizer-group ${isUnsatisfied ? 'customizer-group--required' : ''}`}>
-      <div className="customizer-group-header" onClick={() => setExpanded(!expanded)}>
+    <div className={`customizer-group ${isUnsatisfied ? 'customizer-group--required' : ''} ${isAtMax ? 'customizer-group--maxed' : ''}`}>
+      <button className="customizer-group-header" onClick={() => setExpanded(!expanded)}>
         <div className="customizer-group-header-left">
-          <span className="customizer-group-expand">{expanded ? '▼' : '▶'}</span>
+          <svg className={`customizer-group-chevron ${expanded ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <strong className="customizer-group-name">{groupName}</strong>
           {isRecipe && <span className="customizer-group-badge recipe">Recipe</span>}
+          {isUnsatisfied && <span className="customizer-group-badge required">Required</span>}
         </div>
         <div className="customizer-group-header-right">
           {(sq.min != null || sq.max != null) && (
@@ -449,16 +478,10 @@ function ModifierGroupSection({
           <span className={`customizer-group-count ${selectedCount > 0 ? 'active' : ''} ${isAtMax ? 'at-max' : ''}`}>
             {selectedCount}{sq.max != null ? `/${sq.max}` : ''}
           </span>
-          {isAtMax && (
-            <span className="customizer-group-max-badge" title={`Maximum ${sq.max} selected`}>MAX</span>
-          )}
-          {isUnsatisfied && (
-            <span className="customizer-group-required-dot" title="Required — not enough selected">!</span>
-          )}
         </div>
-      </div>
+      </button>
 
-      {expanded && (
+      <div className={`customizer-group-items-wrap ${expanded ? 'expanded' : 'collapsed'}`}>
         <div className="customizer-group-items">
           {Object.entries(group).map(([itemRef, item]) => (
             <ModifierItemCard
@@ -478,7 +501,7 @@ function ModifierGroupSection({
             />
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -578,8 +601,18 @@ function ModifierItemCard({
 
   const isToggleDisabled = actionType === ActionType.STATIC || isDisabledByCapacity;
 
+  // Build class list
+  const itemClasses = [
+    'customizer-item',
+    isSelected && 'customizer-item--selected',
+    isChanged && 'customizer-item--changed',
+    isExclusive && 'customizer-item--exclusive',
+    isDisabledByCapacity && 'customizer-item--disabled',
+    hasDrillDown && isSelected && 'customizer-item--drillable',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`customizer-item ${isSelected ? 'customizer-item--selected' : ''} ${isChanged ? 'customizer-item--changed' : ''} ${isExclusive ? 'customizer-item--exclusive' : ''} ${isDisabledByCapacity ? 'customizer-item--disabled' : ''}`}>
+    <div className={itemClasses}>
       {/* Selection control */}
       <button
         className="customizer-item-toggle"
@@ -605,6 +638,7 @@ function ModifierItemCard({
           <span className="customizer-item-name">{name}</span>
           {isDefault && <span className="customizer-item-default-badge">Default</span>}
           {isExclusive && <span className="customizer-item-exclusive-badge">None</span>}
+          {isChanged && !isExclusive && <span className="customizer-item-modified-dot" title="Modified" />}
         </div>
         {intensityName && isSelected && !hasDrillDown && (
           <span className="customizer-item-intensity">{intensityName}</span>
