@@ -794,12 +794,40 @@ export function getModificationSummary(
   const items: ModificationSummaryItem[] = [];
 
   for (const [groupRef, group] of Object.entries(selected)) {
+    const groupEntity = resolveRef(menu, groupRef) as ProductGroup | ModifierGroup | undefined;
+    const isRecipe = !!(groupEntity as ProductGroup)?.isRecipe;
+
     for (const [itemRef, item] of Object.entries(group)) {
       const initialItem = initial[groupRef]?.[itemRef];
       const menuItem = resolveRef(menu, itemRef) as Product | Modifier | undefined;
       const name = menuItem?.displayName ?? getRefId(itemRef);
 
-      // Quantity changed from initial
+      // For recipe groups: skip ADD/REMOVE pills — recipe items are expected.
+      // Only report intensity CHANGE modifications.
+      if (isRecipe) {
+        if (item.subItemId && item.subItemId !== initialItem?.subItemId && item.quantity > 0) {
+          const intensityMod = resolveRef(menu, item.subItemId) as Modifier | undefined;
+          const intensityName = intensityMod?.displayName ?? getRefId(item.subItemId);
+          items.push({ action: 'CHANGE', displayName: `${intensityName} ${name}`, quantity: item.quantity });
+        }
+        // Also report if a recipe item was completely removed (quantity went to 0)
+        if (item.quantity === 0 && (initialItem?.quantity ?? 0) > 0) {
+          items.push({ action: 'REMOVE', displayName: name, quantity: initialItem?.quantity ?? 1 });
+        }
+        // Also report if a recipe item was re-added after being removed
+        if (item.quantity > 0 && (initialItem?.quantity ?? 0) === 0) {
+          // Only show if the item existed in initial (was part of recipe but had qty 0)
+          // Don't show for brand-new additions in recipe groups
+          if (initialItem != null) {
+            // Skip — returning to recipe default is not a modification
+          } else {
+            items.push({ action: 'ADD', displayName: name, quantity: item.quantity });
+          }
+        }
+        continue;
+      }
+
+      // Non-recipe groups: normal ADD/REMOVE logic
       if (item.quantity !== (initialItem?.quantity ?? 0)) {
         if (item.quantity === 0 && (initialItem?.quantity ?? 0) > 0) {
           items.push({ action: 'REMOVE', displayName: name, quantity: initialItem?.quantity ?? 1 });
