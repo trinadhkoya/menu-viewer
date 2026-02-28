@@ -399,6 +399,59 @@ function resolveAlternativeChildren(
 }
 
 /**
+ * Get the bundle target for a product.
+ * Products can have relatedProducts.bundle = "products.<id>" pointing to a meal/combo counterpart.
+ * Returns the target product ref, product, and display name, or null if no bundle link.
+ */
+export function getBundleTarget(
+  menu: Menu,
+  product: Product,
+): { ref: string; product: Product; displayName: string } | null {
+  const rp = product.relatedProducts as Record<string, unknown> | undefined;
+  if (!rp) return null;
+  const bundleVal = rp.bundle;
+  if (bundleVal == null) return null;
+
+  const bundleRef = typeof bundleVal === 'string' ? bundleVal : String(bundleVal);
+  if (!bundleRef.startsWith('products.')) return null;
+
+  const target = resolveRef(menu, bundleRef) as Product | undefined;
+  if (!target) return null;
+
+  return {
+    ref: bundleRef,
+    product: target,
+    displayName: target.displayName ?? bundleRef,
+  };
+}
+
+/**
+ * Reverse bundle lookup: find all products whose relatedProducts.bundle
+ * points to the given productRef.
+ */
+export function getBundleSources(
+  menu: Menu,
+  productRef: string,
+): Array<{ ref: string; product: Product; displayName: string }> {
+  const results: Array<{ ref: string; product: Product; displayName: string }> = [];
+  for (const [pId, p] of Object.entries(menu.products || {})) {
+    const rp = p.relatedProducts as Record<string, unknown> | undefined;
+    if (!rp) continue;
+    const bundleVal = rp.bundle;
+    if (bundleVal == null) continue;
+    const bundleRef = typeof bundleVal === 'string' ? bundleVal : String(bundleVal);
+    if (bundleRef === productRef) {
+      results.push({
+        ref: `products.${pId}`,
+        product: p,
+        displayName: p.displayName ?? pId,
+      });
+    }
+  }
+  return results;
+}
+
+/**
  * Reverse lookup: given a product ref, find the parent virtual product(s) that
  * reference it via relatedProducts → productGroup → childRefs.
  * Returns array of { virtualRef, virtualProduct, sizeName } for navigation.

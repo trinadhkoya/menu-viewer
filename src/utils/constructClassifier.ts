@@ -3,12 +3,19 @@
  *
  * Official 25-construct system from the MBDP Menu Products Constructs Page.
  *
- * PRIMARY TYPES (mutually exclusive, auto-detected from JSON):
+ * PRIMARY TYPES (5, mutually exclusive, auto-detected from JSON):
  *   1AAA — No alternatives & no ingredientRefs (leaf product)
  *   1ABB — No alternatives, has ingredientRefs (customizable)
- *   2    — Virtual Product (isVirtual = true)
+ *   2    — Virtual Product (isVirtual = true, no ingredientRefs, no alternatives)
  *   1BAA — Has alternatives (relatedProducts), no ingredientRefs (sized)
  *   1BBB — Has alternatives + ingredientRefs (sized & customizable)
+ *
+ * STRUCTURAL TAGS (data-driven, multiple can apply):
+ *   bare              — no ingredientRefs AND no modifierGroupRefs
+ *   has-modifiers      — has modifierGroupRefs
+ *   has-bundle         — relatedProducts.bundle exists
+ *   is-combo           — isCombo = true
+ *   virtual-ingredient — isVirtual + ingredientRefs but no alternatives
  *
  * BEHAVIORAL SUB-CONSTRUCTS (#6-#16) — layered on top of primary type
  * COMBO/MEAL/BUNDLE (#17-#25) — combo slot configurations
@@ -34,7 +41,7 @@ export interface ConstructDef {
 
 /** All 25 official MBDP constructs */
 export const CONSTRUCTS: ConstructDef[] = [
-  // ── Primary Single-Product Types ──
+  // ── Primary Single-Product Types (5) ──
   {
     id: '1AAA',
     name: 'No Size/Selection, No Customization',
@@ -70,8 +77,8 @@ export const CONSTRUCTS: ConstructDef[] = [
     name: 'Sized, Not Customizable',
     shortName: 'Sized',
     category: 'single',
-    description: 'Product has sizes or selections (alternatives), but the recipe cannot be modified.',
-    engineeringTerm: 'With alternatives and no ingredientRefs',
+    description: 'Product has sizes or selections (alternatives), but the recipe is not able to be modified.',
+    engineeringTerm: 'With alternatives, no ingredientRefs',
     icon: '📏',
     color: '#f97316',
   },
@@ -289,7 +296,7 @@ export const CONSTRUCTS: ConstructDef[] = [
   },
 ];
 
-/** The 5 primary single-product types */
+/** The 5 official primary single-product types */
 export const PRIMARY_TYPES = CONSTRUCTS.filter(
   (c) => ['1AAA', '1ABB', '2', '1BAA', '1BBB'].includes(c.id),
 );
@@ -348,24 +355,135 @@ export function computeFlags(product: Product): StructuralFlags {
 // ─────────────────────────────────────────────
 
 /**
- * Decision tree for primary construct type:
+ * Decision tree for the 5 official primary construct types.
  *
- *   isVirtual?
+ * Only two structural axes matter for primary classification:
+ *   1. alternatives (relatedProducts.alternatives) — sizing/selection
+ *   2. ingredientRefs — customization
+ *
+ * modifierGroupRefs do NOT affect primary type (captured as structural tag instead).
+ *
+ * Tree:
+ *   isVirtual AND no ingredientRefs AND no alternatives?
  *     YES -> "2" (Virtual Product)
- *     NO  -> has relatedProducts (alternatives)?
- *       YES -> has ingredientRefs?
- *         YES -> "1BBB" (Sized + Customizable)
- *         NO  -> "1BAA" (Sized, Not Customizable)
- *       NO  -> has ingredientRefs?
- *         YES -> "1ABB" (Customizable)
- *         NO  -> "1AAA" (Leaf)
+ *   has alternatives?
+ *     YES -> has ingredientRefs?
+ *       YES -> "1BBB" (Sized + Customizable)
+ *       NO  -> "1BAA" (Sized, Not Customizable)
+ *     NO  -> has ingredientRefs?
+ *       YES -> "1ABB" (Customizable)
+ *       NO  -> "1AAA" (Leaf)
+ *
+ * Virtual products that have ingredientRefs (e.g. K-Cup Pods, Bottled Drinks)
+ * fall through to the normal decision tree instead of being classified as "2".
  */
 export function classifyPrimaryType(flags: StructuralFlags): string {
-  if (flags.isVirtual) return '2';
+  // Pure virtual: no ingredients, no alternatives → type 2
+  if (flags.isVirtual && !flags.hasIngredientRefs && !flags.hasAlternatives) {
+    return '2';
+  }
   if (flags.hasAlternatives) {
     return flags.hasIngredientRefs ? '1BBB' : '1BAA';
   }
   return flags.hasIngredientRefs ? '1ABB' : '1AAA';
+}
+
+// ─────────────────────────────────────────────
+// Structural Tags (data-driven, multiple per product)
+// ─────────────────────────────────────────────
+
+export interface StructuralTagDef {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string;
+  icon: string;
+  color: string;
+}
+
+/**
+ * Data-driven structural tags — enrichments discovered from actual menu JSON
+ * analysis. Multiple tags can apply to a single product.
+ */
+export const STRUCTURAL_TAGS: StructuralTagDef[] = [
+  {
+    id: 'bare',
+    name: 'No Customization & No Modifications',
+    shortName: 'Bare',
+    description: 'Product has no ingredientRefs and no modifierGroupRefs — cannot be customized or modified.',
+    icon: '🍃',
+    color: '#84cc16',
+  },
+  {
+    id: 'has-modifiers',
+    name: 'Has Modifier Groups',
+    shortName: 'Modifiers',
+    description: 'Product has modifierGroupRefs — non-tangible modifications like "sauce on side", cookie pieces, etc.',
+    icon: '🔧',
+    color: '#f59e0b',
+  },
+  {
+    id: 'has-bundle',
+    name: 'Bundle Link',
+    shortName: 'Bundle',
+    description: 'Product has a relatedProducts.bundle reference linking it to a combo/meal counterpart.',
+    icon: '🔗',
+    color: '#6366f1',
+  },
+  {
+    id: 'is-combo',
+    name: 'Combo / Meal',
+    shortName: 'Combo',
+    description: 'Product is flagged as a combo (isCombo = true).',
+    icon: '🍔',
+    color: '#8b5cf6',
+  },
+  {
+    id: 'virtual-ingredient',
+    name: 'Virtual + Ingredients (No Sizing)',
+    shortName: 'V+Ing',
+    description: 'Virtual product with ingredientRefs but no size alternatives — uses ingredients for variety instead of sizing (e.g. K-Cup Pods, Bottled Drinks, Packaged Coffee).',
+    icon: '🧪',
+    color: '#14b8a6',
+  },
+];
+
+const structuralTagMap = new Map(STRUCTURAL_TAGS.map((t) => [t.id, t]));
+
+export function getStructuralTag(id: string): StructuralTagDef | undefined {
+  return structuralTagMap.get(id);
+}
+
+/** Detect which structural tags apply to a product */
+export function detectStructuralTags(flags: StructuralFlags): string[] {
+  const tags: string[] = [];
+
+  // Bare: no ingredientRefs AND no modifierGroupRefs
+  if (!flags.hasIngredientRefs && !flags.hasModifierGroupRefs) {
+    tags.push('bare');
+  }
+
+  // Has modifier groups (orthogonal to primary classification)
+  if (flags.hasModifierGroupRefs) {
+    tags.push('has-modifiers');
+  }
+
+  // Bundle link
+  if (flags.hasBundleLink) {
+    tags.push('has-bundle');
+  }
+
+  // Combo
+  if (flags.isCombo) {
+    tags.push('is-combo');
+  }
+
+  // Virtual with ingredients but no alternatives (unusual pattern)
+  if (flags.isVirtual && flags.hasIngredientRefs && !flags.hasAlternatives) {
+    tags.push('virtual-ingredient');
+  }
+
+  return tags;
 }
 
 // ─────────────────────────────────────────────
@@ -480,6 +598,8 @@ export interface ClassifiedProduct {
   primaryType: string;
   primaryConstruct: ConstructDef;
   behavioralTags: string[];
+  /** Data-driven structural tags (bare, has-modifiers, etc.) */
+  structuralTags: string[];
   flags: StructuralFlags;
   /** Category ref this product belongs to (from rootCategoryRef tree) */
   categoryRef?: string;
@@ -493,6 +613,12 @@ export interface ClassifiedProduct {
   mainCategoryRef?: string;
   /** Top-level main category display name */
   mainCategoryName?: string;
+  /** Bundle target: ref of the meal/combo counterpart this product links to */
+  bundleTargetRef?: string;
+  /** Bundle target: display name of the meal/combo counterpart */
+  bundleTargetName?: string;
+  /** Bundle sources: products that link TO this product via their bundle ref */
+  bundleSources?: Array<{ ref: string; name: string }>;
 }
 
 // ─────────────────────────────────────────────
@@ -582,12 +708,14 @@ function classifyOne(
   const primaryType = classifyPrimaryType(flags);
   const primaryConstruct = getConstruct(primaryType)!;
   const behavioralTags = detectBehavioralTags(product, menu);
+  const structuralTags = detectStructuralTags(flags);
   return {
     ref,
     product,
     primaryType,
     primaryConstruct,
     behavioralTags,
+    structuralTags,
     flags,
     ...extra,
   };
@@ -657,6 +785,36 @@ export function classifyAllProducts(menu: Menu): ClassifiedProduct[] {
         }
       }
     }
+
+    // Resolve bundle reference: relatedProducts.bundle → target product
+    const rp = product.relatedProducts as Record<string, unknown> | undefined;
+    const bundleVal = rp?.bundle;
+    if (bundleVal != null) {
+      const bundleRef = typeof bundleVal === 'string' ? bundleVal : String(bundleVal);
+      if (bundleRef.startsWith('products.')) {
+        const target = resolveRef(menu, bundleRef) as Product | undefined;
+        if (target) {
+          classified.bundleTargetRef = bundleRef;
+          classified.bundleTargetName = target.displayName ?? undefined;
+        }
+      }
+    }
+  }
+
+  // Second pass: build reverse bundle links (target → sources)
+  const bundleTargetMap = new Map<string, Array<{ ref: string; name: string }>>();
+  for (const item of result) {
+    if (item.bundleTargetRef) {
+      const sources = bundleTargetMap.get(item.bundleTargetRef) ?? [];
+      sources.push({ ref: item.ref, name: item.product.displayName ?? item.ref });
+      bundleTargetMap.set(item.bundleTargetRef, sources);
+    }
+  }
+  for (const item of result) {
+    const sources = bundleTargetMap.get(item.ref);
+    if (sources && sources.length > 0) {
+      item.bundleSources = sources;
+    }
   }
 
   return result;
@@ -707,6 +865,7 @@ export interface ExtraFlagStats {
   combos: number;
   modifierGroupProducts: number;
   bundleLinks: number;
+  bareProducts: number;
 }
 
 export function getExtraFlagStats(items: ClassifiedProduct[]): ExtraFlagStats {
@@ -714,7 +873,31 @@ export function getExtraFlagStats(items: ClassifiedProduct[]): ExtraFlagStats {
     combos: items.filter((i) => i.flags.isCombo).length,
     modifierGroupProducts: items.filter((i) => i.flags.hasModifierGroupRefs).length,
     bundleLinks: items.filter((i) => i.flags.hasBundleLink).length,
+    bareProducts: items.filter((i) => !i.flags.hasIngredientRefs && !i.flags.hasModifierGroupRefs).length,
   };
+}
+
+/** Count of products per structural tag */
+export interface StructuralTagStats {
+  tagId: string;
+  tag: StructuralTagDef;
+  count: number;
+}
+
+export function getStructuralTagStats(items: ClassifiedProduct[]): StructuralTagStats[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    for (const tag of item.structuralTags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return STRUCTURAL_TAGS
+    .filter((t) => (counts.get(t.id) ?? 0) > 0)
+    .map((t) => ({
+      tagId: t.id,
+      tag: t,
+      count: counts.get(t.id) ?? 0,
+    }));
 }
 
 /** Main category stats (products grouped by top-level category) */
@@ -1055,12 +1238,13 @@ export function getCategorySkeletons(items: ClassifiedProduct[]): CategorySkelet
   return skeletons;
 }
 
-/** Filter products by primary type, behavioral tag, extra flag, search, mainCategory */
+/** Filter products by primary type, behavioral tag, structural tag, search, mainCategory */
 export function filterProducts(
   items: ClassifiedProduct[],
   opts: {
     primaryType?: string | null;
     behavioralTag?: string | null;
+    structuralTag?: string | null;
     extraFlag?: string | null;
     mainCategory?: string | null;
     search?: string;
@@ -1080,6 +1264,10 @@ export function filterProducts(
     result = result.filter((i) => i.behavioralTags.includes(opts.behavioralTag!));
   }
 
+  if (opts.structuralTag) {
+    result = result.filter((i) => i.structuralTags.includes(opts.structuralTag!));
+  }
+
   if (opts.extraFlag) {
     switch (opts.extraFlag) {
       case 'combo':
@@ -1090,6 +1278,9 @@ export function filterProducts(
         break;
       case 'bundleLink':
         result = result.filter((i) => i.flags.hasBundleLink);
+        break;
+      case 'bare':
+        result = result.filter((i) => !i.flags.hasIngredientRefs && !i.flags.hasModifierGroupRefs);
         break;
     }
   }

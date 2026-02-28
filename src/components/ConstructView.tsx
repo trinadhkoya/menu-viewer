@@ -5,11 +5,12 @@ import {
   CONSTRUCTS,
   classifyAllProducts,
   getPrimaryTypeStats,
-  getExtraFlagStats,
+  getStructuralTagStats,
   getMainCategoryStats,
   getCategorySkeletons,
   filterProducts,
   getConstruct,
+  getStructuralTag,
 } from '../utils/constructClassifier';
 import type { CategorySkeleton } from '../utils/constructClassifier';
 import { getRefId } from '../utils/menuHelpers';
@@ -26,7 +27,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
   const [activeMainCategory, setActiveMainCategory] = useState<string | null>(null);
   const [activePrimary, setActivePrimary] = useState<string | null>(null);
   const [activeBehavioral, setActiveBehavioral] = useState<string | null>(null);
-  const [activeExtra, setActiveExtra] = useState<string | null>(null);
+  const [activeStructuralTag, setActiveStructuralTag] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [inspecting, setInspecting] = useState<ClassifiedProduct | null>(null);
   const [showReference, setShowReference] = useState(false);
@@ -35,7 +36,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
   const classified = useMemo(() => classifyAllProducts(menu), [menu]);
   const mainCategoryStats = useMemo(() => getMainCategoryStats(classified), [classified]);
   const primaryStats = useMemo(() => getPrimaryTypeStats(classified), [classified]);
-  const extraStats = useMemo(() => getExtraFlagStats(classified), [classified]);
+  const structuralTagStats = useMemo(() => getStructuralTagStats(classified), [classified]);
   const categorySkeletons = useMemo(() => getCategorySkeletons(classified), [classified]);
 
   // Build a lookup map from category ref → skeleton
@@ -55,10 +56,10 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
         mainCategory: activeMainCategory,
         primaryType: activePrimary,
         behavioralTag: activeBehavioral,
-        extraFlag: activeExtra,
+        structuralTag: activeStructuralTag,
         search: searchTerm.trim(),
       }),
-    [classified, activeMainCategory, activePrimary, activeBehavioral, activeExtra, searchTerm],
+    [classified, activeMainCategory, activePrimary, activeBehavioral, activeStructuralTag, searchTerm],
   );
 
   const toggleMainCategory = useCallback((ref: string) => {
@@ -69,19 +70,19 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
   const togglePrimary = useCallback((id: string) => {
     setActivePrimary((prev) => (prev === id ? null : id));
     setActiveBehavioral(null);
-    setActiveExtra(null);
+    setActiveStructuralTag(null);
     setInspecting(null);
   }, []);
 
   const toggleBehavioral = useCallback((id: string) => {
     setActiveBehavioral((prev) => (prev === id ? null : id));
     setActivePrimary(null);
-    setActiveExtra(null);
+    setActiveStructuralTag(null);
     setInspecting(null);
   }, []);
 
-  const toggleExtra = useCallback((flag: string) => {
-    setActiveExtra((prev) => (prev === flag ? null : flag));
+  const toggleStructuralTag = useCallback((tag: string) => {
+    setActiveStructuralTag((prev) => (prev === tag ? null : tag));
     setActivePrimary(null);
     setActiveBehavioral(null);
     setInspecting(null);
@@ -91,7 +92,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
     setActiveMainCategory(null);
     setActivePrimary(null);
     setActiveBehavioral(null);
-    setActiveExtra(null);
+    setActiveStructuralTag(null);
     setSearchTerm('');
     setInspecting(null);
   }, []);
@@ -115,7 +116,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
         </div>
         <p className="construct-view-desc">
           Products classified using the <strong>official MBDP construct system</strong> — 
-          5 primary types based on alternatives &amp; ingredientRefs.
+          5 primary types based on alternatives &amp; ingredientRefs, enriched with data-driven structural tags.
         </p>
       </div>
 
@@ -132,46 +133,6 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
 
       {/* ── Primary Type Filter ── */}
       <div className="construct-toolbar">
-        {/* ── Main Category (from menu tree) ── */}
-        <div className="construct-section-label">Category</div>
-        <div className="construct-pills-row construct-pills-row--wrap">
-          {mainCategoryStats.map((mc) => {
-            const skeleton = skeletonMap.get(mc.ref);
-            return (
-              <div key={mc.ref} className="construct-category-wrapper">
-                <button
-                  className={`construct-category-pill ${activeMainCategory === mc.ref ? 'construct-category-pill--active' : ''}`}
-                  onClick={() => toggleMainCategory(mc.ref)}
-                  title={skeleton ? `${mc.ref}\nSchema: ${skeleton.skeletonName}\n${skeleton.shapeCount} shape(s)` : mc.ref}
-                >
-                  {mc.name}
-                  <span className="construct-category-count">{mc.count}</span>
-                  {skeleton && (
-                    <span
-                      className={`skeleton-badge ${skeleton.isHomogeneous ? 'skeleton-badge--homo' : 'skeleton-badge--mixed'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedSkeleton((prev) => (prev === mc.ref ? null : mc.ref));
-                      }}
-                      title={`Click to ${expandedSkeleton === mc.ref ? 'hide' : 'show'} schema details\n${skeleton.shapeCount} shape(s)`}
-                    >
-                      🧬 {skeleton.skeletonCode}
-                    </span>
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Skeleton Detail Panel ── */}
-        {expandedSkeleton && skeletonMap.has(expandedSkeleton) && (
-          <SkeletonDetailPanel
-            skeleton={skeletonMap.get(expandedSkeleton)!}
-            onClose={() => setExpandedSkeleton(null)}
-          />
-        )}
-
         <div className="construct-section-label">Primary Type</div>
         <div className="construct-pills-row">
           {primaryStats.map((s) => (
@@ -185,32 +146,18 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
           ))}
         </div>
 
-        {/* ── Extra Structural Flags ── */}
+        {/* ── Structural Tags ── */}
+        <div className="construct-section-label" style={{ marginTop: 8 }}>Structural Tags</div>
         <div className="construct-extra-flags">
-          {extraStats.combos > 0 && (
+          {structuralTagStats.map((s) => (
             <button
-              className={`construct-extra-flag ${activeExtra === 'combo' ? 'construct-extra-flag--active' : ''}`}
-              onClick={() => toggleExtra('combo')}
+              key={s.tagId}
+              className={`construct-extra-flag ${activeStructuralTag === s.tagId ? 'construct-extra-flag--active' : ''}`}
+              onClick={() => toggleStructuralTag(s.tagId)}
             >
-              🍔 Combos <span className="construct-extra-count">{extraStats.combos}</span>
+              {s.tag.icon} {s.tag.shortName} <span className="construct-extra-count">{s.count}</span>
             </button>
-          )}
-          {extraStats.modifierGroupProducts > 0 && (
-            <button
-              className={`construct-extra-flag ${activeExtra === 'modifierGroups' ? 'construct-extra-flag--active' : ''}`}
-              onClick={() => toggleExtra('modifierGroups')}
-            >
-              🔧 With Modifiers <span className="construct-extra-count">{extraStats.modifierGroupProducts}</span>
-            </button>
-          )}
-          {extraStats.bundleLinks > 0 && (
-            <button
-              className={`construct-extra-flag ${activeExtra === 'bundleLink' ? 'construct-extra-flag--active' : ''}`}
-              onClick={() => toggleExtra('bundleLink')}
-            >
-              🔗 Bundle Links <span className="construct-extra-count">{extraStats.bundleLinks}</span>
-            </button>
-          )}
+          ))}
         </div>
 
         {/* ── Search & Clear ── */}
@@ -224,7 +171,7 @@ export function ConstructView({ menu, onProductSelect }: ConstructViewProps) {
               className="construct-search-input"
             />
           </div>
-          {(activeMainCategory || activePrimary || activeBehavioral || activeExtra || searchTerm) && (
+          {(activeMainCategory || activePrimary || activeBehavioral || activeStructuralTag || searchTerm) && (
             <button className="construct-clear-btn" onClick={clearAll}>
               Clear All
             </button>
@@ -437,6 +384,16 @@ function ProductCard({
           {product.calories != null && (
             <span className="construct-card-cal">{product.calories} cal</span>
           )}
+          {item.bundleTargetRef && (
+            <span className="construct-card-bundle" title={`Bundle → ${item.bundleTargetName}`}>
+              🔗 {item.bundleTargetName || 'Meal'}
+            </span>
+          )}
+          {item.bundleSources && item.bundleSources.length > 0 && (
+            <span className="construct-card-bundle construct-card-bundle--target" title={`Bundled from ${item.bundleSources.length} product(s)`}>
+              🍱 {item.bundleSources.length} source{item.bundleSources.length > 1 ? 's' : ''}
+            </span>
+          )}
         </div>
         <button
           className="construct-inspect-btn"
@@ -466,7 +423,7 @@ function ProductInspector({
   onClose: () => void;
   onProductSelect: (ref: string) => void;
 }) {
-  const { product, primaryConstruct, behavioralTags, flags } = item;
+  const { product, primaryConstruct, behavioralTags, structuralTags, flags } = item;
 
   return (
     <div className="construct-inspector-overlay" onClick={onClose}>
@@ -551,6 +508,54 @@ function ProductInspector({
           </div>
         </section>
 
+        {/* Bundle Reference Links */}
+        {(item.bundleTargetRef || (item.bundleSources && item.bundleSources.length > 0)) && (
+          <section className="inspector-section">
+            <h4>🔗 Bundle References</h4>
+            <div className="inspector-bundle-links">
+              {item.bundleTargetRef && (
+                <div className="inspector-bundle-link">
+                  <span className="inspector-bundle-label">Bundle target (meal/combo):</span>
+                  <button
+                    className="inspector-bundle-ref-btn"
+                    onClick={() => onProductSelect(item.bundleTargetRef!)}
+                    title={`Navigate to ${item.bundleTargetName}`}
+                  >
+                    🍱 {item.bundleTargetName || item.bundleTargetRef}
+                    <span className="inspector-bundle-ref-id">
+                      {item.bundleTargetRef.replace('products.', '')}
+                    </span>
+                    <span className="inspector-bundle-arrow">→</span>
+                  </button>
+                </div>
+              )}
+              {item.bundleSources && item.bundleSources.length > 0 && (
+                <div className="inspector-bundle-link">
+                  <span className="inspector-bundle-label">
+                    Bundled from ({item.bundleSources.length} source{item.bundleSources.length > 1 ? 's' : ''}):
+                  </span>
+                  <div className="inspector-bundle-sources">
+                    {item.bundleSources.map((src) => (
+                      <button
+                        key={src.ref}
+                        className="inspector-bundle-ref-btn"
+                        onClick={() => onProductSelect(src.ref)}
+                        title={`Navigate to ${src.name}`}
+                      >
+                        🔙 {src.name}
+                        <span className="inspector-bundle-ref-id">
+                          {src.ref.replace('products.', '')}
+                        </span>
+                        <span className="inspector-bundle-arrow">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Behavioral Tags */}
         {behavioralTags.length > 0 && (
           <section className="inspector-section">
@@ -571,6 +576,30 @@ function ProductInspector({
                     <p className="inspector-behavioral-eng">
                       <em>Eng: {c.engineeringTerm}</em>
                     </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Structural Tags */}
+        {structuralTags.length > 0 && (
+          <section className="inspector-section">
+            <h4>Structural Tags</h4>
+            <div className="inspector-behavioral-list">
+              {structuralTags.map((tagId) => {
+                const t = getStructuralTag(tagId);
+                if (!t) return null;
+                return (
+                  <div key={tagId} className="inspector-behavioral-item">
+                    <span
+                      className="inspector-behavioral-badge"
+                      style={{ '--construct-color': t.color } as React.CSSProperties}
+                    >
+                      {t.icon} {t.shortName}
+                    </span>
+                    <p className="inspector-behavioral-desc">{t.description}</p>
                   </div>
                 );
               })}

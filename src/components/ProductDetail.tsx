@@ -9,6 +9,7 @@ import {
   getProductModifierGroups,
   getVirtualProductAlternatives,
   getParentVirtualProducts,
+  getBundleTarget,
   getRefId,
   resolveRef,
   isProductRef,
@@ -28,7 +29,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
   const productId = getRefId(productRef);
   const product = menu.products?.[productId] as Product | undefined;
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['info', 'ingredients', 'modifiers', 'nutrition', 'sizeVariants']),
+    new Set(['info', 'ingredients', 'modifiers', 'nutrition', 'sizeVariants', 'bundleRef']),
   );
   const [compareMode, setCompareMode] = useState(false);
 
@@ -50,6 +51,11 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
   const parentVirtualProducts = useMemo(
     () => (product && !product.isVirtual ? getParentVirtualProducts(menu, productRef) : []),
     [menu, product, productRef],
+  );
+
+  const bundleTarget = useMemo(
+    () => (product ? getBundleTarget(menu, product) : null),
+    [menu, product],
   );
 
   const toggleSection = (section: string) => {
@@ -212,6 +218,56 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Bundle Reference — only show on source products (forward link to meal/combo) */}
+      {bundleTarget && (
+        <section className="detail-section bundle-ref-section">
+          <div className="section-header" onClick={() => toggleSection('bundleRef')}>
+            <h3>
+              {expandedSections.has('bundleRef') ? '▼' : '▶'} 🔗 Bundle Reference
+              <span className="section-count">1</span>
+            </h3>
+          </div>
+          {expandedSections.has('bundleRef') && (
+            <div className="section-body">
+              <div className="bundle-ref-block">
+                <p className="bundle-ref-hint">
+                  This product has a meal/combo counterpart — tap to navigate.
+                </p>
+                <div className="bundle-ref-grid">
+                  <div
+                    className="bundle-ref-card"
+                    onClick={() => onProductSelect?.(bundleTarget.ref)}
+                    title={`Navigate to ${bundleTarget.displayName}`}
+                  >
+                    {bundleTarget.product.imageUrl && (
+                      <OptimizedImage
+                        src={bundleTarget.product.imageUrl}
+                        alt={bundleTarget.displayName}
+                        className="bundle-ref-image"
+                        width={64}
+                        height={64}
+                      />
+                    )}
+                    <div className="bundle-ref-body">
+                      <span className="bundle-ref-label">🍱 Meal / Combo</span>
+                      <span className="bundle-ref-name">{bundleTarget.displayName}</span>
+                      <CopyRef value={bundleTarget.ref} display={getRefId(bundleTarget.ref)} className="bundle-ref-id" />
+                      {bundleTarget.product.price != null && (
+                        <span className="bundle-ref-price">${bundleTarget.product.price.toFixed(2)}</span>
+                      )}
+                      {bundleTarget.product.calories != null && (
+                        <span className="bundle-ref-cal">{bundleTarget.product.calories} cal</span>
+                      )}
+                    </div>
+                    <span className="bundle-ref-arrow">→</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </section>

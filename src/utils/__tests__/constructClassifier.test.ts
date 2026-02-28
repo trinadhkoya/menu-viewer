@@ -4,11 +4,13 @@ import {
   classifyAllProducts,
   computeFlags,
   classifyPrimaryType,
+  detectStructuralTags,
   getConstruct,
   CONSTRUCTS,
   PRIMARY_TYPES,
   BEHAVIORAL_CONSTRUCTS,
   COMBO_CONSTRUCTS,
+  STRUCTURAL_TAGS,
 } from '../constructClassifier';
 
 // ─────────────────────────────────────────────
@@ -136,8 +138,10 @@ describe('classifyAllProducts', () => {
     const byRef = Object.fromEntries(classified.map((c) => [c.ref, c]));
 
     expect(byRef['products.cheeseburger'].primaryType).toBe('1ABB');
-    expect(byRef['products.veggie-burger'].primaryType).toBe('2');
-    expect(byRef['products.cola'].primaryType).toBe('2');
+    // veggie-burger: isVirtual + alternatives (no ingredientRefs) → falls through to 1BAA (sized, not customizable)
+    expect(byRef['products.veggie-burger'].primaryType).toBe('1BAA');
+    // cola: isVirtual + alternatives (no ingredientRefs) → falls through to 1BAA
+    expect(byRef['products.cola'].primaryType).toBe('1BAA');
     expect(byRef['products.water'].primaryType).toBe('1AAA');
   });
 
@@ -274,18 +278,26 @@ describe('classifyAllProducts', () => {
 // ─────────────────────────────────────────────
 
 describe('classifyPrimaryType', () => {
-  it('returns "2" for virtual products', () => {
+  it('returns "2" for pure virtual (no ingredients, no modifiers, no alternatives)', () => {
     expect(classifyPrimaryType({
       isVirtual: true, isCombo: false, hasIngredientRefs: false,
       hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
     })).toBe('2');
   });
 
-  it('returns "2" for virtual even with alternatives and ingredientRefs', () => {
+  it('virtual with ingredientRefs falls through to normal classification', () => {
+    // e.g. K-Cup Pods, Bottled Drinks — isVirtual but has ingredientRefs → 1ABB
+    expect(classifyPrimaryType({
+      isVirtual: true, isCombo: false, hasIngredientRefs: true,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
+    })).toBe('1ABB');
+  });
+
+  it('virtual with alternatives + ingredientRefs falls through to 1BBB', () => {
     expect(classifyPrimaryType({
       isVirtual: true, isCombo: false, hasIngredientRefs: true,
       hasModifierGroupRefs: true, hasAlternatives: true, hasBundleLink: false,
-    })).toBe('2');
+    })).toBe('1BBB');
   });
 
   it('returns "1BBB" for alternatives + ingredientRefs', () => {
@@ -316,11 +328,25 @@ describe('classifyPrimaryType', () => {
     })).toBe('1AAA');
   });
 
-  it('modifierGroupRefs alone does not change primary type', () => {
+  it('modifierGroupRefs alone still returns 1AAA (modifiers do not affect primary type)', () => {
     expect(classifyPrimaryType({
       isVirtual: false, isCombo: false, hasIngredientRefs: false,
       hasModifierGroupRefs: true, hasAlternatives: false, hasBundleLink: false,
     })).toBe('1AAA');
+  });
+
+  it('alternatives + modifierGroupRefs only returns 1BAA (modifiers do not affect primary type)', () => {
+    expect(classifyPrimaryType({
+      isVirtual: false, isCombo: false, hasIngredientRefs: false,
+      hasModifierGroupRefs: true, hasAlternatives: true, hasBundleLink: false,
+    })).toBe('1BAA');
+  });
+
+  it('virtual with modifiers only still returns 2 (pure virtual)', () => {
+    expect(classifyPrimaryType({
+      isVirtual: true, isCombo: false, hasIngredientRefs: false,
+      hasModifierGroupRefs: true, hasAlternatives: false, hasBundleLink: false,
+    })).toBe('2');
   });
 });
 
@@ -377,11 +403,11 @@ describe('computeFlags', () => {
 // ─────────────────────────────────────────────
 
 describe('CONSTRUCTS', () => {
-  it('has 25 total constructs', () => {
+  it('has 25 official constructs', () => {
     expect(CONSTRUCTS.length).toBe(25);
   });
 
-  it('has 5 primary types', () => {
+  it('has 5 primary types (official MBDP)', () => {
     expect(PRIMARY_TYPES.length).toBe(5);
     expect(PRIMARY_TYPES.map((c) => c.id).sort()).toEqual(['1AAA', '1ABB', '1BAA', '1BBB', '2']);
   });
@@ -404,5 +430,222 @@ describe('CONSTRUCTS', () => {
 
   it('getConstruct returns undefined for unknown id', () => {
     expect(getConstruct('INVALID')).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────
+// Structural tags
+// ─────────────────────────────────────────────
+
+describe('STRUCTURAL_TAGS', () => {
+  it('has defined structural tags', () => {
+    expect(STRUCTURAL_TAGS.length).toBeGreaterThan(0);
+    expect(STRUCTURAL_TAGS.map((t) => t.id)).toContain('bare');
+    expect(STRUCTURAL_TAGS.map((t) => t.id)).toContain('has-modifiers');
+  });
+});
+
+describe('detectStructuralTags', () => {
+  it('bare product gets "bare" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: false, isCombo: false, hasIngredientRefs: false,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
+    });
+    expect(tags).toContain('bare');
+    expect(tags).not.toContain('has-modifiers');
+  });
+
+  it('product with modifierGroupRefs gets "has-modifiers" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: false, isCombo: false, hasIngredientRefs: false,
+      hasModifierGroupRefs: true, hasAlternatives: false, hasBundleLink: false,
+    });
+    expect(tags).toContain('has-modifiers');
+    expect(tags).not.toContain('bare');
+  });
+
+  it('combo product gets "is-combo" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: false, isCombo: true, hasIngredientRefs: false,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
+    });
+    expect(tags).toContain('is-combo');
+  });
+
+  it('bundle link gets "has-bundle" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: false, isCombo: false, hasIngredientRefs: false,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: true,
+    });
+    expect(tags).toContain('has-bundle');
+  });
+
+  it('virtual + ingredientRefs + no alternatives gets "virtual-ingredient" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: true, isCombo: false, hasIngredientRefs: true,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
+    });
+    expect(tags).toContain('virtual-ingredient');
+    expect(tags).not.toContain('bare');
+  });
+
+  it('virtual + alternatives does NOT get "virtual-ingredient" tag', () => {
+    const tags = detectStructuralTags({
+      isVirtual: true, isCombo: false, hasIngredientRefs: true,
+      hasModifierGroupRefs: false, hasAlternatives: true, hasBundleLink: false,
+    });
+    expect(tags).not.toContain('virtual-ingredient');
+  });
+
+  it('product with ingredientRefs only gets no structural tags except nothing special', () => {
+    const tags = detectStructuralTags({
+      isVirtual: false, isCombo: false, hasIngredientRefs: true,
+      hasModifierGroupRefs: false, hasAlternatives: false, hasBundleLink: false,
+    });
+    expect(tags).not.toContain('bare');
+    expect(tags).not.toContain('has-modifiers');
+    expect(tags.length).toBe(0);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Bundle reference resolution
+// ─────────────────────────────────────────────
+
+describe('bundle references', () => {
+  /** Build a menu with bundle-linked products */
+  function buildBundleMenu(): Menu {
+    return {
+      displayName: 'Bundle Test Menu',
+      rootCategoryRef: 'categories.root',
+      isAvailable: true,
+      categories: {
+        root: {
+          displayName: 'Root',
+          childRefs: {
+            'categories.entrees': {},
+            'categories.meals': {},
+          },
+        },
+        entrees: {
+          displayName: 'Entrees',
+          childRefs: {
+            'products.gyro': {},
+            'products.burger': {},
+          },
+        },
+        meals: {
+          displayName: 'Meals',
+          childRefs: {
+            'products.gyro-meal': {},
+            'products.burger-meal': {},
+          },
+        },
+      },
+      products: {
+        gyro: {
+          displayName: 'Greek Gyro',
+          ingredientRefs: { 'productGroups.toppings': {} },
+          relatedProducts: { bundle: 'products.gyro-meal' },
+        },
+        burger: {
+          displayName: 'Deluxe Burger',
+          ingredientRefs: { 'productGroups.toppings': {} },
+          relatedProducts: { bundle: 'products.burger-meal' },
+        },
+        'gyro-meal': {
+          displayName: 'Greek Gyro Meal',
+          ingredientRefs: { 'productGroups.sides': {}, 'productGroups.drinks': {} },
+        },
+        'burger-meal': {
+          displayName: 'Deluxe Burger Meal',
+          ingredientRefs: { 'productGroups.sides': {}, 'productGroups.drinks': {} },
+        },
+        // Product without bundle
+        water: {
+          displayName: 'Water',
+        },
+      },
+      productGroups: {
+        toppings: { displayName: 'Toppings' },
+        sides: { displayName: 'Sides' },
+        drinks: { displayName: 'Drinks' },
+      },
+      modifierGroups: {},
+      modifiers: {},
+    } as Menu;
+  }
+
+  it('source products have bundleTargetRef and bundleTargetName', () => {
+    const menu = buildBundleMenu();
+    const classified = classifyAllProducts(menu);
+    const gyro = classified.find((c) => c.ref === 'products.gyro');
+    const burger = classified.find((c) => c.ref === 'products.burger');
+
+    expect(gyro).toBeDefined();
+    expect(gyro!.bundleTargetRef).toBe('products.gyro-meal');
+    expect(gyro!.bundleTargetName).toBe('Greek Gyro Meal');
+
+    expect(burger).toBeDefined();
+    expect(burger!.bundleTargetRef).toBe('products.burger-meal');
+    expect(burger!.bundleTargetName).toBe('Deluxe Burger Meal');
+  });
+
+  it('target products have bundleSources with reverse links', () => {
+    const menu = buildBundleMenu();
+    const classified = classifyAllProducts(menu);
+    const gyroMeal = classified.find((c) => c.ref === 'products.gyro-meal');
+    const burgerMeal = classified.find((c) => c.ref === 'products.burger-meal');
+
+    expect(gyroMeal).toBeDefined();
+    expect(gyroMeal!.bundleSources).toBeDefined();
+    expect(gyroMeal!.bundleSources).toHaveLength(1);
+    expect(gyroMeal!.bundleSources![0].ref).toBe('products.gyro');
+    expect(gyroMeal!.bundleSources![0].name).toBe('Greek Gyro');
+
+    expect(burgerMeal).toBeDefined();
+    expect(burgerMeal!.bundleSources).toBeDefined();
+    expect(burgerMeal!.bundleSources).toHaveLength(1);
+    expect(burgerMeal!.bundleSources![0].ref).toBe('products.burger');
+  });
+
+  it('products without bundle have no bundleTargetRef or bundleSources', () => {
+    const menu = buildBundleMenu();
+    const classified = classifyAllProducts(menu);
+    const water = classified.find((c) => c.ref === 'products.water');
+
+    // water is not in the menu categories (only entrees and meals)
+    // Let me just check products without bundle from the result
+    const gyroMeal = classified.find((c) => c.ref === 'products.gyro-meal');
+    expect(gyroMeal!.bundleTargetRef).toBeUndefined();
+  });
+
+  it('multiple sources linking to same target are all tracked', () => {
+    const menu = buildBundleMenu();
+    // Add a second product linking to gyro-meal
+    (menu.products as Record<string, unknown>)['gyro-spicy'] = {
+      displayName: 'Spicy Gyro',
+      ingredientRefs: { 'productGroups.toppings': {} },
+      relatedProducts: { bundle: 'products.gyro-meal' },
+    };
+    (menu.categories as Record<string, { displayName: string; childRefs: Record<string, unknown> }>).entrees.childRefs['products.gyro-spicy'] = {};
+
+    const classified = classifyAllProducts(menu);
+    const gyroMeal = classified.find((c) => c.ref === 'products.gyro-meal');
+
+    expect(gyroMeal!.bundleSources).toBeDefined();
+    expect(gyroMeal!.bundleSources).toHaveLength(2);
+    const sourceRefs = gyroMeal!.bundleSources!.map((s) => s.ref);
+    expect(sourceRefs).toContain('products.gyro');
+    expect(sourceRefs).toContain('products.gyro-spicy');
+  });
+
+  it('bundle source products get has-bundle structural tag', () => {
+    const menu = buildBundleMenu();
+    const classified = classifyAllProducts(menu);
+    const gyro = classified.find((c) => c.ref === 'products.gyro');
+
+    expect(gyro!.structuralTags).toContain('has-bundle');
+    expect(gyro!.flags.hasBundleLink).toBe(true);
   });
 });

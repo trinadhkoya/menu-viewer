@@ -2364,6 +2364,131 @@ code {
 }
 
 /* ============================================
+   Bundle Reference Section
+   ============================================ */
+
+.bundle-ref-section {
+  border-left: 3px solid #f59e0b;
+}
+
+.bundle-ref-hint {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.bundle-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.bundle-ref-card {
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.bundle-ref-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+}
+
+.bundle-ref-card--source {
+  background: rgba(139, 92, 246, 0.04);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.bundle-ref-card--source:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
+}
+
+.bundle-ref-image {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bundle-ref-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bundle-ref-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #f59e0b;
+}
+
+.bundle-ref-card--source .bundle-ref-label {
+  color: #8b5cf6;
+}
+
+.bundle-ref-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bundle-ref-id {
+  font-size: 0.72rem;
+}
+
+.bundle-ref-price {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-available);
+}
+
+.bundle-ref-cal {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.bundle-ref-arrow {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.bundle-ref-card:hover .bundle-ref-arrow {
+  opacity: 1;
+  color: #f59e0b;
+}
+
+.bundle-ref-card--source:hover .bundle-ref-arrow {
+  color: #8b5cf6;
+}
+
+.bundle-ref-block + .bundle-ref-block {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ============================================
    Menu Stats / Overview
    ============================================ */
 
@@ -4092,6 +4217,27 @@ body,
   color: var(--color-text-muted);
 }
 
+.construct-card-bundle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.10);
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.construct-card-bundle--target {
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.10);
+}
+
 .construct-card-bottom {
   display: flex;
   align-items: center;
@@ -4682,6 +4828,67 @@ body,
 .inspector-action-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+/* ── Inspector Bundle Links ── */
+.inspector-bundle-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inspector-bundle-link {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-bundle-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.inspector-bundle-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspector-bundle-ref-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.06);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.inspector-bundle-ref-btn:hover {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateX(3px);
+}
+
+.inspector-bundle-ref-id {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.inspector-bundle-arrow {
+  margin-left: auto;
+  font-size: 0.9rem;
+  color: #f59e0b;
+  font-weight: 700;
 }
 
 /* ── Match Reasons Table ── */
