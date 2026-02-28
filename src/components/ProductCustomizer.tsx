@@ -255,7 +255,11 @@ function CustomizerInner({
       </div>
 
       {/* ── Nested drill-down overlay ── */}
-      {isDrillDown && <NestedSizeCustomizer />}
+      {isDrillDown && (
+        drillDownProduct?.isVirtual
+          ? <NestedSizeCustomizer />
+          : <NestedIngredientCustomizer />
+      )}
     </div>
   );
 }
@@ -402,7 +406,14 @@ function ModifierOptionRow({
     () => getVirtualSizeAlternatives(menu, menuItem),
     [menu, menuItem],
   );
-  const hasDrillDown = virtualAlts != null;
+  const hasVirtualDrillDown = virtualAlts != null;
+
+  // Non-virtual product with its own ingredientRefs or modifierGroupRefs → ingredient drill-down
+  const hasIngredientDrillDown = !hasVirtualDrillDown
+    && !isExclusive
+    && !!menuItem
+    && isCustomizable(menuItem as Product);
+  const hasDrillDown = hasVirtualDrillDown || hasIngredientDrillDown;
 
   // Currently selected size name
   const selectedSizeName = useMemo(() => {
@@ -492,9 +503,6 @@ function ModifierOptionRow({
           <span className="customizer-option-name">{name}</span>
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
-          {!isExclusive && menuItem && 'ingredientRefs' in menuItem && isCustomizable(menuItem as Product) && (
-            <span className="customizer-option-badge customizable">Customizable</span>
-          )}
         </div>
         <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && !hasDrillDown && (
@@ -590,6 +598,169 @@ function NestedSizeCustomizer() {
       onSave={saveDrillDown}
       onBack={closeDrillDown}
     />
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Nested Ingredient Customizer (drill-down for
+   non-virtual products with ingredientRefs)
+   ────────────────────────────────────────────── */
+
+function NestedIngredientCustomizer() {
+  const menu = useCustomizerStore((s) => s.menu);
+  const drillDown = useCustomizerStore((s) => s.drillDown);
+  const existingState = useCustomizerStore(
+    (s) => s.drillDown ? s.selectedIngredients[s.drillDown.groupRef]?.[s.drillDown.itemRef] : undefined,
+  );
+  const closeDrillDown = useCustomizerStore((s) => s.closeDrillDown);
+  const saveDrillDown = useCustomizerStore((s) => s.saveDrillDown);
+  const drillDownProduct = useCustomizerStore(selectDrillDownProduct);
+
+  if (!drillDown || !drillDownProduct) return null;
+
+  const parentGroupRef = drillDown.groupRef;
+  const parentItemRef = drillDown.itemRef;
+
+  return (
+    <NestedIngredientCustomizerInner
+      menu={menu}
+      parentGroupRef={parentGroupRef}
+      parentItemRef={parentItemRef}
+      product={drillDownProduct}
+      existingState={existingState}
+      onSave={(mods) => saveDrillDown(parentGroupRef, parentItemRef, parentItemRef, mods)}
+      onBack={closeDrillDown}
+    />
+  );
+}
+
+function NestedIngredientCustomizerInner({
+  menu,
+  parentGroupRef,
+  parentItemRef,
+  product,
+  existingState,
+  onSave,
+  onBack,
+}: {
+  menu: Menu;
+  parentGroupRef: string;
+  parentItemRef: string;
+  product: Product;
+  existingState?: SelectedGroupItem;
+  onSave: (mods: SelectedModifiers) => void;
+  onBack: () => void;
+}) {
+  const initialMods = useMemo(
+    () => getInitialSelectedIngredients(menu, product),
+    [menu, product],
+  );
+
+  const [ingredientMods, setIngredientMods] = useState<SelectedModifiers>(() =>
+    existingState?.selection ?? initialMods,
+  );
+
+  const isNestedModified = useMemo(
+    () => JSON.stringify(ingredientMods) !== JSON.stringify(initialMods),
+    [ingredientMods, initialMods],
+  );
+
+  const handleToggle = useCallback((groupRef: string, itemRef: string) => {
+    setIngredientMods((prev) =>
+      toggleIngredientSelection(prev, menu, groupRef, itemRef, initialMods),
+    );
+  }, [menu, initialMods]);
+
+  const handleIncrease = useCallback((groupRef: string, itemRef: string) => {
+    setIngredientMods((prev) => increaseQuantity(prev, menu, groupRef, itemRef));
+  }, [menu]);
+
+  const handleDecrease = useCallback((groupRef: string, itemRef: string) => {
+    setIngredientMods((prev) => decreaseQuantity(prev, groupRef, itemRef));
+  }, []);
+
+  const handleIntensityChange = useCallback((groupRef: string, itemRef: string, subItemId: string) => {
+    setIngredientMods((prev) => {
+      const groupState = prev[groupRef];
+      if (!groupState?.[itemRef]) return prev;
+      return {
+        ...prev,
+        [groupRef]: {
+          ...groupState,
+          [itemRef]: { ...groupState[itemRef], subItemId },
+        },
+      };
+    });
+  }, []);
+
+  const imageUrl = product.imageUrl;
+  const name = product.displayName ?? getRefId(parentItemRef);
+  const calories = product.calories ?? product.nutrition?.totalCalories;
+
+  if (Object.keys(ingredientMods).length === 0) {
+    return (
+      <div className="customizer-nested">
+        <button className="customizer-back" onClick={onBack}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
+        <p className="customizer-empty">No customization options available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="customizer-nested">
+      {/* Header */}
+      <div className="customizer-nested-header">
+        <button className="customizer-back" onClick={onBack} title="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        {imageUrl && (
+          <div className="customizer-nested-img">
+            <OptimizedImage src={imageUrl} alt="" width={32} height={32} />
+          </div>
+        )}
+        <div className="customizer-nested-title">
+          <strong>{name}</strong>
+          <div className="customizer-nested-meta">
+            {product.price != null && (
+              <span className="customizer-nested-meta-price">${product.price.toFixed(2)}</span>
+            )}
+            {calories != null && (
+              <span className="customizer-nested-meta-cal">{calories} cal</span>
+            )}
+            <CopyRef value={parentItemRef} display={getRefId(parentItemRef)} className="customizer-nested-meta-ref" />
+          </div>
+        </div>
+        <button
+          className={`customizer-save${!isNestedModified ? ' customizer-save--disabled' : ''}`}
+          disabled={!isNestedModified}
+          onClick={() => onSave(ingredientMods)}
+        >
+          Save
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="customizer-nested-body">
+        {imageUrl && (
+          <div className="customizer-nested-hero">
+            <OptimizedImage src={imageUrl} alt={name} width={120} height={120} />
+          </div>
+        )}
+
+        <NestedSingleCustomizer
+          menu={menu}
+          selectedIngredients={ingredientMods}
+          initialIngredients={initialMods}
+          onToggle={handleToggle}
+          onIncrease={handleIncrease}
+          onDecrease={handleDecrease}
+          onIntensityChange={handleIntensityChange}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1027,9 +1198,6 @@ function NestedOptionRow({
           <span className="customizer-option-name">{name}</span>
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
-          {!isExclusive && menuItem && 'ingredientRefs' in menuItem && isCustomizable(menuItem as Product) && (
-            <span className="customizer-option-badge customizable">Customizable</span>
-          )}
         </div>
         <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && (
