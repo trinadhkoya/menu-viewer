@@ -6422,9 +6422,6 @@ body,
   color: var(--color-text-muted);
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 60px;
-  z-index: 1;
 }
 .diff-th-field { width: 28%; }
 .diff-th-left { width: 36%; }
@@ -7419,6 +7416,30 @@ body,
   display: none !important;
 }
 .hide-refs .ref-chip {
+  display: none !important;
+}
+.hide-refs .search-card-ref {
+  display: none !important;
+}
+.hide-refs .search-card-plu {
+  display: none !important;
+}
+.hide-refs .diff-list-item-id {
+  display: none !important;
+}
+.hide-refs .diff-detail-id {
+  display: none !important;
+}
+.hide-refs .diff-detail-note {
+  display: none !important;
+}
+.hide-refs .category-ref {
+  display: none !important;
+}
+.hide-refs .info-row-ref {
+  display: none !important;
+}
+.hide-refs .construct-ref-card-id {
   display: none !important;
 }
 

@@ -95,12 +95,12 @@ export function ProductCustomizer({
   onProductSelect,
 }: ProductCustomizerProps) {
   // Create store once per mount — restore saved selections if available
-  const storeRef = useRef(
+  const [store] = useState(() =>
     createCustomizerStore(menu, product, savedSelections, savedComboSelection),
   );
 
   return (
-    <CustomizerContext.Provider value={storeRef.current}>
+    <CustomizerContext.Provider value={store}>
       <CustomizerInner productRef={productRef} onClose={onClose} onSave={onSave} onProductSelect={onProductSelect} />
     </CustomizerContext.Provider>
   );
@@ -221,7 +221,9 @@ function CustomizerInner({
               <h2 className="customizer-hero-name">{product.displayName}</h2>
               <div className="customizer-hero-meta">
                 <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
-                <span className="customizer-hero-meta-sep">·</span>
+                {priceResult.totalCalories != null && (
+                  <span className="customizer-hero-meta-sep">·</span>
+                )}
                 {priceResult.totalCalories != null && (
                   <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
                 )}
@@ -246,7 +248,7 @@ function CustomizerInner({
       {/* Body — Single PDP or Combo PDP */}
       <div className="customizer-body" ref={bodyRef}>
         {isCombo ? (
-          <ComboCustomizer onProductSelect={onProductSelect} />
+          <ComboCustomizer />
         ) : (
           <SingleCustomizer onProductSelect={onProductSelect} />
         )}
@@ -1032,7 +1034,6 @@ function NestedOptionRow({
             <NestedIntensitySelector
               menu={menu}
               itemRef={itemRef}
-              groupRef={groupRef}
               currentSubItemId={item.subItemId}
               onSelect={(subItemId) => onIntensityChange(groupRef, itemRef, subItemId)}
             />
@@ -1103,13 +1104,11 @@ function IntensitySelector({ itemRef, groupRef }: { itemRef: string; groupRef: s
 function NestedIntensitySelector({
   menu,
   itemRef,
-  groupRef,
   currentSubItemId,
   onSelect,
 }: {
   menu: Menu;
   itemRef: string;
-  groupRef: string;
   currentSubItemId?: string;
   onSelect: (subItemId: string) => void;
 }) {
@@ -1149,7 +1148,7 @@ function NestedIntensitySelector({
    Combo Customizer — Store-connected
    ────────────────────────────────────────────── */
 
-function ComboCustomizer({ onProductSelect }: { onProductSelect?: (ref: string) => void }) {
+function ComboCustomizer() {
   const menu = useCustomizerStore((s) => s.menu);
   const comboOptions = useCustomizerStore((s) => s.comboOptions);
   const comboSelection = useCustomizerStore((s) => s.comboSelection);

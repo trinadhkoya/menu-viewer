@@ -439,13 +439,13 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                   </tr>
                 )}
                 {product.PLU != null && (
-                  <tr>
+                  <tr className="info-row-ref">
                     <td className="info-label">PLU</td>
                     <td><CopyRef value={String(product.PLU)} /></td>
                   </tr>
                 )}
                 {product.id && (
-                  <tr>
+                  <tr className="info-row-ref">
                     <td className="info-label">ID</td>
                     <td><CopyRef value={product.id} /></td>
                   </tr>
