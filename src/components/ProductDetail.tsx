@@ -5,6 +5,7 @@ import { CopyRef } from './CopyRef';
 import { ProductCompare } from './ProductCompare';
 import { ProductCustomizer } from './ProductCustomizer';
 import type { BrandId } from './MenuUploader';
+import type { SavedCustomization } from '../utils/productCustomization';
 import {
   getProductIngredients,
   getProductModifierGroups,
@@ -54,10 +55,17 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
   const productId = getRefId(productRef);
   const product = menu.products?.[productId] as Product | undefined;
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['info', 'ingredients', 'modifiers', 'nutrition', 'sizeVariants', 'bundleRef']),
+    new Set(['info', 'ingredients', 'modifiers', 'nutrition', 'sizeVariants', 'bundleRef', 'customization']),
   );
   const [compareMode, setCompareMode] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
+  const [savedCustomization, setSavedCustomization] = useState<SavedCustomization | null>(null);
+
+  // Clear saved customization when navigating to a different product
+  useEffect(() => {
+    setSavedCustomization(null);
+    setCustomizeMode(false);
+  }, [productRef]);
 
   const ingredients = useMemo(
     () => (product ? getProductIngredients(menu, product) : []),
@@ -122,6 +130,12 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
         product={product}
         productRef={productRef}
         onClose={() => setCustomizeMode(false)}
+        onSave={(data) => {
+          setSavedCustomization(data);
+          setCustomizeMode(false);
+        }}
+        savedSelections={savedCustomization?.selectedIngredients}
+        savedComboSelection={savedCustomization?.comboSelection}
         onProductSelect={onProductSelect}
       />
     );
@@ -191,6 +205,90 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
             ))}
           </div>
         </div>
+      )}
+
+      {/* ─── Customization Summary (carried over from Customizer) ─── */}
+      {savedCustomization && (
+        <section className="detail-section customization-summary-section">
+          <div className="section-header" onClick={() => toggleSection('customization')}>
+            <h3>
+              {expandedSections.has('customization') ? '▼' : '▶'} Your Customization
+              <span className="section-count">{savedCustomization.modifications.length}</span>
+            </h3>
+          </div>
+          {expandedSections.has('customization') !== false && (
+            <div className="section-body">
+              {/* Price summary row */}
+              <div className="customization-price-row">
+                <div className="customization-price-item">
+                  <span className="customization-price-label">Base</span>
+                  <span className="customization-price-value">${savedCustomization.priceResult.basePrice.toFixed(2)}</span>
+                </div>
+                {savedCustomization.priceResult.modifierUpcharge !== 0 && (
+                  <div className="customization-price-item">
+                    <span className="customization-price-label">Upcharge</span>
+                    <span className={`customization-price-value ${savedCustomization.priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
+                      {savedCustomization.priceResult.modifierUpcharge > 0 ? '+' : ''}${savedCustomization.priceResult.modifierUpcharge.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="customization-price-item customization-price-total">
+                  <span className="customization-price-label">Total</span>
+                  <span className="customization-price-value">${savedCustomization.priceResult.totalPrice.toFixed(2)}</span>
+                </div>
+                {savedCustomization.priceResult.totalCalories != null && (
+                  <div className="customization-price-item">
+                    <span className="customization-price-label">Calories</span>
+                    <span className="customization-price-value">{savedCustomization.priceResult.totalCalories} cal</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Modification pills */}
+              {savedCustomization.modifications.length > 0 ? (
+                <div className="customization-pills">
+                  {savedCustomization.modifications.map((mod, i) => (
+                    <span
+                      key={`${mod.action}-${mod.displayName}-${i}`}
+                      className={`customization-pill customization-pill--${mod.action.toLowerCase()}`}
+                    >
+                      <span className="customization-pill-action">
+                        {mod.action === 'ADD' ? '+' : mod.action === 'REMOVE' ? '−' : '~'}
+                      </span>
+                      <span className="customization-pill-name">{mod.displayName}</span>
+                      {mod.quantity > 1 && (
+                        <span className="customization-pill-qty">×{mod.quantity}</span>
+                      )}
+                      {mod.price != null && mod.price > 0 && (
+                        <span className="customization-pill-price">+${mod.price.toFixed(2)}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="customization-no-changes">No modifications — using default selections.</p>
+              )}
+
+              {/* Action buttons */}
+              <div className="customization-actions">
+                <button
+                  className="customization-edit-btn"
+                  onClick={() => setCustomizeMode(true)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Edit Customization
+                </button>
+                <button
+                  className="customization-clear-btn"
+                  onClick={() => setSavedCustomization(null)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* Size Variants (Virtual Products) */}
