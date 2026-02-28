@@ -592,6 +592,7 @@ function ModifierGroupCard({
               <div key={ref} className="modifier-item">
                 <span className={`availability-dot ${modifier.isAvailable ? 'available' : 'unavailable'}`} />
                 <span className="modifier-name">{modifier.displayName}</span>
+                <CopyRef value={ref} display={getRefId(ref)} className="modifier-ref" />
                 {modifier.isDefault && <span className="mini-badge default">Default</span>}
                 {modifier.price > 0 && <span className="modifier-price">+${modifier.price.toFixed(2)}</span>}
                 {modifier.nutrition?.totalCalories != null && (
