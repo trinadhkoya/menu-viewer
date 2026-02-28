@@ -42,17 +42,19 @@ export function resolveRef(menu: Menu, ref: string): MenuEntity | undefined {
 }
 
 /**
- * Gets the namespace from a ref (e.g., "products" from "products.burger")
- */
-export function getRefNamespace(ref: string): string {
-  return ref.split('.')[0];
-}
-
-/**
  * Gets the ID from a ref (e.g., "burger" from "products.burger")
  */
 export function getRefId(ref: string): string {
-  return ref.split('.').slice(1).join('.');
+  const dotIndex = ref.indexOf('.');
+  return dotIndex < 0 ? ref : ref.substring(dotIndex + 1);
+}
+
+/**
+ * Gets the namespace from a ref (e.g., "products" from "products.burger")
+ */
+export function getRefNamespace(ref: string): string {
+  const dotIndex = ref.indexOf('.');
+  return dotIndex < 0 ? ref : ref.substring(0, dotIndex);
 }
 
 /**
@@ -319,6 +321,21 @@ export function searchMenu(
   return { products, modifiers, categories };
 }
 
+/** Resolved size variant for a virtual product's alternative group. */
+export interface VirtualVariantEntry {
+  ref: string;
+  product: Product;
+  overrides?: ChildRefOverride;
+  isDefault: boolean;
+}
+
+/** A product group of size variants for a virtual product. */
+export interface AlternativeGroup {
+  groupRef: string;
+  group: ProductGroup;
+  variants: VirtualVariantEntry[];
+}
+
 /**
  * For virtual products, resolves size variants from relatedProducts.alternatives.
  * Pattern: virtual product → relatedProducts.alternatives → productGroup → childRefs (actual sized products)
@@ -327,28 +344,10 @@ export function searchMenu(
 export function getVirtualProductAlternatives(
   menu: Menu,
   product: Product,
-): Array<{
-  groupRef: string;
-  group: ProductGroup;
-  variants: Array<{
-    ref: string;
-    product: Product;
-    overrides?: ChildRefOverride;
-    isDefault: boolean;
-  }>;
-}> {
+): AlternativeGroup[] {
   if (!product.isVirtual || !product.relatedProducts) return [];
 
-  const results: Array<{
-    groupRef: string;
-    group: ProductGroup;
-    variants: Array<{
-      ref: string;
-      product: Product;
-      overrides?: ChildRefOverride;
-      isDefault: boolean;
-    }>;
-  }> = [];
+  const results: AlternativeGroup[] = [];
 
   // relatedProducts is Record<string, ChildRefOverride> where keys can be like "alternatives"
   // or can be refs like "productGroups.size-xxx"
