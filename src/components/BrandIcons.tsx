@@ -7,7 +7,10 @@ interface IconProps {
   className?: string;
 }
 
-/** Arby's – iconic wide-brimmed hat on red */
+/**
+ * Arby's – Classic oven-mitt hat on Arby's red.
+ * The silhouette uses the distinctive wide-brim cowboy-hat shape.
+ */
 export const ArbysIcon: React.FC<IconProps> = ({ size = S, className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -17,19 +20,25 @@ export const ArbysIcon: React.FC<IconProps> = ({ size = S, className }) => (
     className={className}
     aria-label="Arby's"
   >
-    <rect width="120" height="120" rx="22" fill="#DC0032" />
-    {/* Arby's hat silhouette */}
+    <rect width="120" height="120" rx="22" fill="#CE1126" />
+    {/* Hat crown (tall rounded top) */}
     <path
-      d="M60 22c-3 0-7 4-11 12-5 10-9 24-9 36 0 4 .5 8 2 11
-         1.5 3 4 5.5 7 7l1 .5V96c0 1.5 1 2.5 2.5 2.5h15
-         c1.5 0 2.5-1 2.5-2.5V88.5l1-.5c3-1.5 5.5-4 7-7
-         1.5-3 2-7 2-11 0-12-4-26-9-36C66 26 63 22 60 22z"
+      d="M47 70
+         C47 46 49 28 60 28
+         C71 28 73 46 73 70"
       fill="#fff"
     />
+    {/* Hat brim (wide curved base) */}
+    <ellipse cx="60" cy="72" rx="26" ry="8" fill="#fff" />
+    {/* Inner shadow line on brim */}
+    <ellipse cx="60" cy="72" rx="13" ry="4" fill="#CE1126" opacity="0.15" />
   </svg>
 );
 
-/** BWW – bold "BWW" text on gold */
+/**
+ * BWW – Buffalo Wild Wings.
+ * Dark buffalo wings silhouette on signature gold/yellow.
+ */
 export const BwwIcon: React.FC<IconProps> = ({ size = S, className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -40,36 +49,39 @@ export const BwwIcon: React.FC<IconProps> = ({ size = S, className }) => (
     aria-label="Buffalo Wild Wings"
   >
     <rect width="120" height="120" rx="22" fill="#FFC600" />
-    {/* Buffalo silhouette — compact, centered */}
-    <path
-      d="M36 78c-2-4-3-9-1-14 1-4 4-7 7-9 2-1 3-3 3-5
-         0-3-2-5-1-8 1-4 4-6 8-5 3 0 5 2 7 5v-4c0-3 2-6 5-7
-         3-1 6 0 8 2 2-2 5-3 8-2 3 1 5 4 5 7v4
-         c2-3 4-5 7-5 4-1 7 1 8 5 1 3-1 5-1 8
-         0 2 1 4 3 5 3 2 6 5 7 9 2 5 1 10-1 14z"
-      fill="#1A1A1A"
-    />
-    {/* Wing accent */}
-    <path
-      d="M48 44c-1-3 0-7 3-10 2-2 4-3 6-2 1 0 2 1 2 3
-         -1 3-2 6-1 9M72 44c1-3 0-7-3-10-2-2-4-3-6-2
-         -1 0-2 1-2 3 1 3 2 6 1 9"
-      fill="none" stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round"
-    />
+    {/* Simplified buffalo/wings silhouette */}
+    <g fill="#1A1A1A">
+      {/* Left wing */}
+      <path d="M22 62c2-12 8-22 18-28 4-2 7-1 6 3-2 6-3 13 0 18 2 4 6 7 11 8z" />
+      {/* Right wing */}
+      <path d="M98 62c-2-12-8-22-18-28-4-2-7-1-6 3 2 6 3 13 0 18-2 4-6 7-11 8z" />
+      {/* Buffalo body (center mass) */}
+      <ellipse cx="60" cy="62" rx="20" ry="14" />
+      {/* Head */}
+      <circle cx="60" cy="44" r="8" />
+      {/* Horns */}
+      <path
+        d="M52 42c-3-4-8-6-13-5M68 42c3-4 8-6 13-5"
+        fill="none" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round"
+      />
+    </g>
     {/* BWW text */}
     <text
-      x="60" y="105"
+      x="60" y="100"
       textAnchor="middle"
-      fontFamily="Arial Black, Impact, sans-serif"
+      fontFamily="'Arial Black','Helvetica Neue',Arial,sans-serif"
       fontWeight="900"
       fontSize="18"
       fill="#1A1A1A"
-      letterSpacing="2"
+      letterSpacing="1.5"
     >BWW</text>
   </svg>
 );
 
-/** Sonic – double chevron speed mark on blue */
+/**
+ * Sonic Drive-In.
+ * Horizontal speed lines with the red cherry-limeade circle on Sonic blue.
+ */
 export const SonicIcon: React.FC<IconProps> = ({ size = S, className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -79,28 +91,32 @@ export const SonicIcon: React.FC<IconProps> = ({ size = S, className }) => (
     className={className}
     aria-label="Sonic"
   >
-    <rect width="120" height="120" rx="22" fill="#0093D0" />
-    {/* Horizontal speed lines — the Sonic carhop motif */}
-    <rect x="20" y="38" width="80" height="6" rx="3" fill="#fff" />
-    <rect x="28" y="52" width="64" height="6" rx="3" fill="#fff" />
-    <rect x="20" y="66" width="80" height="6" rx="3" fill="#fff" />
-    {/* Cherry limeade circle at right */}
-    <circle cx="88" cy="55" r="14" fill="#E40046" />
-    <circle cx="88" cy="55" r="8" fill="#fff" opacity="0.35" />
+    <rect width="120" height="120" rx="22" fill="#0073CF" />
+    {/* Three horizontal speed lines */}
+    <rect x="18" y="35" width="60" height="7" rx="3.5" fill="#fff" />
+    <rect x="24" y="51" width="48" height="7" rx="3.5" fill="#fff" />
+    <rect x="18" y="67" width="60" height="7" rx="3.5" fill="#fff" />
+    {/* Red carhop cherry circle */}
+    <circle cx="86" cy="51" r="16" fill="#EE3A42" />
+    {/* Highlight on cherry */}
+    <circle cx="82" cy="47" r="4" fill="#fff" opacity="0.35" />
     {/* SONIC text */}
     <text
       x="60" y="100"
       textAnchor="middle"
-      fontFamily="Arial Black, Impact, sans-serif"
+      fontFamily="'Arial Black','Helvetica Neue',Arial,sans-serif"
       fontWeight="900"
-      fontSize="18"
+      fontSize="16"
       fill="#fff"
       letterSpacing="3"
     >SONIC</text>
   </svg>
 );
 
-/** Dunkin' – coffee cup with DD on warm orange-pink */
+/**
+ * Dunkin' (formerly Dunkin' Donuts).
+ * Coffee cup with DD on warm orange.
+ */
 export const DunkinIcon: React.FC<IconProps> = ({ size = S, className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -110,27 +126,28 @@ export const DunkinIcon: React.FC<IconProps> = ({ size = S, className }) => (
     className={className}
     aria-label="Dunkin'"
   >
-    <rect width="120" height="120" rx="22" fill="#FF6600" />
-    {/* Coffee cup body */}
+    <rect width="120" height="120" rx="22" fill="#FF671F" />
+    {/* Steam wisps */}
     <path
-      d="M38 36h44l-5 52c-.5 4-3.5 7-7.5 7H50.5c-4 0-7-3-7.5-7L38 36z"
-      fill="#fff"
+      d="M46 26c0-5 4-9 4-14M56 24c0-5 4-9 4-14M66 26c0-5 4-9 4-14"
+      fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"
     />
     {/* Cup lid */}
-    <rect x="34" y="30" width="52" height="8" rx="4" fill="#DA1884" />
+    <rect x="34" y="30" width="52" height="9" rx="4.5" fill="#DA1884" />
+    {/* Cup body */}
+    <path
+      d="M38 39h44l-5 48c-.5 4.5-4 8-8.5 8H51.5c-4.5 0-8-3.5-8.5-8L38 39z"
+      fill="#fff"
+    />
     {/* DD text on cup */}
     <text
       x="60" y="72"
       textAnchor="middle"
-      fontFamily="Arial Black, Impact, sans-serif"
+      fontFamily="'Arial Black','Helvetica Neue',Arial,sans-serif"
       fontWeight="900"
       fontSize="22"
-      fill="#FF6600"
+      fill="#FF671F"
     >DD</text>
-    {/* Steam wisps */}
-    <path d="M48 24c0-4 3-7 3-10M56 22c0-4 3-7 3-10M64 24c0-4 3-7 3-10"
-      fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.7"
-    />
   </svg>
 );
 

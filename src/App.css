@@ -45,8 +45,8 @@
 .brand-arbys {
   --brand-font-heading: 'ArbysSmoked', serif;
   --brand-font-body: 'ArbysSmoked', sans-serif;
-  --color-accent: #DC0032;
-  --color-accent-hover: #981B32;
+  --color-accent: #CE1126;
+  --color-accent-hover: #A30E1E;
   --color-accent-text: #fff;
 }
 .brand-bww {
@@ -310,9 +310,9 @@
   --color-text-secondary: #737373;
   --color-text-muted: #a3a3a3;
   --color-bg: #F3F3F3;
-  --color-overlay-accent: rgba(220, 0, 50, 0.08);
-  --color-overlay-accent-subtle: rgba(220, 0, 50, 0.04);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(220, 0, 50, 0.15);
+  --color-overlay-accent: rgba(206, 17, 38, 0.08);
+  --color-overlay-accent-subtle: rgba(206, 17, 38, 0.04);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(206, 17, 38, 0.15);
 }
 
 [data-theme="light"] .brand-bww {
@@ -350,9 +350,9 @@
 
 /* ---------- Brand-aware dark theme overrides ---------- */
 [data-theme="dark"] .brand-arbys {
-  --color-overlay-accent: rgba(220, 0, 50, 0.10);
-  --color-overlay-accent-subtle: rgba(220, 0, 50, 0.05);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(220, 0, 50, 0.2);
+  --color-overlay-accent: rgba(206, 17, 38, 0.10);
+  --color-overlay-accent-subtle: rgba(206, 17, 38, 0.05);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(206, 17, 38, 0.2);
 }
 
 [data-theme="dark"] .brand-bww {
