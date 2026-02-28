@@ -22,6 +22,7 @@ import type {
   Quantity,
 } from '../types/menu';
 import { resolveRef, getRefId, isProductRef, isProductGroupRef, getVirtualProductAlternatives } from './menuHelpers';
+import type { VirtualVariantEntry } from './menuHelpers';
 
 /* ──────────────────────────────────────────────
    Selection State Types
@@ -107,6 +108,20 @@ function isSingleSelectionGroup(menu: Menu, groupRef: string): boolean {
    ────────────────────────────────────────────── */
 
 /**
+ * Internal: resolves the size variants for a virtual product.
+ * Returns the first alternative group's variants, or an empty array.
+ * Centralised to avoid repeated getVirtualProductAlternatives calls.
+ */
+function resolveVirtualVariants(
+  menu: Menu,
+  product: Product | Modifier | undefined,
+): VirtualVariantEntry[] {
+  if (!product || !(product as Product).isVirtual) return [];
+  const alts = getVirtualProductAlternatives(menu, product as Product);
+  return alts.length > 0 ? alts[0].variants : [];
+}
+
+/**
  * Resolves the effective price of a product.
  * For virtual products, walks relatedProducts.alternatives → finds the default
  * size variant → returns that variant's price (matching mobile getProductGroupItems).
@@ -119,11 +134,9 @@ export function getDefaultSizeVariantPrice(
   if (!product) return undefined;
   if (!(product as Product).isVirtual) return product.price;
 
-  // Virtual product: resolve through default size variant
-  const alts = getVirtualProductAlternatives(menu, product as Product);
-  if (alts.length === 0) return product.price;
+  const variants = resolveVirtualVariants(menu, product);
+  if (variants.length === 0) return product.price;
 
-  const variants = alts[0].variants;
   const defaultVariant = variants.find((v) => v.isDefault);
   return defaultVariant?.product?.price ?? variants[0]?.product?.price ?? product.price;
 }
@@ -139,17 +152,16 @@ export function getSizeVariantPrice(
 ): number | undefined {
   if (!virtualProduct || !(virtualProduct as Product).isVirtual) return virtualProduct?.price;
 
-  const alts = getVirtualProductAlternatives(menu, virtualProduct as Product);
-  if (alts.length === 0) return virtualProduct?.price;
+  const variants = resolveVirtualVariants(menu, virtualProduct);
+  if (variants.length === 0) return virtualProduct?.price;
 
-  const variant = alts[0].variants.find((v) => v.ref === sizeRef);
+  const variant = variants.find((v) => v.ref === sizeRef);
   return variant?.product?.price ?? virtualProduct?.price;
 }
 
 /**
  * Case 3 — Size variant upcharge (Y-X).
- * For a virtual product with size alternatives, calculates the upcharge
- * of a selected size variant relative to the default size.
+ * Calculates the premium of a selected size relative to the default size.
  * Returns 0 if no upcharge or if prices aren't available.
  */
 export function getSizeVariantUpcharge(
@@ -159,19 +171,17 @@ export function getSizeVariantUpcharge(
 ): number {
   if (!virtualProduct || !(virtualProduct as Product).isVirtual) return 0;
 
-  const alts = getVirtualProductAlternatives(menu, virtualProduct as Product);
-  if (alts.length === 0) return 0;
+  const variants = resolveVirtualVariants(menu, virtualProduct);
+  if (variants.length === 0) return 0;
 
-  const variants = alts[0].variants;
   const defaultVariant = variants.find((v) => v.isDefault);
   const selectedVariant = variants.find((v) => v.ref === selectedSizeRef);
-
   if (!defaultVariant || !selectedVariant) return 0;
 
   const defaultPrice = defaultVariant.product?.price;
   const selectedPrice = selectedVariant.product?.price;
-
   if (defaultPrice == null || selectedPrice == null) return 0;
+
   return Math.max(selectedPrice - defaultPrice, 0);
 }
 
@@ -179,7 +189,7 @@ export function getSizeVariantUpcharge(
  * Case 4 — Product group upcharge (Y-X).
  * For a product group with min=1,max=1 (forced single-select),
  * calculates the upcharge of selecting a non-default product.
- * Virtual products are resolved to their default size variant prices.
+ * Reuses getProductGroupItems to avoid duplicate resolution logic.
  */
 export function getProductGroupUpcharge(
   menu: Menu,
@@ -189,39 +199,25 @@ export function getProductGroupUpcharge(
 ): number {
   if (!isSingleSelectionGroup(menu, groupRef)) return 0;
 
-  const group = resolveRef(menu, groupRef) as ProductGroup | undefined;
-  if (!group?.childRefs) return 0;
+  const items = getProductGroupItems(menu, groupRef);
+  if (items.length === 0) return 0;
 
-  // Find the default product and its resolved price
-  let defaultPrice: number | undefined;
-  for (const [ref, override] of Object.entries(group.childRefs)) {
-    const ov = (override ?? {}) as ChildRefOverride;
-    const menuProduct = resolveRef(menu, ref) as Product | undefined;
-    const isDefault = ov.isDefault ?? menuProduct?.isDefault ?? false;
-    if (isDefault) {
-      // Use override price first, then resolve virtual → default size price, then product price
-      defaultPrice = ov.price ?? getDefaultSizeVariantPrice(menu, menuProduct) ?? menuProduct?.price;
-      break;
-    }
-  }
-
+  // Default product price (already resolved through virtual → default size)
+  const defaultItem = items.find((p) => p.isDefault);
+  const defaultPrice = defaultItem?.price;
   if (defaultPrice == null) return 0;
 
-  // Resolve selected product's price
-  const selectedOverride = (group.childRefs[selectedItemRef] ?? {}) as ChildRefOverride;
-  const selectedProduct = resolveRef(menu, selectedItemRef) as Product | undefined;
+  // Selected product price — handle optional size override for virtual
+  const selectedItem = items.find((p) => p._ref === selectedItemRef);
+  if (!selectedItem) return 0;
 
-  let selectedPrice: number | undefined;
-  if (selectedSizeRef && selectedProduct?.isVirtual) {
-    // User selected a specific size within the virtual product
-    selectedPrice = selectedOverride.price ?? getSizeVariantPrice(menu, selectedProduct, selectedSizeRef);
-  } else {
-    // Use default size of the selected product
-    selectedPrice = selectedOverride.price ?? getDefaultSizeVariantPrice(menu, selectedProduct) ?? selectedProduct?.price;
+  let selectedPrice = selectedItem.price;
+  if (selectedSizeRef && selectedItem.isVirtual) {
+    // User picked a specific size within the virtual product
+    selectedPrice = getSizeVariantPrice(menu, selectedItem, selectedSizeRef) ?? selectedPrice;
   }
 
-  if (selectedPrice == null) return 0;
-  return Math.max(selectedPrice - defaultPrice, 0);
+  return Math.max((selectedPrice ?? 0) - defaultPrice, 0);
 }
 
 /* ──────────────────────────────────────────────
@@ -693,16 +689,18 @@ export function getModifierPriceAndCalories(
   });
   const defaultKey = defaultModEntry?.[0];
 
-  // Default product in the ingredient/product group — resolve virtual prices
-  const defaultProductEntry = group.childRefs
-    ? Object.entries(group.childRefs).find(([, val]) => {
-        const ov = (val ?? {}) as ChildRefOverride;
-        return ov.isDefault;
-      }) ?? Object.entries(group.childRefs).find(([ref]) => {
-        const p = resolveRef(menu, ref) as Product | undefined;
-        return p?.isDefault;
-      })
-    : undefined;
+  // Default product in the ingredient/product group — single pass to find default
+  let defaultProductEntry: [string, unknown] | undefined;
+  if (group.childRefs) {
+    for (const entry of Object.entries(group.childRefs)) {
+      const ov = (entry[1] ?? {}) as ChildRefOverride;
+      if (ov.isDefault) { defaultProductEntry = entry; break; }
+      if (!defaultProductEntry) {
+        const p = resolveRef(menu, entry[0]) as Product | undefined;
+        if (p?.isDefault) defaultProductEntry = entry;
+      }
+    }
+  }
   const defaultProductRef = defaultProductEntry?.[0];
   const defaultProduct = defaultProductRef ? resolveRef(menu, defaultProductRef) as Product : undefined;
   // Resolve default product price through virtual → default size variant
@@ -1050,6 +1048,19 @@ export function getModificationSummary(
 ): ModificationSummaryItem[] {
   const items: ModificationSummaryItem[] = [];
 
+  /** Push an intensity-CHANGE pill if subItemId differs from initial. */
+  const pushIntensityChange = (
+    item: SelectedGroupItem,
+    initialItem: SelectedGroupItem | undefined,
+    name: string,
+  ) => {
+    if (item.subItemId && item.subItemId !== initialItem?.subItemId && item.quantity > 0) {
+      const intensityMod = resolveRef(menu, item.subItemId) as Modifier | undefined;
+      const intensityName = intensityMod?.displayName ?? getRefId(item.subItemId);
+      items.push({ action: 'CHANGE', displayName: `${intensityName} ${name}`, quantity: item.quantity });
+    }
+  };
+
   for (const [groupRef, group] of Object.entries(selected)) {
     const groupEntity = resolveRef(menu, groupRef) as ProductGroup | ModifierGroup | undefined;
     const isRecipe = !!(groupEntity as ProductGroup)?.isRecipe;
@@ -1062,24 +1073,14 @@ export function getModificationSummary(
       // For recipe groups: skip ADD/REMOVE pills — recipe items are expected.
       // Only report intensity CHANGE modifications.
       if (isRecipe) {
-        if (item.subItemId && item.subItemId !== initialItem?.subItemId && item.quantity > 0) {
-          const intensityMod = resolveRef(menu, item.subItemId) as Modifier | undefined;
-          const intensityName = intensityMod?.displayName ?? getRefId(item.subItemId);
-          items.push({ action: 'CHANGE', displayName: `${intensityName} ${name}`, quantity: item.quantity });
-        }
-        // Also report if a recipe item was completely removed (quantity went to 0)
+        pushIntensityChange(item, initialItem, name);
+        // Recipe item completely removed (quantity went to 0)
         if (item.quantity === 0 && (initialItem?.quantity ?? 0) > 0) {
           items.push({ action: 'REMOVE', displayName: name, quantity: initialItem?.quantity ?? 1 });
         }
-        // Also report if a recipe item was re-added after being removed
-        if (item.quantity > 0 && (initialItem?.quantity ?? 0) === 0) {
-          // Only show if the item existed in initial (was part of recipe but had qty 0)
-          // Don't show for brand-new additions in recipe groups
-          if (initialItem != null) {
-            // Skip — returning to recipe default is not a modification
-          } else {
-            items.push({ action: 'ADD', displayName: name, quantity: item.quantity });
-          }
+        // Recipe item re-added after being removed
+        if (item.quantity > 0 && (initialItem?.quantity ?? 0) === 0 && initialItem == null) {
+          items.push({ action: 'ADD', displayName: name, quantity: item.quantity });
         }
         continue;
       }
@@ -1093,12 +1094,8 @@ export function getModificationSummary(
         }
       }
 
-      // Intensity changed
-      if (item.subItemId && item.subItemId !== initialItem?.subItemId && item.quantity > 0) {
-        const intensityMod = resolveRef(menu, item.subItemId) as Modifier | undefined;
-        const intensityName = intensityMod?.displayName ?? getRefId(item.subItemId);
-        items.push({ action: 'CHANGE', displayName: `${intensityName} ${name}`, quantity: item.quantity });
-      }
+      // Intensity changed (non-recipe)
+      pushIntensityChange(item, initialItem, name);
     }
   }
 
