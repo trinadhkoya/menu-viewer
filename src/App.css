@@ -2176,6 +2176,27 @@ code {
   border-radius: var(--radius-sm);
 }
 
+.quantity-badge--required {
+  color: var(--color-primary, #e4002b);
+  background: rgba(228, 0, 43, 0.08);
+}
+
+.required-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--color-primary, #e4002b);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.modifier-group-card--required {
+  border-color: var(--color-primary, #e4002b) !important;
+  border-left: 3px solid var(--color-primary, #e4002b);
+}
+
 /* ── Quantity Chips ── */
 .qty-chips {
   display: inline-flex;

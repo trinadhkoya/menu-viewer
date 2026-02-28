@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride } from '../types/menu';
+import type { Menu, Product, ModifierGroup as ModifierGroupType, Modifier, ProductGroup, DisplayableItem, ChildRefOverride, Quantity } from '../types/menu';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
 import { ProductCompare } from './ProductCompare';
@@ -18,6 +18,30 @@ import {
   hasOverrides,
   isRecipeGroup,
 } from '../utils/menuHelpers';
+
+/**
+ * Convert selectionQuantity { min, max } into human-readable text.
+ */
+function formatSelectionQty(sq: Quantity): string {
+  const min = sq.min ?? 0;
+  const max = sq.max ?? null;
+
+  if (min === 0 && max === null) return 'Optional';
+  if (min === 0 && max === 1) return 'Select up to 1';
+  if (min === 0 && max != null) return `Select up to ${max}`;
+  if (min === 1 && max === 1) return 'Select exactly 1';
+  if (min === max && min != null) return `Select exactly ${min}`;
+  if (min >= 1 && max != null) return `Select ${min}–${max}`;
+  if (min >= 1 && max === null) return `Select at least ${min}`;
+  return `Select ${min}–${max ?? '∞'}`;
+}
+
+/**
+ * Check if any modifier in the list is marked as default.
+ */
+function hasDefaultModifier(modifiers: Array<{ ref: string; modifier: Modifier }>): boolean {
+  return modifiers.some(({ modifier }) => modifier.isDefault);
+}
 
 interface ProductDetailProps {
   menu: Menu;
@@ -196,7 +220,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                     <CopyRef value={groupRef} display={getRefId(groupRef)} className="modifier-ref" />
                     {group.selectionQuantity && (
                       <span className="quantity-badge">
-                        Select {group.selectionQuantity.min ?? 0}–{group.selectionQuantity.max ?? '∞'}
+                        {formatSelectionQty(group.selectionQuantity)}
                       </span>
                     )}
                   </div>
@@ -566,20 +590,23 @@ function ModifierGroupCard({
   modifiers: Array<{ ref: string; modifier: Modifier }>;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const sq = group.selectionQuantity;
+  const isRequired = sq != null && (sq.min ?? 0) >= 1 && !hasDefaultModifier(modifiers);
 
   return (
-    <div className="modifier-group-card">
+    <div className={`modifier-group-card ${isRequired ? 'modifier-group-card--required' : ''}`}>
       <div className="modifier-group-header" onClick={() => setExpanded(!expanded)}>
         <div>
           <strong>{group.displayName}</strong>
           <CopyRef value={ref_} display={getRefId(ref_)} className="modifier-ref" />
         </div>
         <div className="modifier-group-meta">
-          {group.selectionQuantity && (
-            <span className="quantity-badge">
-              Select {group.selectionQuantity.min ?? 0}–{group.selectionQuantity.max ?? '∞'}
+          {sq && (
+            <span className={`quantity-badge ${isRequired ? 'quantity-badge--required' : ''}`}>
+              {formatSelectionQty(sq)}
             </span>
           )}
+          {isRequired && <span className="required-badge">Required</span>}
           <span className="sidebar-badge">{modifiers.length}</span>
           <span>{expanded ? '▲' : '▼'}</span>
         </div>
