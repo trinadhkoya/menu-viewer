@@ -2,6 +2,14 @@ import { useMemo } from 'react';
 import type { Menu } from '../types/menu';
 import { searchMenu, getRefId } from '../utils/menuHelpers';
 
+/** Small pill showing match quality */
+function MatchBadge({ score }: { score: number }) {
+  if (score >= 90) return null; // exact match — no badge needed
+  const label = score >= 70 ? 'Close' : 'Fuzzy';
+  const cls = score >= 70 ? 'match-badge--close' : 'match-badge--fuzzy';
+  return <span className={`match-badge ${cls}`}>{label}</span>;
+}
+
 interface SearchResultsProps {
   menu: Menu;
   query: string;
@@ -28,13 +36,13 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
             📁 Categories <span className="section-count">{results.categories.length}</span>
           </h3>
           <div className="search-grid">
-            {results.categories.map(({ ref, category }) => (
+            {results.categories.map(({ ref, category, score }) => (
               <div
                 key={ref}
                 className="search-card search-card--category"
                 onClick={() => onCategorySelect(ref)}
               >
-                <div className="search-card-title">{category.displayName || getRefId(ref)}</div>
+                <div className="search-card-title">{category.displayName || getRefId(ref)} <MatchBadge score={score} /></div>
                 <code className="search-card-ref">{ref}</code>
                 {category.childRefs && (
                   <span className="search-card-meta">
@@ -53,7 +61,7 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
             🍕 Products <span className="section-count">{results.products.length}</span>
           </h3>
           <div className="search-grid">
-            {results.products.map(({ ref, product }) => (
+            {results.products.map(({ ref, product, score }) => (
               <div
                 key={ref}
                 className={`search-card search-card--product ${product.isCombo ? 'search-card--combo' : ''}`}
@@ -62,6 +70,7 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
                 <div className="search-card-header">
                   <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
                   <span className="search-card-title">{product.displayName || getRefId(ref)}</span>
+                  <MatchBadge score={score} />
                 </div>
                 <code className="search-card-ref">{ref}</code>
                 <div className="search-card-details">
@@ -84,11 +93,12 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
             🔧 Modifiers <span className="section-count">{results.modifiers.length}</span>
           </h3>
           <div className="search-grid">
-            {results.modifiers.map(({ ref, modifier }) => (
+            {results.modifiers.map(({ ref, modifier, score }) => (
               <div key={ref} className="search-card search-card--modifier">
                 <div className="search-card-header">
                   <span className={`availability-dot ${modifier.isAvailable ? 'available' : 'unavailable'}`} />
                   <span className="search-card-title">{modifier.displayName}</span>
+                  <MatchBadge score={score} />
                 </div>
                 <code className="search-card-ref">{ref}</code>
                 <div className="search-card-details">

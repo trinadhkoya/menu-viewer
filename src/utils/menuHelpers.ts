@@ -282,44 +282,141 @@ function resolveProductGroupChildren(
 /**
  * Search across all products and modifiers
  */
+// ── Fuzzy Search Engine ──────────────────────────────────────────────
+//
+// Scoring tiers:
+//   100  exact substring match on displayName
+//    90  exact substring match on ref / description / PLU
+//    80  all query words appear (prefix ok) in displayName
+//    70  all query words appear in ref / description
+//  0-60  character-sequence fuzzy match (scaled by match density)
+//     0  no match
+
+/** Score a single target string against the full query and query words. */
+function fuzzyScore(target: string, query: string, queryWords: string[]): number {
+  if (!target) return 0;
+  const t = target.toLowerCase();
+  const q = query;
+
+  // Tier 1: exact substring
+  if (t.includes(q)) return 100;
+
+  // Tier 2: all query words present (supports prefix matching)
+  if (queryWords.length > 1) {
+    const allPresent = queryWords.every((w) => t.includes(w));
+    if (allPresent) return 80;
+
+    // Prefix word matching: "chk sand" matches "chicken sandwich"
+    const words = t.split(/[\s\-_./]+/);
+    const allPrefix = queryWords.every((qw) => words.some((tw) => tw.startsWith(qw)));
+    if (allPrefix) return 75;
+  }
+
+  // Tier 3: character-sequence fuzzy
+  // Walk through query chars in order, finding them in target
+  let qi = 0;
+  let consecutiveBonus = 0;
+  let totalBonus = 0;
+  let prevMatchIdx = -2;
+
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) {
+      // Bonus for consecutive matches
+      if (ti === prevMatchIdx + 1) {
+        consecutiveBonus++;
+        totalBonus += consecutiveBonus;
+      } else {
+        consecutiveBonus = 0;
+      }
+      // Bonus for matching at word boundary
+      if (ti === 0 || /[\s\-_./]/.test(t[ti - 1])) {
+        totalBonus += 2;
+      }
+      prevMatchIdx = ti;
+      qi++;
+    }
+  }
+
+  // All query chars must be found in order
+  if (qi < q.length) return 0;
+
+  // Scale: longer matches relative to target = better
+  const coverage = q.length / t.length;
+  const density = (q.length + totalBonus) / t.length;
+  const raw = Math.min(60, Math.round(density * 60 + coverage * 20));
+
+  // Require minimum quality to avoid garbage matches
+  return raw >= 15 ? raw : 0;
+}
+
+/** Best fuzzy score across multiple target strings. */
+function bestScore(targets: string[], query: string, queryWords: string[]): number {
+  let best = 0;
+  for (const t of targets) {
+    const s = fuzzyScore(t, query, queryWords);
+    if (s === 100) return 100; // short-circuit on exact match
+    if (s > best) best = s;
+  }
+  return best;
+}
+
+export interface SearchResult<T> {
+  ref: string;
+  item: T;
+  score: number;
+}
+
 export function searchMenu(
   menu: Menu,
   query: string,
 ): {
-  products: Array<{ ref: string; product: Product; categoryRef?: string }>;
-  modifiers: Array<{ ref: string; modifier: Modifier }>;
-  categories: Array<{ ref: string; category: Category }>;
+  products: Array<{ ref: string; product: Product; score: number }>;
+  modifiers: Array<{ ref: string; modifier: Modifier; score: number }>;
+  categories: Array<{ ref: string; category: Category; score: number }>;
 } {
   const q = query.toLowerCase().trim();
   if (!q) return { products: [], modifiers: [], categories: [] };
 
-  const products = Object.entries(menu.products || {})
-    .filter(([ref, p]) => {
-      const name = p.displayName?.toLowerCase() ?? '';
-      const desc = p.description?.toLowerCase() ?? '';
-      const id = ref.toLowerCase();
-      return name.includes(q) || desc.includes(q) || id.includes(q);
-    })
-    .map(([ref, product]) => ({ ref: `products.${ref}`, product }));
+  const queryWords = q.split(/\s+/).filter(Boolean);
 
-  const modifiers = Object.entries(menu.modifiers || {})
-    .filter(([ref, m]) => {
-      const name = m.displayName?.toLowerCase() ?? '';
-      const id = ref.toLowerCase();
-      return name.includes(q) || id.includes(q);
-    })
-    .map(([ref, modifier]) => ({ ref: `modifiers.${ref}`, modifier }));
+  const products: Array<{ ref: string; product: Product; score: number }> = [];
+  for (const [ref, p] of Object.entries(menu.products || {})) {
+    const score = bestScore(
+      [p.displayName ?? '', ref, p.description ?? ''],
+      q,
+      queryWords,
+    );
+    if (score > 0) products.push({ ref: `products.${ref}`, product: p, score });
+  }
+  products.sort((a, b) => b.score - a.score);
 
-  const categories = Object.entries(menu.categories || {})
-    .filter(([ref, c]) => {
-      const name = c.displayName?.toLowerCase() ?? '';
-      const id = ref.toLowerCase();
-      return name.includes(q) || id.includes(q);
-    })
-    .map(([ref, category]) => ({ ref: `categories.${ref}`, category }));
+  const modifiers: Array<{ ref: string; modifier: Modifier; score: number }> = [];
+  for (const [ref, m] of Object.entries(menu.modifiers || {})) {
+    const score = bestScore(
+      [m.displayName ?? '', ref, m.PLU != null ? String(m.PLU) : ''],
+      q,
+      queryWords,
+    );
+    if (score > 0) modifiers.push({ ref: `modifiers.${ref}`, modifier: m, score });
+  }
+  modifiers.sort((a, b) => b.score - a.score);
+
+  const categories: Array<{ ref: string; category: Category; score: number }> = [];
+  for (const [ref, c] of Object.entries(menu.categories || {})) {
+    const score = bestScore(
+      [c.displayName ?? '', ref],
+      q,
+      queryWords,
+    );
+    if (score > 0) categories.push({ ref: `categories.${ref}`, category: c, score });
+  }
+  categories.sort((a, b) => b.score - a.score);
 
   return { products, modifiers, categories };
 }
+
+/** Exported for testing */
+export { fuzzyScore as _fuzzyScore };
 
 /** Resolved size variant for a virtual product's alternative group. */
 export interface VirtualVariantEntry {

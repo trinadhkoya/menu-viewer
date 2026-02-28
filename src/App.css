@@ -1574,6 +1574,30 @@ code {
   line-height: 1.5;
 }
 
+/* ── Fuzzy Match Badges ── */
+.match-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.match-badge--close {
+  background: color-mix(in srgb, #f59e0b 15%, transparent);
+  color: #f59e0b;
+}
+
+.match-badge--fuzzy {
+  background: color-mix(in srgb, #a855f7 15%, transparent);
+  color: #a855f7;
+}
+
 /* ── Empty category (no products) ── */
 .category-empty {
   text-align: center;
