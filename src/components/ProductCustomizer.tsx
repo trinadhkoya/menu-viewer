@@ -15,13 +15,16 @@
  * - Running total (base price + modifier upcharges)
  */
 
-import { useRef, useMemo, useState, useCallback } from 'react';
+import { useRef, useMemo, useState, useCallback, useEffect } from 'react';
 import type { Menu, Product, Modifier, ModifierGroup, ProductGroup, ChildRefOverride, Quantity } from '../types/menu';
 import { resolveRef, getRefId } from '../utils/menuHelpers';
 import { OptimizedImage } from './OptimizedImage';
+import { CopyRef } from './CopyRef';
 import {
   type SelectedModifiers,
   type SelectedGroupItem,
+  type ComboSelection,
+  type SavedCustomization,
   ActionType,
   getInitialSelectedIngredients,
   toggleIngredientSelection,
@@ -36,6 +39,8 @@ import {
   productHasIntensities,
   getModifierPriceAndCalories,
   getVirtualSizeAlternatives,
+  getSizeVariantUpcharge,
+  getModificationSummary,
 } from '../utils/productCustomization';
 import {
   createCustomizerStore,
@@ -74,16 +79,30 @@ interface ProductCustomizerProps {
   product: Product;
   productRef: string;
   onClose: () => void;
+  onSave?: (data: SavedCustomization) => void;
+  savedSelections?: SelectedModifiers;
+  savedComboSelection?: ComboSelection[];
   onProductSelect?: (ref: string) => void;
 }
 
-export function ProductCustomizer({ menu, product, onClose, onProductSelect }: ProductCustomizerProps) {
-  // Create store once per mount (fresh for each product)
-  const storeRef = useRef(createCustomizerStore(menu, product));
+export function ProductCustomizer({
+  menu,
+  product,
+  productRef,
+  onClose,
+  onSave,
+  savedSelections,
+  savedComboSelection,
+  onProductSelect,
+}: ProductCustomizerProps) {
+  // Create store once per mount — restore saved selections if available
+  const storeRef = useRef(
+    createCustomizerStore(menu, product, savedSelections, savedComboSelection),
+  );
 
   return (
     <CustomizerContext.Provider value={storeRef.current}>
-      <CustomizerInner onClose={onClose} onProductSelect={onProductSelect} />
+      <CustomizerInner productRef={productRef} onClose={onClose} onSave={onSave} onProductSelect={onProductSelect} />
     </CustomizerContext.Provider>
   );
 }
@@ -93,12 +112,17 @@ export function ProductCustomizer({ menu, product, onClose, onProductSelect }: P
    ══════════════════════════════════════════════ */
 
 function CustomizerInner({
+  productRef,
   onClose,
+  onSave,
   onProductSelect,
 }: {
+  productRef: string;
   onClose: () => void;
+  onSave?: (data: SavedCustomization) => void;
   onProductSelect?: (ref: string) => void;
 }) {
+  const menu = useCustomizerStore((s) => s.menu);
   const product = useCustomizerStore((s) => s.product);
   const isCombo = useCustomizerStore((s) => s.isCombo);
   const priceResult = useCustomizerStore(selectPriceResult);
@@ -108,51 +132,99 @@ function CustomizerInner({
   const drillDown = useCustomizerStore((s) => s.drillDown);
   const drillDownProduct = useCustomizerStore(selectDrillDownProduct);
 
+  const selectedIngredients = useCustomizerStore((s) => s.selectedIngredients);
+  const initialIngredients = useCustomizerStore((s) => s.initialIngredients);
+  const comboSelection = useCustomizerStore((s) => s.comboSelection);
+
   const reset = useCustomizerStore((s) => s.reset);
+
+  const isDrillDown = !!drillDown && !!drillDownProduct;
+
+  /** Save selections and close. */
+  const handleDone = useCallback(() => {
+    if (onSave) {
+      const modifications = getModificationSummary(menu, selectedIngredients, initialIngredients);
+      onSave({
+        selectedIngredients,
+        comboSelection,
+        priceResult,
+        isCombo,
+        modifications,
+      });
+    }
+    onClose();
+  }, [onSave, onClose, menu, selectedIngredients, initialIngredients, comboSelection, priceResult, isCombo]);
+
+  /* ── Scroll-driven hero collapse ── */
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [heroCollapsed, setHeroCollapsed] = useState(false);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const onScroll = () => setHeroCollapsed(el.scrollTop > 40);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="customizer">
-      {/* ── Hero Header ── */}
-      <div className="customizer-hero-header">
+      {/* ── Hero Header (collapses on scroll) ── */}
+      <div className={`customizer-hero-header ${heroCollapsed ? 'customizer-hero-header--collapsed' : ''}`}>
         <div className="customizer-hero-nav">
-          <button className="customizer-back" onClick={onClose} title="Back">
+          <button className="customizer-back" onClick={handleDone} title="Back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
+
+          {/* Collapsed inline info — only visible when scrolled */}
+          <div className="customizer-hero-collapsed-info">
+            {product.imageUrl && (
+              <div className="customizer-hero-collapsed-img">
+                <OptimizedImage src={product.imageUrl} alt="" width={32} height={32} />
+              </div>
+            )}
+            <span className="customizer-hero-collapsed-name">{product.displayName}</span>
+            <span className="customizer-hero-collapsed-price">${priceResult.totalPrice.toFixed(2)}</span>
+          </div>
+
           {isModified && (
             <button className="customizer-reset" onClick={reset} title="Reset to defaults">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 105.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           )}
         </div>
-        {product.imageUrl && (
-          <div className="customizer-hero-image">
-            <OptimizedImage src={product.imageUrl} alt="" width={96} height={96} />
-          </div>
-        )}
-        <h2 className="customizer-hero-name">{product.displayName}</h2>
-        <div className="customizer-hero-meta">
-          <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
-          {priceResult.totalCalories != null && (
-            <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
+
+        {/* Expanded hero content — hides when scrolled */}
+        <div className="customizer-hero-expanded">
+          {product.imageUrl && (
+            <div className="customizer-hero-image">
+              <OptimizedImage src={product.imageUrl} alt="" width={96} height={96} />
+            </div>
           )}
-          {priceResult.modifierUpcharge !== 0 && (
-            <span className={`customizer-hero-delta ${priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
-              {priceResult.modifierUpcharge > 0 ? '+' : ''}{priceResult.modifierUpcharge.toFixed(2)}
+          <h2 className="customizer-hero-name">{product.displayName}</h2>
+          <CopyRef value={productRef} display={getRefId(productRef)} className="customizer-hero-ref" />
+          <div className="customizer-hero-meta">
+            <span className="customizer-hero-price">${priceResult.totalPrice.toFixed(2)}</span>
+            {priceResult.totalCalories != null && (
+              <span className="customizer-hero-cal">{priceResult.totalCalories} cal</span>
+            )}
+            {priceResult.modifierUpcharge !== 0 && (
+              <span className={`customizer-hero-delta ${priceResult.modifierUpcharge > 0 ? 'up' : 'down'}`}>
+                {priceResult.modifierUpcharge > 0 ? '+' : ''}{priceResult.modifierUpcharge.toFixed(2)}
+              </span>
+            )}
+          </div>
+          {unsatisfied.length > 0 && (
+            <span className="customizer-hero-required-hint">
+              {unsatisfied.length} required {unsatisfied.length === 1 ? 'selection' : 'selections'} remaining
             </span>
           )}
         </div>
-        {unsatisfied.length > 0 && (
-          <span className="customizer-hero-required-hint">
-            {unsatisfied.length} required {unsatisfied.length === 1 ? 'selection' : 'selections'} remaining
-          </span>
-        )}
       </div>
 
-      {/* Body — Single PDP, Combo PDP, or Nested Drill-down */}
-      <div className="customizer-body">
-        {drillDown && drillDownProduct ? (
-          <NestedSizeCustomizer />
-        ) : isCombo ? (
+      {/* Body — Single PDP or Combo PDP */}
+      <div className="customizer-body" ref={bodyRef}>
+        {isCombo ? (
           <ComboCustomizer onProductSelect={onProductSelect} />
         ) : (
           <SingleCustomizer onProductSelect={onProductSelect} />
@@ -160,22 +232,27 @@ function CustomizerInner({
       </div>
 
       {/* ── Floating Footer CTA ── */}
-      <div className="customizer-footer-glass">
-        <button
-          className={`customizer-cta ${!selectionComplete ? 'customizer-cta--disabled' : ''}`}
-          disabled={!selectionComplete}
-          onClick={onClose}
-        >
-          {!selectionComplete ? (
-            <span className="customizer-cta-label">Complete {unsatisfied.length} required {unsatisfied.length === 1 ? 'group' : 'groups'}</span>
-          ) : (
-            <>
-              <span className="customizer-cta-label">Done</span>
-              <span className="customizer-cta-price">${priceResult.totalPrice.toFixed(2)}</span>
-            </>
-          )}
-        </button>
-      </div>
+      {!isDrillDown && (
+        <div className="customizer-footer-glass">
+          <button
+            className={`customizer-cta ${!selectionComplete ? 'customizer-cta--disabled' : ''}`}
+            disabled={!selectionComplete}
+            onClick={handleDone}
+          >
+            {!selectionComplete ? (
+              <span className="customizer-cta-label">Complete {unsatisfied.length} required {unsatisfied.length === 1 ? 'group' : 'groups'}</span>
+            ) : (
+              <>
+                <span className="customizer-cta-label">Done</span>
+                <span className="customizer-cta-price">${priceResult.totalPrice.toFixed(2)}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ── Nested drill-down overlay ── */}
+      {isDrillDown && <NestedSizeCustomizer />}
     </div>
   );
 }
@@ -246,6 +323,7 @@ function ModifierGroupSection({
       <button className="customizer-section-header" onClick={() => toggleGroupExpanded(groupRef)}>
         <div className="customizer-section-title-row">
           <h3 className="customizer-section-name">{groupName}</h3>
+          <CopyRef value={groupRef} display={getRefId(groupRef)} className="customizer-section-ref" />
           {isUnsatisfied && <span className="customizer-section-tag required">Required</span>}
           {isRecipe && <span className="customizer-section-tag recipe">Recipe</span>}
         </div>
@@ -412,6 +490,7 @@ function ModifierOptionRow({
           {isDefault && <span className="customizer-option-badge default">Default</span>}
           {isExclusive && <span className="customizer-option-badge none">None</span>}
         </div>
+        <CopyRef value={itemRef} display={getRefId(itemRef)} className="customizer-option-ref" />
         {intensityName && isSelected && !hasDrillDown && (
           <span className="customizer-option-sub">{intensityName}</span>
         )}
@@ -626,9 +705,8 @@ function NestedSizeCustomizerInner({
       <div className="customizer-nested-sizes">
         {alternatives.variants.map((v) => {
           const isActive = v.ref === selectedSizeRef;
-          const upcharge = v.product.price != null && alternatives.variants[0]?.product.price != null
-            ? Math.max(v.product.price - (alternatives.variants.find((d) => d.isDefault)?.product.price ?? 0), 0)
-            : 0;
+          // Case 3: Size variant upcharge = selected size price - default size price
+          const upcharge = getSizeVariantUpcharge(menu, virtualProduct, v.ref);
           return (
             <button
               key={v.ref}

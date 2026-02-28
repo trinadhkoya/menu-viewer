@@ -12,6 +12,7 @@
 
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { createContext, useContext } from 'react';
 import type { Menu, Product } from '../types/menu';
 import { resolveRef } from '../utils/menuHelpers';
@@ -118,7 +119,12 @@ export type CustomizerStore = CustomizerState & CustomizerActions;
 /*  Store factory                                  */
 /* ────────────────────────────────────────────── */
 
-export function createCustomizerStore(menu: Menu, product: Product) {
+export function createCustomizerStore(
+  menu: Menu,
+  product: Product,
+  savedIngredients?: SelectedModifiers,
+  savedComboSelection?: ComboSelection[],
+) {
   const isCombo = product.isCombo === true;
   const initialIngredients = getInitialSelectedIngredients(menu, product);
   const comboOptions = isCombo ? getComboOptions(menu, product) : [];
@@ -130,10 +136,10 @@ export function createCustomizerStore(menu: Menu, product: Product) {
     product,
     isCombo,
     initialIngredients,
-    selectedIngredients: initialIngredients,
+    selectedIngredients: savedIngredients ?? initialIngredients,
     comboOptions,
     initialComboSelection,
-    comboSelection: initialComboSelection,
+    comboSelection: savedComboSelection ?? initialComboSelection,
     activeComboSlot: 0,
     drillDown: null,
     expandedGroups: {},
@@ -273,5 +279,5 @@ export const CustomizerContext = createContext<CustomizerStoreApi | null>(null);
 export function useCustomizerStore<T>(selector: (state: CustomizerStore) => T): T {
   const store = useContext(CustomizerContext);
   if (!store) throw new Error('useCustomizerStore must be used within CustomizerContext.Provider');
-  return useStore(store, selector);
+  return useStore(store, useShallow(selector));
 }

@@ -103,6 +103,128 @@ function isSingleSelectionGroup(menu: Menu, groupRef: string): boolean {
 }
 
 /* ──────────────────────────────────────────────
+   Virtual Product Price Resolution
+   ────────────────────────────────────────────── */
+
+/**
+ * Resolves the effective price of a product.
+ * For virtual products, walks relatedProducts.alternatives → finds the default
+ * size variant → returns that variant's price (matching mobile getProductGroupItems).
+ * For concrete products, returns the product's own price.
+ */
+export function getDefaultSizeVariantPrice(
+  menu: Menu,
+  product: Product | Modifier | undefined,
+): number | undefined {
+  if (!product) return undefined;
+  if (!(product as Product).isVirtual) return product.price;
+
+  // Virtual product: resolve through default size variant
+  const alts = getVirtualProductAlternatives(menu, product as Product);
+  if (alts.length === 0) return product.price;
+
+  const variants = alts[0].variants;
+  const defaultVariant = variants.find((v) => v.isDefault);
+  return defaultVariant?.product?.price ?? variants[0]?.product?.price ?? product.price;
+}
+
+/**
+ * Gets the price of a specific size variant of a virtual product.
+ * Used when a user selects a non-default size (e.g., Large instead of Medium).
+ */
+export function getSizeVariantPrice(
+  menu: Menu,
+  virtualProduct: Product | Modifier | undefined,
+  sizeRef: string,
+): number | undefined {
+  if (!virtualProduct || !(virtualProduct as Product).isVirtual) return virtualProduct?.price;
+
+  const alts = getVirtualProductAlternatives(menu, virtualProduct as Product);
+  if (alts.length === 0) return virtualProduct?.price;
+
+  const variant = alts[0].variants.find((v) => v.ref === sizeRef);
+  return variant?.product?.price ?? virtualProduct?.price;
+}
+
+/**
+ * Case 3 — Size variant upcharge (Y-X).
+ * For a virtual product with size alternatives, calculates the upcharge
+ * of a selected size variant relative to the default size.
+ * Returns 0 if no upcharge or if prices aren't available.
+ */
+export function getSizeVariantUpcharge(
+  menu: Menu,
+  virtualProduct: Product | Modifier | undefined,
+  selectedSizeRef: string,
+): number {
+  if (!virtualProduct || !(virtualProduct as Product).isVirtual) return 0;
+
+  const alts = getVirtualProductAlternatives(menu, virtualProduct as Product);
+  if (alts.length === 0) return 0;
+
+  const variants = alts[0].variants;
+  const defaultVariant = variants.find((v) => v.isDefault);
+  const selectedVariant = variants.find((v) => v.ref === selectedSizeRef);
+
+  if (!defaultVariant || !selectedVariant) return 0;
+
+  const defaultPrice = defaultVariant.product?.price;
+  const selectedPrice = selectedVariant.product?.price;
+
+  if (defaultPrice == null || selectedPrice == null) return 0;
+  return Math.max(selectedPrice - defaultPrice, 0);
+}
+
+/**
+ * Case 4 — Product group upcharge (Y-X).
+ * For a product group with min=1,max=1 (forced single-select),
+ * calculates the upcharge of selecting a non-default product.
+ * Virtual products are resolved to their default size variant prices.
+ */
+export function getProductGroupUpcharge(
+  menu: Menu,
+  groupRef: string,
+  selectedItemRef: string,
+  selectedSizeRef?: string,
+): number {
+  if (!isSingleSelectionGroup(menu, groupRef)) return 0;
+
+  const group = resolveRef(menu, groupRef) as ProductGroup | undefined;
+  if (!group?.childRefs) return 0;
+
+  // Find the default product and its resolved price
+  let defaultPrice: number | undefined;
+  for (const [ref, override] of Object.entries(group.childRefs)) {
+    const ov = (override ?? {}) as ChildRefOverride;
+    const menuProduct = resolveRef(menu, ref) as Product | undefined;
+    const isDefault = ov.isDefault ?? menuProduct?.isDefault ?? false;
+    if (isDefault) {
+      // Use override price first, then resolve virtual → default size price, then product price
+      defaultPrice = ov.price ?? getDefaultSizeVariantPrice(menu, menuProduct) ?? menuProduct?.price;
+      break;
+    }
+  }
+
+  if (defaultPrice == null) return 0;
+
+  // Resolve selected product's price
+  const selectedOverride = (group.childRefs[selectedItemRef] ?? {}) as ChildRefOverride;
+  const selectedProduct = resolveRef(menu, selectedItemRef) as Product | undefined;
+
+  let selectedPrice: number | undefined;
+  if (selectedSizeRef && selectedProduct?.isVirtual) {
+    // User selected a specific size within the virtual product
+    selectedPrice = selectedOverride.price ?? getSizeVariantPrice(menu, selectedProduct, selectedSizeRef);
+  } else {
+    // Use default size of the selected product
+    selectedPrice = selectedOverride.price ?? getDefaultSizeVariantPrice(menu, selectedProduct) ?? selectedProduct?.price;
+  }
+
+  if (selectedPrice == null) return 0;
+  return Math.max(selectedPrice - defaultPrice, 0);
+}
+
+/* ──────────────────────────────────────────────
    Virtual Product Drill-down Helpers
    ────────────────────────────────────────────── */
 
@@ -258,13 +380,25 @@ export function getInitialSelectedIngredients(menu: Menu, product?: Product): Se
     if (!group?.childRefs) continue;
 
     const groupItems: SelectedGroup = {};
+    const isSingleSelect = isSingleSelectionGroup(menu, groupRef);
+    let singleSelectFilled = false; // tracks if one default was already assigned qty 1
 
     for (const [itemRef, overrideRaw] of Object.entries(group.childRefs)) {
       const menuItem = resolveRef(menu, itemRef) as Product | Modifier | undefined;
       if (!menuItem) continue;
 
       const override = (overrideRaw ?? {}) as ChildRefOverride;
-      const defaultQty = getDefaultQuantity(override, menuItem);
+      let defaultQty = getDefaultQuantity(override, menuItem);
+
+      // For single-selection groups (min=1, max=1), only the first default gets qty 1.
+      // Subsequent defaults are set to 0 to avoid exceeding the max.
+      if (isSingleSelect && defaultQty > 0) {
+        if (singleSelectFilled) {
+          defaultQty = 0;
+        } else {
+          singleSelectFilled = true;
+        }
+      }
 
       if (isProductGroupRef(itemRef)) {
         // Dropdown-style selection: find default child
@@ -514,6 +648,7 @@ export function getModifierPriceAndCalories(
 
   const menuProduct = resolveRef(menu, itemRef) as Product | undefined;
   const groupOverride = group.childRefs?.[itemRef] as ChildRefOverride | undefined;
+  const isVirtual = !!(menuProduct as Product)?.isVirtual;
 
   // Resolve intensity modifier group
   const modGroupRef = menuProduct?.modifierGroupRefs ? Object.keys(menuProduct.modifierGroupRefs)[0] : undefined;
@@ -525,7 +660,27 @@ export function getModifierPriceAndCalories(
   const selectedModifierOverride = subItemId ? (childRefs[subItemId] as ChildRefOverride) : undefined;
   const selectedModifier = subItemId ? resolveRef(menu, subItemId) as Modifier | undefined : undefined;
   const selectedModifierPrice = selectedModifierOverride?.price ?? selectedModifier?.price;
-  const selectedPrice = selectedModifierPrice ?? groupOverride?.price ?? menuProduct?.price ?? 0;
+
+  // For virtual products, resolve price via size variants.
+  // If a specific size is selected (subItemId = size ref), use that size's price.
+  // Otherwise, use the default size variant's price.
+  let resolvedProductPrice: number;
+  if (isVirtual && subItemId && !hasChildRefs) {
+    // Virtual product with a selected size variant (Case 3: segmented button)
+    resolvedProductPrice = groupOverride?.price
+      ?? getSizeVariantPrice(menu, menuProduct as Product, subItemId)
+      ?? getDefaultSizeVariantPrice(menu, menuProduct)
+      ?? menuProduct?.price ?? 0;
+  } else if (isVirtual) {
+    // Virtual product at default size
+    resolvedProductPrice = groupOverride?.price
+      ?? getDefaultSizeVariantPrice(menu, menuProduct)
+      ?? menuProduct?.price ?? 0;
+  } else {
+    resolvedProductPrice = groupOverride?.price ?? menuProduct?.price ?? 0;
+  }
+
+  const selectedPrice = selectedModifierPrice ?? resolvedProductPrice;
 
   const menuProductCal = menuProduct?.nutrition?.totalCalories ?? 0;
   const subItemCal = selectedModifier?.nutrition?.totalCalories ?? 0;
@@ -538,13 +693,22 @@ export function getModifierPriceAndCalories(
   });
   const defaultKey = defaultModEntry?.[0];
 
-  // Default product in the ingredient group
+  // Default product in the ingredient/product group — resolve virtual prices
   const defaultProductEntry = group.childRefs
-    ? Object.entries(group.childRefs).find(([, val]) => (val as ChildRefOverride)?.isDefault)
+    ? Object.entries(group.childRefs).find(([, val]) => {
+        const ov = (val ?? {}) as ChildRefOverride;
+        return ov.isDefault;
+      }) ?? Object.entries(group.childRefs).find(([ref]) => {
+        const p = resolveRef(menu, ref) as Product | undefined;
+        return p?.isDefault;
+      })
     : undefined;
   const defaultProductRef = defaultProductEntry?.[0];
   const defaultProduct = defaultProductRef ? resolveRef(menu, defaultProductRef) as Product : undefined;
-  const defaultProductPrice = (defaultProductEntry?.[1] as ChildRefOverride)?.price ?? defaultProduct?.price ?? 0;
+  // Resolve default product price through virtual → default size variant
+  const defaultProductPrice = (defaultProductEntry?.[1] as ChildRefOverride)?.price
+    ?? getDefaultSizeVariantPrice(menu, defaultProduct)
+    ?? defaultProduct?.price ?? 0;
 
   const defaultModifier = defaultKey ? resolveRef(menu, defaultKey) as Modifier : undefined;
   const defaultModPrice = defaultModifier?.price ?? 0;
@@ -559,6 +723,19 @@ export function getModifierPriceAndCalories(
   // Case 1: Default item with NO intensity mods → free
   // Case 2: Default item WITH intensity mods → upcharge = max(selectedModPrice - defaultModPrice, 0)
   if (isDefault) {
+    if (!hasChildRefs && !isVirtual) {
+      return { price: 0, calories: defaultCalories, defaultCalories: 0, isDefault: true };
+    }
+    // For default virtual products: if user upgraded size, show size upcharge (Case 3)
+    if (isVirtual && subItemId) {
+      const sizeUpcharge = getSizeVariantUpcharge(menu, menuProduct, subItemId);
+      return {
+        price: sizeUpcharge,
+        calories: selectedCalories,
+        defaultCalories,
+        isDefault: true,
+      };
+    }
     if (!hasChildRefs) {
       return { price: 0, calories: defaultCalories, defaultCalories: 0, isDefault: true };
     }
@@ -570,12 +747,15 @@ export function getModifierPriceAndCalories(
     };
   }
 
-  // Case 3: Non-default, upcharge-applicable group (min=1, max=1) → delta pricing
-  // Case 4: Non-default, other groups → full price
+  // Case 4: Non-default product in upcharge-applicable group (min=1, max=1) → Y-X delta pricing
+  // For virtual products: resolvedProductPrice already uses the selected size's price
   if (!hasChildRefs) {
     const isUpchargeGroup = isSingleSelectionGroup(menu, groupRef);
+    const upchargePrice = isUpchargeGroup
+      ? Math.max(resolvedProductPrice - defaultProductPrice, 0)
+      : resolvedProductPrice;
     return {
-      price: isUpchargeGroup ? selectedPrice - defaultProductPrice : selectedPrice,
+      price: upchargePrice,
       calories: defaultCalories || selectedCalories,
       defaultCalories: 0,
       isDefault: false,
@@ -649,7 +829,8 @@ export function getSinglePDPPriceAndCalories(
    ────────────────────────────────────────────── */
 
 /**
- * Resolves a product group's children with overrides (same as mobile getProductGroupItems).
+ * Resolves a product group's children with overrides (matching mobile getProductGroupItems).
+ * For virtual products, resolves price through the default size variant.
  */
 export function getProductGroupItems(
   menu: Menu,
@@ -661,10 +842,17 @@ export function getProductGroupItems(
   return Object.entries(group.childRefs).map(([childRef, overrideRaw]) => {
     const override = (overrideRaw ?? {}) as ChildRefOverride;
     const menuProduct = resolveRef(menu, childRef) as Product | undefined;
+
+    // For virtual products, resolve price via default size variant (matching mobile logic)
+    const resolvedPrice = override.price
+      ?? getDefaultSizeVariantPrice(menu, menuProduct)
+      ?? menuProduct?.price
+      ?? 0;
+
     return {
       ...menuProduct,
       _ref: childRef,
-      price: override.price ?? menuProduct?.price ?? 0,
+      price: resolvedPrice,
       isDefault: override.isDefault ?? menuProduct?.isDefault ?? false,
     } as Product & { _ref: string };
   });
@@ -839,6 +1027,17 @@ export interface ModificationSummaryItem {
   displayName: string;
   price?: number;
   quantity: number;
+}
+
+/**
+ * Snapshot of customizer state, carried back to the Product Detail Page.
+ */
+export interface SavedCustomization {
+  selectedIngredients: SelectedModifiers;
+  comboSelection: ComboSelection[];
+  priceResult: FullPriceResult;
+  isCombo: boolean;
+  modifications: ModificationSummaryItem[];
 }
 
 /**
