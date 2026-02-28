@@ -8514,3 +8514,517 @@ body,
 .customizer-nested-done:hover {
   filter: brightness(1.06);
 }
+
+/* ═══════════════════════════════════════════════
+   Customizer v2 — Hero Header, Sections, Options
+   ═══════════════════════════════════════════════ */
+
+/* ── Hero Header ── */
+
+.customizer-hero-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 16px 16px;
+  background: var(--color-surface, #fff);
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.customizer-hero-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.customizer-hero-image {
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-surface-alt, #f5f5f5);
+  margin-bottom: 10px;
+}
+
+.customizer-hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.customizer-hero-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: var(--color-text, #333);
+  line-height: 1.2;
+}
+
+.customizer-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
+
+.customizer-hero-price {
+  font-weight: 800;
+  color: var(--color-text, #333);
+}
+
+.customizer-hero-cal {
+  color: var(--color-text-secondary, #999);
+}
+
+.customizer-hero-delta {
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 100px;
+}
+
+.customizer-hero-delta.up {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.customizer-hero-delta.down {
+  background: rgba(34, 197, 94, 0.08);
+  color: #16a34a;
+}
+
+.customizer-hero-required-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+/* ── Floating Footer CTA ── */
+
+.customizer-footer-glass {
+  padding: 10px 16px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border, #e2e2e2);
+  background: color-mix(in srgb, var(--color-surface, #fff) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.customizer-cta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.customizer-cta:hover:not(.customizer-cta--disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.customizer-cta:active:not(.customizer-cta--disabled) {
+  transform: translateY(0);
+}
+
+.customizer-cta--disabled {
+  background: var(--color-border, #ddd);
+  color: var(--color-text-secondary, #999);
+  cursor: default;
+}
+
+.customizer-cta-label {
+  font-weight: 700;
+}
+
+.customizer-cta-price {
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+/* ── Section (modifier group) ── */
+
+.customizer-section {
+  background: var(--color-surface, #fff);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border, #eee);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.customizer-section--required {
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(239, 68, 68, 0.15);
+}
+
+.customizer-section--maxed {
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.customizer-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.customizer-section-header:hover {
+  background: var(--color-surface-alt, #f9f9fb);
+}
+
+.customizer-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.customizer-section-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.customizer-section-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.customizer-section-tag.recipe {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
+.customizer-section-tag.required {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.customizer-section-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.customizer-section-hint {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary, #aaa);
+}
+
+.customizer-section-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 100px;
+  padding: 0 6px;
+  background: var(--color-surface-alt, #f0f0f0);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-secondary, #999);
+  transition: all 0.2s;
+}
+
+.customizer-section-count.active {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.customizer-section-count.at-max {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.customizer-section-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-secondary, #999);
+  transition: transform 0.25s ease;
+}
+
+.customizer-section-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* ── Section body expand/collapse ── */
+
+.customizer-section-body {
+  display: grid;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.customizer-section-body.expanded {
+  grid-template-rows: 1fr;
+}
+
+.customizer-section-body.collapsed {
+  grid-template-rows: 0fr;
+}
+
+.customizer-section-body > .customizer-section-items {
+  overflow: hidden;
+}
+
+.customizer-section-items {
+  border-top: 1px solid var(--color-border, #f0f0f0);
+}
+
+/* ── Option Row (modifier item, full-row clickable) ── */
+
+.customizer-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 14px;
+  transition: background 0.15s, transform 0.1s;
+  position: relative;
+  cursor: pointer;
+}
+
+.customizer-option:not(:last-child) {
+  border-bottom: 1px solid var(--color-border, #f5f5f5);
+}
+
+.customizer-option:hover {
+  background: var(--color-surface-alt, #fafafa);
+}
+
+.customizer-option:active {
+  transform: scale(0.995);
+}
+
+.customizer-option--selected {
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface, #fff));
+}
+
+.customizer-option--changed {
+  /* left accent strip for modified items */
+}
+
+.customizer-option--changed::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-accent);
+  opacity: 0.6;
+}
+
+.customizer-option--exclusive {
+  opacity: 0.55;
+}
+
+.customizer-option--selected.customizer-option--exclusive {
+  opacity: 1;
+}
+
+.customizer-option--drillable {
+  cursor: pointer;
+}
+
+.customizer-option--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.customizer-option--disabled .customizer-option-control {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+/* ── Option Control (visual checkbox/radio indicator) ── */
+
+.customizer-option-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.customizer-option-control.disabled {
+  opacity: 0.4;
+}
+
+/* ── Option Image ── */
+
+.customizer-option-image {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-surface-alt, #f5f5f5);
+}
+
+.customizer-option-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ── Option Content ── */
+
+.customizer-option-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.customizer-option-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.customizer-option-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+
+.customizer-option-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 100px;
+}
+
+.customizer-option-badge.default {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.customizer-option-badge.none {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.customizer-option-sub {
+  font-size: 0.72rem;
+  color: #7c3aed;
+  font-weight: 600;
+  margin-top: 2px;
+  display: block;
+}
+
+.customizer-option-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.customizer-option-upcharge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.customizer-option-cal {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary, #aaa);
+}
+
+/* ── Option Drill-down Button ── */
+
+.customizer-option-drill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.customizer-option-drill:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* ── Option Stepper ── */
+
+.customizer-option-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  background: var(--color-surface-alt, #f5f5f5);
+  border-radius: 100px;
+  padding: 2px;
+}
+
+/* ── Option Navigate Arrow ── */
+
+.customizer-option-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-secondary, #bbb);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.customizer-option-nav:hover {
+  background: var(--color-surface-alt, #f0f0f0);
+  color: var(--color-accent);
+}
