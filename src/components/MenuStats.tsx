@@ -191,8 +191,16 @@ function ProductCard({ ref_, product, onClick }: ProductCardProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {product.imageUrl && (
+      {product.imageUrl ? (
         <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
+      ) : (
+        <div className="product-card-placeholder">
+          <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
+            <rect x="6" y="10" width="36" height="28" rx="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="17" cy="21" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M6 34l10-8 5 4 8-10 13 14" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+        </div>
       )}
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>

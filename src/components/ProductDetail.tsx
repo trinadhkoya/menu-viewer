@@ -560,7 +560,9 @@ function ModifierGroupCard({
                 {modifier.nutrition?.totalCalories != null && (
                   <span className="modifier-cal">{modifier.nutrition.totalCalories} cal</span>
                 )}
-                <CopyRef value={String(modifier.PLU)} display={`PLU: ${modifier.PLU}`} className="modifier-plu" />
+                {modifier.PLU != null && modifier.PLU !== undefined && (
+                  <CopyRef value={String(modifier.PLU)} display={`PLU: ${modifier.PLU}`} className="modifier-plu" />
+                )}
               </div>
             ))}
         </div>

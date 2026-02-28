@@ -96,7 +96,7 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
                   {modifier.nutrition?.totalCalories != null && (
                     <span className="search-card-cal">{modifier.nutrition.totalCalories} cal</span>
                   )}
-                  <code className="search-card-plu">PLU: {modifier.PLU}</code>
+                  {modifier.PLU != null && <code className="search-card-plu">PLU: {modifier.PLU}</code>}
                 </div>
               </div>
             ))}
