@@ -8207,3 +8207,212 @@ body,
 .detail-customize-btn svg {
   flex-shrink: 0;
 }
+
+/* ── Nested Size Customizer (virtual product drill-down) ── */
+
+.customizer-item-drilldown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.customizer-item-drilldown:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.customizer-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: slideInRight 0.2s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.customizer-nested-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+  background: var(--color-surface, #fff);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.customizer-nested-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-surface-alt, #f0f0f0);
+  color: var(--color-text, #333);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.customizer-nested-back:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.customizer-nested-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customizer-nested-title strong {
+  font-size: 0.95rem;
+  color: var(--color-text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customizer-nested-subtitle {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+.customizer-nested-sizes {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+  background: var(--color-surface, #fff);
+}
+
+.customizer-nested-size-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--color-border, #ddd);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #333);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.customizer-nested-size-pill:hover {
+  border-color: var(--color-accent);
+}
+
+.customizer-nested-size-pill.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.customizer-nested-size-default {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.customizer-nested-size-pill.active .customizer-nested-size-default {
+  opacity: 0.85;
+}
+
+.customizer-nested-size-upcharge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-orange, #e67e22);
+}
+
+.customizer-nested-size-pill.active .customizer-nested-size-upcharge {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.customizer-nested-body {
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.customizer-nested-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-surface-alt, #f8f8f8);
+}
+
+.customizer-nested-hero img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.customizer-nested-hero-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text, #333);
+}
+
+.customizer-nested-hero-cal {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary, #999);
+  margin-left: auto;
+}
+
+.customizer-nested-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border, #e5e5e5);
+  background: var(--color-surface, #fff);
+  position: sticky;
+  bottom: 0;
+}
+
+.customizer-nested-done {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.customizer-nested-done:hover {
+  filter: brightness(1.06);
+}

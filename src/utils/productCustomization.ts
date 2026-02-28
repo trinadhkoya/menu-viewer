@@ -21,7 +21,7 @@ import type {
   ChildRefOverride,
   Quantity,
 } from '../types/menu';
-import { resolveRef, getRefId, isProductRef, isProductGroupRef } from './menuHelpers';
+import { resolveRef, getRefId, isProductRef, isProductGroupRef, getVirtualProductAlternatives } from './menuHelpers';
 
 /* ──────────────────────────────────────────────
    Selection State Types
@@ -100,6 +100,64 @@ function isSingleSelectionGroup(menu: Menu, groupRef: string): boolean {
   if (!group) return false;
   const sq = (group as ProductGroup).selectionQuantity ?? (group as ModifierGroup).selectionQuantity;
   return sq?.min === 1 && sq?.max === 1;
+}
+
+/* ──────────────────────────────────────────────
+   Virtual Product Drill-down Helpers
+   ────────────────────────────────────────────── */
+
+export interface VirtualSizeVariant {
+  ref: string;
+  product: Product;
+  isDefault: boolean;
+  overrides?: ChildRefOverride;
+}
+
+export interface VirtualAlternatives {
+  groupRef: string;
+  groupName: string;
+  variants: VirtualSizeVariant[];
+}
+
+/**
+ * Returns size alternatives for a virtual product, or null if it has none.
+ * Used to determine if a product in the customizer should show a "Customize" drill-down.
+ */
+export function getVirtualSizeAlternatives(
+  menu: Menu,
+  product: Product | Modifier | undefined,
+): VirtualAlternatives | null {
+  if (!product || !(product as Product).isVirtual) return null;
+  const alts = getVirtualProductAlternatives(menu, product as Product);
+  if (alts.length === 0) return null;
+  const first = alts[0];
+  return {
+    groupRef: first.groupRef,
+    groupName: first.group.displayName ?? 'Size',
+    variants: first.variants.map((v) => ({
+      ref: v.ref,
+      product: v.product,
+      isDefault: v.isDefault,
+      overrides: v.overrides,
+    })),
+  };
+}
+
+/**
+ * Build the initial nested state for a virtual product's default size variant.
+ * Returns { selectedSizeRef, sizeModifiers } for the default size.
+ */
+export function getInitialVirtualSizeState(
+  menu: Menu,
+  product: Product | Modifier | undefined,
+): { selectedSizeRef: string; sizeModifiers: SelectedModifiers } | null {
+  const alts = getVirtualSizeAlternatives(menu, product);
+  if (!alts || alts.variants.length === 0) return null;
+  const defaultVariant = alts.variants.find((v) => v.isDefault) ?? alts.variants[0];
+  return {
+    selectedSizeRef: defaultVariant.ref,
+    sizeModifiers: getInitialSelectedIngredients(menu, defaultVariant.product),
+  };
 }
 
 /** Determine the control type for a modifier item */
