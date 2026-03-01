@@ -204,7 +204,12 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
+      <div className="product-card-image-wrapper">
+        <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
+        <span
+          className={`availability-dot overlay ${product.isAvailable ? 'available' : 'unavailable'}`}
+        />
+      </div>
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
         <CopyRef value={ref_} display={getRefId(ref_)} />
@@ -212,6 +217,9 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
           <div className="product-card-meta">
             {product.price != null && (
               <span className="product-card-price">${product.price.toFixed(2)}</span>
+            )}
+            {product.price != null && product?.nutrition?.totalCalories != null && (
+              <span className="product-card-dot">·</span>
             )}
             {product?.nutrition?.totalCalories != null && (
               <span className="product-card-cal">{product.nutrition.totalCalories} cal</span>
