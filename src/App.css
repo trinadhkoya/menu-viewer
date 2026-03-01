@@ -675,6 +675,30 @@ code {
   opacity: 0.6;
 }
 
+.sidebar-switch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 8px;
+}
+
+.sidebar-switch-btn:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .header-right {
   display: flex;
   align-items: center;

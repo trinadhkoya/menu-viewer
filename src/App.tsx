@@ -289,19 +289,6 @@ function App() {
     navigate('/');
   }, [navigate]);
 
-  const brandClass = activeBrand ? `brand-${activeBrand}` : '';
-
-  if (!menu) {
-    return (
-      <div className="app">
-        <div style={{ position: 'absolute', top: 16, right: 16 }}>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </div>
-        <MenuUploader onMenuLoad={handleMenuLoad} />
-      </div>
-    );
-  }
-
   const handleProductGroupSelect = useCallback(
     (ref: string) => {
       setSelectedProductGroupRef(ref);
@@ -323,6 +310,19 @@ function App() {
     },
     [activeTab, navigate],
   );
+
+  const brandClass = activeBrand ? `brand-${activeBrand}` : '';
+
+  if (!menu) {
+    return (
+      <div className="app">
+        <div style={{ position: 'absolute', top: 16, right: 16 }}>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
+        <MenuUploader onMenuLoad={handleMenuLoad} />
+      </div>
+    );
+  }
 
   // Content for the main area — search + product/group overlay on top of routed view
   const mainContent = searchQuery ? (
@@ -370,6 +370,7 @@ function App() {
                     : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
               </span>
             )}
+
           </h1>
           <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
@@ -423,6 +424,14 @@ function App() {
               onProductSelect={handleProductSelect}
             />
             <div className="sidebar-footer">
+              <button
+                className="sidebar-switch-btn"
+                onClick={handleReset}
+                title="Switch brand / Load different menu"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+                Change Menu
+              </button>
               <div className="sidebar-settings">
                 <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
                   <input
