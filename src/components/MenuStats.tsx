@@ -207,6 +207,7 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
       <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+        <CopyRef value={ref_} display={getRefId(ref_)} />
         {(product.price != null || product?.nutrition?.totalCalories != null) && (
           <div className="product-card-meta">
             {product.price != null && (
