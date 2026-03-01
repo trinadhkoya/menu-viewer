@@ -19,10 +19,11 @@ interface MenuStatsProps {
   selectedCategoryRef: string | null;
   onProductSelect: (productRef: string, categoryName?: string) => void;
   onCategorySelect?: (categoryRef: string) => void;
+  onNavigate?: (tab: 'constructs' | 'data-quality' | 'diff') => void;
   activeBrand?: BrandId | null;
 }
 
-export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect, activeBrand }: MenuStatsProps) {
+export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect, onNavigate, activeBrand }: MenuStatsProps) {
   const stats = useMemo(() => getMenuStats(menu), [menu]);
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
 
@@ -72,6 +73,17 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
     return products;
   }, [categoryData, menu]);
 
+  // These hooks MUST be above any conditional return (Rules of Hooks)
+  const catSectionRef = useRef<HTMLDivElement>(null);
+
+  const statCards = useMemo(() => [
+    { key: 'products', label: 'Products', value: stats.totalProducts },
+    { key: 'categories', label: 'Categories', value: stats.totalCategories, action: () => catSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+    { key: 'modifiers', label: 'Modifiers', value: stats.totalModifiers },
+    { key: 'modifierGroups', label: 'Modifier Groups', value: stats.totalModifierGroups },
+    { key: 'productGroups', label: 'Product Groups', value: stats.totalProductGroups },
+  ], [stats]);
+
   if (selectedCategoryRef && categoryData) {
     return (
       <div className="menu-stats">
@@ -115,49 +127,82 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
   // Default: show menu overview
   return (
     <div className="menu-stats">
-      <h2>Menu Overview</h2>
-      <p className="menu-name">{stats.menuType}</p>
-      <span className={`availability-dot ${stats.isAvailable ? 'available' : 'unavailable'}`} title={stats.isAvailable ? 'Menu Available' : 'Menu Unavailable'} />
+      {/* ── Unified hero banner ── */}
+      <div className="ms-hero">
+        <div className="ms-hero-top">
+          <div className="ms-hero-text">
+            <h2 className="ms-hero-title">Menu Overview</h2>
+            <p className="ms-hero-name">{stats.menuType}</p>
+          </div>
+          <span className={`ms-availability ms-availability--${stats.isAvailable ? 'on' : 'off'}`}>
+            <span className="ms-availability-dot" />
+            {stats.isAvailable ? 'Available' : 'Unavailable'}
+          </span>
+        </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-number">{stats.totalProducts}</span>
-          <span className="stat-label">Products</span>
+        {/* Stat pills — inline */}
+        <div className="ms-stat-pills">
+          {statCards.map((s) => (
+            <button
+              key={s.key}
+              className={`ms-stat-pill ${s.value === 0 ? 'ms-stat-pill--zero' : ''}`}
+              onClick={s.action}
+              tabIndex={s.action ? 0 : -1}
+              style={{ cursor: s.action ? 'pointer' : 'default' }}
+            >
+              <span className="ms-stat-pill-value">{s.value}</span>
+              <span className="ms-stat-pill-label">{s.label}</span>
+            </button>
+          ))}
         </div>
-        <div className="stat-card">
-          <span className="stat-number">{stats.totalCategories}</span>
-          <span className="stat-label">Categories</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-number">{stats.totalModifiers}</span>
-          <span className="stat-label">Modifiers</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-number">{stats.totalModifierGroups}</span>
-          <span className="stat-label">Modifier Groups</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-number">{stats.totalProductGroups}</span>
-          <span className="stat-label">Product Groups</span>
+
+        {/* Quick actions row */}
+        <div className="ms-hero-actions">
+          <button className="ms-hero-action ms-hero-action--quality" onClick={() => onNavigate?.('data-quality')}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
+            Quality Check
+            <svg className="ms-hero-action-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+          <button className="ms-hero-action ms-hero-action--constructs" onClick={() => onNavigate?.('constructs')}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" />
+              <path d="M13 6h3a2 2 0 012 2v7" /><path d="M6 9v12" />
+            </svg>
+            Constructs
+            <svg className="ms-hero-action-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
         </div>
       </div>
 
-      <h3 className="categories-heading">Top-Level Categories</h3>
-      <div className="category-grid">
-        {topCategories.map(({ ref, category }) => {
+      {/* ── Category grid ── */}
+      <div ref={catSectionRef}>
+        <h3 className="ms-section-heading">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+          Top-Level Categories
+          <span className="ms-section-count">{topCategories.length}</span>
+        </h3>
+      </div>
+      <div className="ms-category-grid">
+        {topCategories.map(({ ref, category }, i) => {
           const childCount = category.childRefs ? Object.keys(category.childRefs).length : 0;
           return (
             <div
               key={ref}
-              className="category-card"
+              className="ms-cat-card"
               onClick={() => onCategorySelect?.(ref)}
+              style={{ '--cat-i': i } as React.CSSProperties}
             >
-              <OptimizedImage src={category.imageUrl || getProductPlaceholder(activeBrand)} alt={category.displayName} className="category-card-image" width={280} height={100} />
-              <div className="category-card-body">
-                <strong>{category.displayName}</strong>
+              <div className="ms-cat-card-img">
+                <OptimizedImage src={category.imageUrl || getProductPlaceholder(activeBrand)} alt={category.displayName} className="ms-cat-image" width={280} height={110} />
+                <span className="ms-cat-count-overlay">{childCount} items</span>
+                {category.hasSubCategories && <span className="ms-cat-sub-badge">Sub&thinsp;↓</span>}
+              </div>
+              <div className="ms-cat-card-body">
+                <strong className="ms-cat-name">{category.displayName}</strong>
                 <CopyRef value={ref} display={getRefId(ref)} />
-                <span>{childCount} items</span>
-                {category.hasSubCategories && <span className="mini-badge">Subcategories</span>}
               </div>
             </div>
           );

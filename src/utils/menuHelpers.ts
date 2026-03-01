@@ -388,46 +388,75 @@ export function searchMenu(
   products: Array<{ ref: string; product: Product; score: number }>;
   modifiers: Array<{ ref: string; modifier: Modifier; score: number }>;
   categories: Array<{ ref: string; category: Category; score: number }>;
+  modifierGroups: Array<{ ref: string; modifierGroup: ModifierGroup; score: number }>;
+  productGroups: Array<{ ref: string; productGroup: ProductGroup; score: number }>;
 } {
   const q = query.toLowerCase().trim();
-  if (!q) return { products: [], modifiers: [], categories: [] };
+  if (!q) return { products: [], modifiers: [], categories: [], modifierGroups: [], productGroups: [] };
 
   const queryWords = q.split(/\s+/).filter(Boolean);
 
   const products: Array<{ ref: string; product: Product; score: number }> = [];
   for (const [ref, p] of Object.entries(menu.products || {})) {
+    const fullRef = `products.${ref}`;
     const score = bestScore(
-      [p.displayName ?? '', ref, p.description ?? ''],
+      [p.displayName ?? '', ref, fullRef, p.description ?? ''],
       q,
       queryWords,
     );
-    if (score > 0) products.push({ ref: `products.${ref}`, product: p, score });
+    if (score > 0) products.push({ ref: fullRef, product: p, score });
   }
   products.sort((a, b) => b.score - a.score);
 
   const modifiers: Array<{ ref: string; modifier: Modifier; score: number }> = [];
   for (const [ref, m] of Object.entries(menu.modifiers || {})) {
+    const fullRef = `modifiers.${ref}`;
     const score = bestScore(
-      [m.displayName ?? '', ref, m.PLU != null ? String(m.PLU) : ''],
+      [m.displayName ?? '', ref, fullRef, m.PLU != null ? String(m.PLU) : ''],
       q,
       queryWords,
     );
-    if (score > 0) modifiers.push({ ref: `modifiers.${ref}`, modifier: m, score });
+    if (score > 0) modifiers.push({ ref: fullRef, modifier: m, score });
   }
   modifiers.sort((a, b) => b.score - a.score);
 
   const categories: Array<{ ref: string; category: Category; score: number }> = [];
   for (const [ref, c] of Object.entries(menu.categories || {})) {
+    const fullRef = `categories.${ref}`;
     const score = bestScore(
-      [c.displayName ?? '', ref],
+      [c.displayName ?? '', ref, fullRef],
       q,
       queryWords,
     );
-    if (score > 0) categories.push({ ref: `categories.${ref}`, category: c, score });
+    if (score > 0) categories.push({ ref: fullRef, category: c, score });
   }
   categories.sort((a, b) => b.score - a.score);
 
-  return { products, modifiers, categories };
+  const modifierGroups: Array<{ ref: string; modifierGroup: ModifierGroup; score: number }> = [];
+  for (const [ref, mg] of Object.entries(menu.modifierGroups || {})) {
+    const fullRef = `modifierGroups.${ref}`;
+    const score = bestScore(
+      [mg.displayName ?? '', ref, fullRef],
+      q,
+      queryWords,
+    );
+    if (score > 0) modifierGroups.push({ ref: fullRef, modifierGroup: mg, score });
+  }
+  modifierGroups.sort((a, b) => b.score - a.score);
+
+  const productGroups: Array<{ ref: string; productGroup: ProductGroup; score: number }> = [];
+  for (const [ref, pg] of Object.entries(menu.productGroups || {})) {
+    const fullRef = `productGroups.${ref}`;
+    const score = bestScore(
+      [pg.displayName ?? '', ref, fullRef, pg.description ?? ''],
+      q,
+      queryWords,
+    );
+    if (score > 0) productGroups.push({ ref: fullRef, productGroup: pg, score });
+  }
+  productGroups.sort((a, b) => b.score - a.score);
+
+  return { products, modifiers, categories, modifierGroups, productGroups };
 }
 
 /** Exported for testing */

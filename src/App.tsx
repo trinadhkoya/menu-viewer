@@ -26,6 +26,8 @@ import { MenuUploader } from './components/MenuUploader';
 import type { BrandId } from './components/MenuUploader';
 import { Sidebar } from './components/Sidebar';
 import { ProductDetail } from './components/ProductDetail';
+import { ProductGroupDetail } from './components/ProductGroupDetail';
+import { ModifierGroupDetail } from './components/ModifierGroupDetail';
 import { SearchBar } from './components/SearchBar';
 import { SearchResults } from './components/SearchResults';
 import { MenuStats } from './components/MenuStats';
@@ -51,6 +53,8 @@ function App() {
   const [menu, setMenu] = useState<Menu | null>(loadMenuFromStorage);
   const [selectedProductRef, setSelectedProductRef] = useState<string | null>(null);
   const [selectedCategoryRef, setSelectedCategoryRef] = useState<string | null>(null);
+  const [selectedProductGroupRef, setSelectedProductGroupRef] = useState<string | null>(null);
+  const [selectedModifierGroupRef, setSelectedModifierGroupRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
   const [showRefs, setShowRefs] = useState(true);
@@ -165,6 +169,8 @@ function App() {
     localStorage.removeItem(STORAGE_KEY);
     setSelectedProductRef(null);
     setSelectedCategoryRef(null);
+    setSelectedProductGroupRef(null);
+    setSelectedModifierGroupRef(null);
     setSearchQuery('');
     setActiveBrand(brand ?? null);
     // Persist the brand for reload
@@ -190,6 +196,8 @@ function App() {
     (productRef: string, categoryName?: string) => {
       const update = () => {
         setSelectedProductRef(productRef);
+        setSelectedProductGroupRef(null);
+        setSelectedModifierGroupRef(null);
         setSearchQuery('');
       };
       if (document.startViewTransition) {
@@ -228,6 +236,8 @@ function App() {
     (categoryRef: string) => {
       setSelectedCategoryRef(categoryRef);
       setSelectedProductRef(null);
+      setSelectedProductGroupRef(null);
+      setSelectedModifierGroupRef(null);
       setSearchQuery('');
       const catId = categoryRef.includes('.') ? categoryRef.substring(categoryRef.indexOf('.') + 1) : categoryRef;
       const cat = menu?.categories?.[catId];
@@ -269,6 +279,8 @@ function App() {
     setMenu(null);
     setSelectedProductRef(null);
     setSelectedCategoryRef(null);
+    setSelectedProductGroupRef(null);
+    setSelectedModifierGroupRef(null);
     setSearchQuery('');
     setActiveBrand(null);
     setBreadcrumbs([{ label: 'Menu', type: 'root' }]);
@@ -290,23 +302,59 @@ function App() {
     );
   }
 
-  // Content for the main area — search + product overlay on top of routed view
+  const handleProductGroupSelect = useCallback(
+    (ref: string) => {
+      setSelectedProductGroupRef(ref);
+      setSelectedModifierGroupRef(null);
+      setSelectedProductRef(null);
+      setSearchQuery('');
+      if (activeTab !== 'menu') navigate('/menu');
+    },
+    [activeTab, navigate],
+  );
+
+  const handleModifierGroupSelect = useCallback(
+    (ref: string) => {
+      setSelectedModifierGroupRef(ref);
+      setSelectedProductGroupRef(null);
+      setSelectedProductRef(null);
+      setSearchQuery('');
+      if (activeTab !== 'menu') navigate('/menu');
+    },
+    [activeTab, navigate],
+  );
+
+  // Content for the main area — search + product/group overlay on top of routed view
   const mainContent = searchQuery ? (
     <SearchResults
       menu={menu}
       query={searchQuery}
       onProductSelect={handleProductSelect}
       onCategorySelect={handleCategorySelect}
+      onProductGroupSelect={handleProductGroupSelect}
+      onModifierGroupSelect={handleModifierGroupSelect}
     />
   ) : selectedProductRef ? (
     <ProductDetail menu={menu} productRef={selectedProductRef} activeBrand={activeBrand} onProductSelect={handleProductSelect} />
+  ) : selectedProductGroupRef ? (
+    <ProductGroupDetail menu={menu} productGroupRef={selectedProductGroupRef} activeBrand={activeBrand} onProductSelect={handleProductSelect} onBack={() => setSelectedProductGroupRef(null)} />
+  ) : selectedModifierGroupRef ? (
+    <ModifierGroupDetail menu={menu} modifierGroupRef={selectedModifierGroupRef} onBack={() => setSelectedModifierGroupRef(null)} />
   ) : null;
 
   return (
     <div className={`app ${brandClass}`}>
       <header className="app-header">
         <div className="header-left">
-          <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
+          <h1 className="app-title" onClick={() => {
+            setSelectedProductRef(null);
+            setSelectedCategoryRef(null);
+            setSelectedProductGroupRef(null);
+            setSelectedModifierGroupRef(null);
+            setSearchQuery('');
+            setBreadcrumbs([{ label: menu?.displayName || 'Menu', type: 'root' }]);
+            navigate('/menu');
+          }} style={{ cursor: 'pointer' }}>
             {activeBrand && (
               <span className="header-brand-icon">
                 <img src={`/placeholders/${activeBrand}.png`} alt={activeBrand} width={26} height={26} />
@@ -326,30 +374,27 @@ function App() {
           <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
         <div className="header-right">
-          <div className="view-mode-toggle">
+          {activeTab !== 'menu' && (
             <button
-              className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
+              className="header-back-btn"
               onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
-              title="Browse by category"
+              title="Back to Menu Overview"
             >
-              📂 Menu
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              Menu
             </button>
+          )}
+          {activeTab !== 'menu' && dqCount > 0 && activeTab !== 'data-quality' && (
             <button
-              className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
-              onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
-              title="Browse by product construct"
-            >
-              🧬 Constructs
-            </button>
-            <button
-              className={`view-mode-btn ${activeTab === 'data-quality' ? 'active' : ''}`}
+              className="header-back-btn header-back-btn--badge"
               onClick={() => { navigate('/data-quality'); setSelectedProductRef(null); }}
-              title="Data quality checks"
+              title="Data quality issues found"
             >
-              🩺 Quality{dqCount > 0 && <span className="dq-tab-badge">{dqCount}</span>}
+              🩺 {dqCount}
             </button>
-          </div>
+          )}
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
       </header>
 
@@ -388,7 +433,6 @@ function App() {
                   <span className="header-toggle-slider" />
                   <span className="header-toggle-label">Hide IDs</span>
                 </label>
-                <ThemeToggle theme={theme} onToggle={toggleTheme} />
               </div>
             </div>
           </div>
@@ -411,7 +455,7 @@ function App() {
           {mainContent ?? (
             <Routes>
               <Route path="/menu" element={
-                <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} activeBrand={activeBrand} />
+                <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} onNavigate={(tab) => { navigate(`/${tab}`); setSelectedProductRef(null); }} activeBrand={activeBrand} />
               } />
               <Route path="/constructs" element={
                 <ConstructView menu={menu} onProductSelect={handleProductSelect} activeBrand={activeBrand} />
@@ -422,6 +466,7 @@ function App() {
               <Route path="/diff" element={
                 <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />
               } />
+              <Route path="/" element={<Navigate to="/menu" replace />} />
               <Route path="*" element={<Navigate to="/menu" replace />} />
             </Routes>
           )}

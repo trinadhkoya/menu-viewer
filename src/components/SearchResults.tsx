@@ -15,11 +15,13 @@ interface SearchResultsProps {
   query: string;
   onProductSelect: (productRef: string) => void;
   onCategorySelect: (categoryRef: string) => void;
+  onProductGroupSelect?: (ref: string) => void;
+  onModifierGroupSelect?: (ref: string) => void;
 }
 
-export function SearchResults({ menu, query, onProductSelect, onCategorySelect }: SearchResultsProps) {
+export function SearchResults({ menu, query, onProductSelect, onCategorySelect, onProductGroupSelect, onModifierGroupSelect }: SearchResultsProps) {
   const results = useMemo(() => searchMenu(menu, query), [menu, query]);
-  const totalResults = results.products.length + results.modifiers.length + results.categories.length;
+  const totalResults = results.products.length + results.modifiers.length + results.categories.length + results.modifierGroups.length + results.productGroups.length;
 
   if (!query.trim()) return null;
 
@@ -110,6 +112,60 @@ export function SearchResults({ menu, query, onProductSelect, onCategorySelect }
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {results.modifierGroups.length > 0 && (
+        <section className="search-section">
+          <h3 className="search-section-title">
+            🗂️ Modifier Groups <span className="section-count">{results.modifierGroups.length}</span>
+          </h3>
+          <div className="search-grid">
+            {results.modifierGroups.map(({ ref, modifierGroup, score }) => {
+              const childCount = modifierGroup.childRefs ? Object.keys(modifierGroup.childRefs).length : 0;
+              const { min, max } = modifierGroup.selectionQuantity || {} as Record<string, number | undefined>;
+              return (
+                <div key={ref} className="search-card search-card--modifier-group" onClick={() => onModifierGroupSelect?.(ref)} style={{ cursor: onModifierGroupSelect ? 'pointer' : undefined }}>
+                  <div className="search-card-title">{modifierGroup.displayName || getRefId(ref)} <MatchBadge score={score} /></div>
+                  <code className="search-card-ref">{ref}</code>
+                  <div className="search-card-details">
+                    <span className="search-card-meta">{childCount} modifier{childCount !== 1 ? 's' : ''}</span>
+                    {(min != null || max != null) && (
+                      <span className="search-card-meta">
+                        Select {min ?? 0}–{max ?? '∞'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {results.productGroups.length > 0 && (
+        <section className="search-section">
+          <h3 className="search-section-title">
+            📦 Product Groups <span className="section-count">{results.productGroups.length}</span>
+          </h3>
+          <div className="search-grid">
+            {results.productGroups.map(({ ref, productGroup, score }) => {
+              const childCount = productGroup.childRefs ? Object.keys(productGroup.childRefs).length : 0;
+              return (
+                <div key={ref} className="search-card search-card--product-group" onClick={() => onProductGroupSelect?.(ref)} style={{ cursor: onProductGroupSelect ? 'pointer' : undefined }}>
+                  <div className="search-card-title">{productGroup.displayName || getRefId(ref)} <MatchBadge score={score} /></div>
+                  <code className="search-card-ref">{ref}</code>
+                  <div className="search-card-details">
+                    <span className="search-card-meta">{childCount} product{childCount !== 1 ? 's' : ''}</span>
+                    {productGroup.isRecipe && <span className="mini-badge">Recipe</span>}
+                    {productGroup.description && (
+                      <p className="search-card-desc">{productGroup.description.slice(0, 80)}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

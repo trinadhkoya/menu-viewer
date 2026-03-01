@@ -61,6 +61,63 @@ function HealthRing({ score }: { score: number }) {
   );
 }
 
+/* ── Check card SVG icons (replace emojis with professional SVGs) ── */
+const CHECK_ICONS: Record<string, React.ReactNode> = {
+  'recipe-no-default': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2v7.527a2 2 0 01-.211.896L4.72 20.55a1 1 0 00.9 1.45h12.76a1 1 0 00.9-1.45l-5.069-10.127A2 2 0 0114 9.527V2" />
+      <path d="M8.5 2h7" /><path d="M7 16.5h10" />
+    </svg>
+  ),
+  'virtual-missing-cta': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 15l-2 5L9 9l11 4-5 2zm7 7l-5-5" />
+    </svg>
+  ),
+  'missing-description': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+    </svg>
+  ),
+  'desc-inheritable': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 009 9" />
+    </svg>
+  ),
+  'missing-image': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+  'missing-tags': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  ),
+  'tags-inheritable': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 009 9" />
+    </svg>
+  ),
+  'missing-keywords': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  ),
+  'kw-inheritable': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 009 9" />
+    </svg>
+  ),
+  'malformed-tags': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+};
+
 interface DataQualityProps {
   menu: Menu;
   onProductSelect: (productRef: string) => void;
@@ -120,7 +177,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords]);
+  }, [recipeNoDefaultMismatches, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -388,19 +445,17 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
   return (
     <div className="dq-page">
-      {/* ── Dashboard header ── */}
-      <div className="dq-header">
-        <div className="dq-header-top">
-          <div className="dq-header-title">
-            <HealthRing score={healthScore} />
-            <div>
-              <h2>Data Quality</h2>
-              <p className="dq-header-subtitle">
-                {totalIssues === 0
-                  ? 'All checks passed — no issues found.'
-                  : `${animTotalIssues} issue${totalIssues !== 1 ? 's' : ''} across ${checks.length} check${checks.length !== 1 ? 's' : ''}`}
-              </p>
-            </div>
+      {/* ── Hero banner ── */}
+      <div className="dq-hero">
+        <div className="dq-hero-top">
+          <HealthRing score={healthScore} />
+          <div className="dq-hero-info">
+            <h2 className="dq-hero-title">Data Quality</h2>
+            <p className="dq-hero-subtitle">
+              {totalIssues === 0
+                ? 'All checks passed \u2014 no issues found.'
+                : `${animTotalIssues} issue${totalIssues !== 1 ? 's' : ''} across ${checks.length} check${checks.length !== 1 ? 's' : ''}`}
+            </p>
           </div>
           {checks.length > 0 && (
             <button className="dq-export-btn" onClick={handleExport} title="Export all issues as CSV">
@@ -409,35 +464,26 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export CSV
+              Export
             </button>
           )}
         </div>
 
-        {/* Severity stat pills */}
+        {/* Severity breakdown cards — always show all 3 for stable layout */}
         {checks.length > 0 && (
-          <div className="dq-stats">
-            {severityCounts.error > 0 && (
-              <div className="dq-stat dq-stat--error">
-                <span className="dq-stat-dot" />
-                <span className="dq-stat-count">{animErrorCount}</span>
-                <span className="dq-stat-label">Errors</span>
-              </div>
-            )}
-            {severityCounts.warning > 0 && (
-              <div className="dq-stat dq-stat--warning">
-                <span className="dq-stat-dot" />
-                <span className="dq-stat-count">{animWarningCount}</span>
-                <span className="dq-stat-label">Warnings</span>
-              </div>
-            )}
-            {severityCounts.info > 0 && (
-              <div className="dq-stat dq-stat--info">
-                <span className="dq-stat-dot" />
-                <span className="dq-stat-count">{animInfoCount}</span>
-                <span className="dq-stat-label">Observations</span>
-              </div>
-            )}
+          <div className="dq-severity-grid">
+            <div className={`dq-severity-card dq-severity-card--error${severityCounts.error === 0 ? ' dq-severity-card--zero' : ''}`}>
+              <span className="dq-severity-count">{animErrorCount}</span>
+              <span className="dq-severity-label">Errors</span>
+            </div>
+            <div className={`dq-severity-card dq-severity-card--warning${severityCounts.warning === 0 ? ' dq-severity-card--zero' : ''}`}>
+              <span className="dq-severity-count">{animWarningCount}</span>
+              <span className="dq-severity-label">Warnings</span>
+            </div>
+            <div className={`dq-severity-card dq-severity-card--info${severityCounts.info === 0 ? ' dq-severity-card--zero' : ''}`}>
+              <span className="dq-severity-count">{animInfoCount}</span>
+              <span className="dq-severity-label">Observations</span>
+            </div>
           </div>
         )}
       </div>
@@ -445,17 +491,14 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       {/* ── Check cards ── */}
       {checks.length === 0 ? (
         <div className="dq-empty">
-          <div className="dq-empty-confetti">
-            <span className="dq-confetti-piece" style={{ '--i': 0 } as React.CSSProperties}>🎉</span>
-            <span className="dq-confetti-piece" style={{ '--i': 1 } as React.CSSProperties}>✨</span>
-            <span className="dq-confetti-piece" style={{ '--i': 2 } as React.CSSProperties}>🎊</span>
-            <span className="dq-confetti-piece" style={{ '--i': 3 } as React.CSSProperties}>⭐</span>
-          </div>
           <div className="dq-empty-icon-wrap">
-            <span className="dq-empty-icon">✅</span>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
           </div>
           <p className="dq-empty-title">All Clear</p>
-          <p className="dq-empty-sub">Every check passed — no issues detected.</p>
+          <p className="dq-empty-sub">Every quality check passed — no issues detected.</p>
         </div>
       ) : (
         <div className="dq-checks">
@@ -482,6 +525,14 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
             }
             return (
             <div key={sec.severity + sec.label} className="dq-section">
+              {/* Section divider label when sorting by severity */}
+              {sec.label && (
+                <div className={`dq-section-label dq-section-label--${sec.severity}`}>
+                  <span className="dq-section-dot" />
+                  {sec.label}
+                  <span className="dq-section-count">{sec.checks.reduce((s, c) => s + c.count, 0)}</span>
+                </div>
+              )}
               {sec.checks.map((check, ci) => {
                 const isActive = activeCheck === check.id;
                 return (
@@ -492,17 +543,17 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                   >
                     <button className="dq-check-toggle" onClick={() => { setActiveCheck(isActive ? null : check.id); setExpandedProduct(null); }}>
                       <span className={`dq-check-icon-wrap dq-check-icon-wrap--${check.severity}`}>
-                        <span className="dq-check-icon">{check.icon}</span>
+                        {CHECK_ICONS[check.id] ?? <span className="dq-check-icon">{check.icon}</span>}
                       </span>
                       <div className="dq-check-info">
-                        <span className="dq-check-title">
-                          {check.title}
-                          <span className={`dq-priority dq-priority--${check.priority}`}>{PRIORITY_LABEL[check.priority]}</span>
-                        </span>
+                        <span className="dq-check-title">{check.title}</span>
                         <span className="dq-check-desc">{check.description}</span>
                       </div>
+                      <span className={`dq-priority dq-priority--${check.priority}`}>{PRIORITY_LABEL[check.priority]}</span>
                       <span className={`dq-check-badge dq-check-badge--${check.severity}`}>{check.count}</span>
-                      <span className={`dq-chevron ${isActive ? 'open' : ''}`}>&#9656;</span>
+                      <span className={`dq-chevron ${isActive ? 'open' : ''}`}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                      </span>
                     </button>
 
                     {/* ── Expanded detail area for each check type ── */}
@@ -609,14 +660,17 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
         </div>
       )}
 
-      {/* ── Shoutout ── */}
+      {/* ── Feedback ── */}
       <div className="dq-feedback">
-        <div className="dq-feedback-icon">📣</div>
+        <div className="dq-feedback-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+        </div>
         <div className="dq-feedback-body">
-          <p className="dq-feedback-title">Shoutout to the team!</p>
+          <p className="dq-feedback-title">Have a repetitive manual check?</p>
           <p className="dq-feedback-desc">
-            If there's a manual check you keep doing over and over — validating a field, cross-referencing data, spotting patterns — let me know.
-            I'll automate it and add it right here. Less grunt work, more impact. 🚀
+            Let me know and I'll automate it right here. Less grunt work, more impact.
           </p>
         </div>
       </div>
