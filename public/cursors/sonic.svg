@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Slush cup for Sonic -->
+  <g fill="none" stroke="#E40046" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Cup body (tapered) -->
+    <path d="M9 12h14l-3 17H12z" fill="#285780" fill-opacity="0.12"/>
+    <path d="M9 12h14l-3 17H12z"/>
+    <!-- Dome lid -->
+    <path d="M8 12c0 0 1-4 8-4s8 4 8 4" fill="#E40046" fill-opacity="0.1"/>
+    <path d="M8 12c0 0 1-4 8-4s8 4 8 4"/>
+    <!-- Straw -->
+    <line x1="18" y1="1" x2="17" y2="12" stroke-width="2" stroke="#E40046" opacity="0.7"/>
+    <!-- Sonic cherry on top -->
+    <circle cx="18" cy="3" r="2" fill="#E40046" fill-opacity="0.3" stroke="#E40046"/>
+    <!-- Horizontal stripe on cup -->
+    <path d="M10 18h12" opacity="0.3" stroke-width="1.2"/>
+    <path d="M10.5 21h11" opacity="0.3" stroke-width="1.2"/>
+  </g>
+</svg>

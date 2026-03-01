@@ -58,6 +58,7 @@
   --shadow-brand-15: rgba(0, 0, 0, 0.15);
   --shadow-brand-30: rgba(0, 0, 0, 0.30);
   --shadow-brand-50: rgba(46, 46, 46, 0.50);
+  cursor: url('/cursors/arbys.svg') 16 16, auto;
 }
 .brand-bww {
   --brand-font-heading: 'BarlowSemiCondensed', sans-serif;
@@ -75,6 +76,7 @@
   --shadow-brand-15: rgba(26, 23, 22, 0.15);
   --shadow-brand-30: rgba(26, 23, 22, 0.30);
   --shadow-brand-50: rgba(54, 46, 44, 0.50);
+  cursor: url('/cursors/bww.svg') 16 16, auto;
 }
 .brand-sonic {
   --brand-font-heading: 'CarhopSans', sans-serif;
@@ -92,6 +94,7 @@
   --shadow-brand-15: rgba(15, 33, 48, 0.15);
   --shadow-brand-30: rgba(15, 33, 48, 0.30);
   --shadow-brand-50: rgba(24, 53, 77, 0.50);
+  cursor: url('/cursors/sonic.svg') 16 16, auto;
 }
 .brand-dunkin {
   --brand-font-heading: 'DunkinSans', sans-serif;
@@ -109,6 +112,7 @@
   --shadow-brand-15: rgba(62, 52, 47, 0.15);
   --shadow-brand-30: rgba(62, 52, 47, 0.30);
   --shadow-brand-50: rgba(62, 52, 47, 0.50);
+  cursor: url('/cursors/dunkin.svg') 16 16, auto;
 }
 
 /*
@@ -137,6 +141,26 @@
 [class*="brand-"] button,
 [class*="brand-"] code {
   font-family: inherit;
+}
+
+/* ── Brand cursors: keep pointer on interactive elements ── */
+[class*="brand-"] a,
+[class*="brand-"] button,
+[class*="brand-"] [role="button"],
+[class*="brand-"] [role="option"],
+[class*="brand-"] [role="tab"],
+[class*="brand-"] .product-card,
+[class*="brand-"] .sidebar-item,
+[class*="brand-"] .category-card,
+[class*="brand-"] .search-card,
+[class*="brand-"] .construct-card,
+[class*="brand-"] .diff-list-item {
+  cursor: pointer;
+}
+[class*="brand-"] input,
+[class*="brand-"] textarea,
+[class*="brand-"] select {
+  cursor: text;
 }
 
 /* ── 700 Heading (Bold) — uses heading font ── */
@@ -3094,9 +3118,9 @@ code {
 }
 
 .products-count {
+  display: block;
   color: var(--color-text-muted);
   font-size: 0.9rem;
-  margin-left: 8px;
 }
 
 .product-grid {

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Sandwich for Arby's -->
+  <g fill="none" stroke="#CE1126" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top bun (dome) -->
+    <path d="M5 15c0-6 5-9 11-9s11 3 11 9z" fill="#CE1126" fill-opacity="0.12"/>
+    <path d="M5 15c0-6 5-9 11-9s11 3 11 9z"/>
+    <!-- Sesame seeds -->
+    <ellipse cx="12" cy="10" rx="1" ry="0.6" fill="#CE1126" opacity="0.4"/>
+    <ellipse cx="17" cy="8" rx="1" ry="0.6" fill="#CE1126" opacity="0.4"/>
+    <ellipse cx="20" cy="11" rx="1" ry="0.6" fill="#CE1126" opacity="0.4"/>
+    <!-- Lettuce -->
+    <path d="M4 16c2 1 4-1 6 0s4-1 6 0 4-1 6 0 4-1 6 0" stroke="#22c55e" stroke-width="1.4"/>
+    <!-- Meat layers -->
+    <path d="M5 18h22" stroke-width="2.5" opacity="0.6" stroke="#CE1126"/>
+    <path d="M5 21h22" stroke-width="2" opacity="0.4" stroke="#CE1126"/>
+    <!-- Bottom bun -->
+    <path d="M5 23h22c0 3-4 4-11 4S5 26 5 23z" fill="#CE1126" fill-opacity="0.12"/>
+    <path d="M5 23h22c0 3-4 4-11 4S5 26 5 23z"/>
+  </g>
+</svg>
