@@ -54,6 +54,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
   const [showRefs, setShowRefs] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Derive active tab from current route path
   const activeTab = useMemo(() => {
@@ -327,26 +328,41 @@ function App() {
       )}
 
       <div className={`app-body${showRefs ? '' : ' hide-refs'}`}>
-        <aside className="app-sidebar">
-          <Sidebar
-            menu={menu}
-            selectedCategoryRef={selectedCategoryRef}
-            selectedProductRef={selectedProductRef}
-            onCategorySelect={handleCategorySelect}
-            onProductSelect={handleProductSelect}
-          />
-          <div className="sidebar-footer">
-            <div className="sidebar-toggle-row">
-              <span className="sidebar-footer-label">Menu size</span>
-              <span className="sidebar-footer-value">
-                {menuSizeBytes < 1024
-                  ? `${menuSizeBytes} B`
-                  : menuSizeBytes < 1048576
-                    ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
-                    : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
-              </span>
+        <aside className={`app-sidebar ${sidebarOpen ? '' : 'app-sidebar--collapsed'}`}>
+          <div className="sidebar-content">
+            <Sidebar
+              menu={menu}
+              selectedCategoryRef={selectedCategoryRef}
+              selectedProductRef={selectedProductRef}
+              onCategorySelect={handleCategorySelect}
+              onProductSelect={handleProductSelect}
+            />
+            <div className="sidebar-footer">
+              <div className="sidebar-toggle-row">
+                <span className="sidebar-footer-label">Menu size</span>
+                <span className="sidebar-footer-value">
+                  {menuSizeBytes < 1024
+                    ? `${menuSizeBytes} B`
+                    : menuSizeBytes < 1048576
+                      ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
+                      : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
+                </span>
+              </div>
             </div>
           </div>
+          <button
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarOpen((v) => !v)}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              {sidebarOpen ? (
+                <path d="M10.354 3.354a.5.5 0 00-.708-.708l-5 5a.5.5 0 000 .708l5 5a.5.5 0 00.708-.708L5.707 8l4.647-4.646z"/>
+              ) : (
+                <path d="M5.646 3.354a.5.5 0 01.708-.708l5 5a.5.5 0 010 .708l-5 5a.5.5 0 01-.708-.708L10.293 8 5.646 3.354z"/>
+              )}
+            </svg>
+          </button>
         </aside>
 
         <main className="app-main">
