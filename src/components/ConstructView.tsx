@@ -26,6 +26,9 @@ interface ConstructViewProps {
   activeBrand?: BrandId | null;
 }
 
+const INITIAL_LIMIT = 120;
+const LOAD_BATCH = 120;
+
 export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructViewProps) {
   const [activeMainCategory, setActiveMainCategory] = useState<string | null>(null);
   const [activePrimary, setActivePrimary] = useState<string | null>(null);
@@ -52,6 +55,9 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
   // Which skeleton detail panel is expanded
   const [expandedSkeleton, setExpandedSkeleton] = useState<string | null>(null);
 
+  // Progressive product loading
+  const [displayLimit, setDisplayLimit] = useState(INITIAL_LIMIT);
+
   // Filtered products
   const filtered = useMemo(
     () =>
@@ -68,6 +74,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
   const toggleMainCategory = useCallback((ref: string) => {
     setActiveMainCategory((prev) => (prev === ref ? null : ref));
     setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
   const togglePrimary = useCallback((id: string) => {
@@ -75,6 +82,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
     setActiveBehavioral(null);
     setActiveStructuralTag(null);
     setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
   const toggleBehavioral = useCallback((id: string) => {
@@ -82,6 +90,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
     setActivePrimary(null);
     setActiveStructuralTag(null);
     setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
   const toggleStructuralTag = useCallback((tag: string) => {
@@ -89,6 +98,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
     setActivePrimary(null);
     setActiveBehavioral(null);
     setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
   const clearAll = useCallback(() => {
@@ -98,6 +108,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
     setActiveStructuralTag(null);
     setSearchTerm('');
     setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
   return (
@@ -193,7 +204,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
 
       {/* ── Product Grid ── */}
       <div className="construct-product-grid">
-        {filtered.slice(0, 120).map((item) => (
+        {filtered.slice(0, displayLimit).map((item) => (
           <ProductCard
             key={item.ref}
             item={item}
@@ -202,8 +213,26 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
             activeBrand={activeBrand}
           />
         ))}
-        {filtered.length > 120 && (
-          <div className="construct-more">+{filtered.length - 120} more</div>
+        {filtered.length > displayLimit && (
+          <button
+            className="construct-more construct-more--interactive"
+            onClick={() => setDisplayLimit((prev) => prev + LOAD_BATCH)}
+          >
+            <span className="construct-more-icon">▼</span>
+            Show {Math.min(LOAD_BATCH, filtered.length - displayLimit)} more
+            <span className="construct-more-remaining">
+              ({filtered.length - displayLimit} remaining)
+            </span>
+          </button>
+        )}
+        {filtered.length > INITIAL_LIMIT && displayLimit > INITIAL_LIMIT && filtered.length <= displayLimit && (
+          <button
+            className="construct-more construct-more--interactive construct-more--collapse"
+            onClick={() => setDisplayLimit(INITIAL_LIMIT)}
+          >
+            <span className="construct-more-icon">▲</span>
+            Show less
+          </button>
         )}
         {filtered.length === 0 && (
           <div className="construct-empty">No products match the current filters.</div>

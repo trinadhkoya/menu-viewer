@@ -4952,13 +4952,45 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  font-size: 0.9rem;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-muted);
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-md);
   grid-column: 1 / -1;
+}
+.construct-more--interactive {
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.construct-more--interactive:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.04);
+}
+.construct-more--collapse {
+  border-style: solid;
+  border-width: 1px;
+}
+.construct-more-icon {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  transition: transform 0.2s;
+}
+.construct-more--interactive:hover .construct-more-icon {
+  opacity: 1;
+  transform: translateY(2px);
+}
+.construct-more--collapse:hover .construct-more-icon {
+  transform: translateY(-2px);
+}
+.construct-more-remaining {
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 0.78rem;
 }
 
 .construct-empty {
