@@ -138,6 +138,13 @@ function CustomizerInner({
 
   const isDrillDown = !!drillDown && !!drillDownProduct;
 
+  // Determine whether the drill-down product has actual size alternatives.
+  // A virtual product without relatedProducts should fall through to the ingredient customizer.
+  const drillDownHasSizeAlts = useMemo(
+    () => isDrillDown && !!drillDownProduct?.isVirtual && getVirtualSizeAlternatives(menu, drillDownProduct) !== null,
+    [isDrillDown, drillDownProduct, menu],
+  );
+
   /** Save selections and close. */
   const handleDone = useCallback(() => {
     if (onSave) {
@@ -256,7 +263,7 @@ function CustomizerInner({
 
       {/* ── Nested drill-down overlay ── */}
       {isDrillDown && (
-        drillDownProduct?.isVirtual
+        drillDownHasSizeAlts
           ? <NestedSizeCustomizer />
           : <NestedIngredientCustomizer />
       )}
@@ -554,8 +561,11 @@ function ModifierOptionRow({
         {(upchargeDisplay || (itemCalories != null && itemCalories > 0)) && (
           <div className="customizer-option-meta">
             {upchargeDisplay && <span className="customizer-option-upcharge">{upchargeDisplay}</span>}
+            {upchargeDisplay && itemCalories != null && itemCalories > 0 && (
+              <span className="customizer-option-dot">·</span>
+            )}
             {itemCalories != null && itemCalories > 0 && (
-              <span className="customizer-option-cal">{itemCalories} cal</span>
+              <span className="customizer-option-cal">{itemCalories} calories</span>
             )}
           </div>
         )}
@@ -1264,8 +1274,11 @@ function NestedOptionRow({
         {(upchargeDisplay || (itemCalories != null && itemCalories > 0)) && (
           <div className="customizer-option-meta">
             {upchargeDisplay && <span className="customizer-option-upcharge">{upchargeDisplay}</span>}
+            {upchargeDisplay && itemCalories != null && itemCalories > 0 && (
+              <span className="customizer-option-dot">·</span>
+            )}
             {itemCalories != null && itemCalories > 0 && (
-              <span className="customizer-option-cal">{itemCalories} cal</span>
+              <span className="customizer-option-cal">{itemCalories} calories</span>
             )}
           </div>
         )}

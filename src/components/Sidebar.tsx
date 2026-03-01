@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import type { Menu, Category, Product } from '../types/menu';
 import {
   getTopLevelCategories,
@@ -6,85 +6,8 @@ import {
   isProductRef,
   resolveRef,
   getRefId,
-  getVirtualProductAlternatives,
   resolveVirtualToDefault,
 } from '../utils/menuHelpers';
-
-/** Normalized tag group extracted from product tags */
-interface TagGroup {
-  prefix: string;
-  label: string;
-  icon: string;
-  tags: { raw: string; label: string; count: number }[];
-}
-
-/** Build grouped tag stats from all products */
-function buildTagGroups(menu: Menu): TagGroup[] {
-  const counts = new Map<string, number>();
-  for (const p of Object.values(menu.products ?? {})) {
-    for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
-  }
-
-  // Group prefixes
-  const groups: Record<string, { label: string; icon: string; tags: { raw: string; label: string; count: number }[] }> = {};
-
-  const ORDER: [string, string, string][] = [
-    ['is.', 'Type', '🏷️'],
-    ['protein.', 'Protein', '🥩'],
-    ['spicelevel.', 'Spice', '🌶️'],
-    ['allergen.', 'Allergen', '⚠️'],
-    ['has.', 'Feature', '✦'],
-  ];
-
-  for (const [raw, count] of counts) {
-    // skip noisy tags
-    if (raw.startsWith('core_product_') || raw.startsWith('dmbSizeGroup.') || raw.startsWith('sizeBadge.')) continue;
-
-    let matched = false;
-    for (const [prefix, label, icon] of ORDER) {
-      if (raw.startsWith(prefix)) {
-        if (!groups[prefix]) groups[prefix] = { label, icon, tags: [] };
-        // Pretty-print: "is.Drink" → "Drink", "protein.Beef" → "Beef"
-        const tagLabel = raw.slice(prefix.length).replace(/([a-z])([A-Z])/g, '$1 $2');
-        groups[prefix].tags.push({ raw, label: tagLabel, count });
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) {
-      // Ungrouped tags — only include if they're common enough
-      if (count >= 3) {
-        const key = '_other';
-        if (!groups[key]) groups[key] = { label: 'Other', icon: '📌', tags: [] };
-        groups[key].tags.push({ raw, label: raw, count });
-      }
-    }
-  }
-
-  // Sort tags within each group by count desc
-  const result: TagGroup[] = [];
-  for (const [prefix, gLabel, gIcon] of ORDER) {
-    if (groups[prefix]) {
-      groups[prefix].tags.sort((a, b) => b.count - a.count);
-      result.push({ prefix, ...groups[prefix] });
-    }
-  }
-  if (groups['_other']) {
-    groups['_other'].tags.sort((a, b) => b.count - a.count);
-    result.push({ prefix: '_other', ...groups['_other'] });
-  }
-  return result;
-}
-
-/** Check if a product matches the active tag filters */
-function productMatchesTags(product: Product, activeTags: Set<string>): boolean {
-  if (activeTags.size === 0) return true;
-  const productTags = new Set(product.tags ?? []);
-  for (const tag of activeTags) {
-    if (productTags.has(tag)) return true;
-  }
-  return false;
-}
 
 interface SidebarProps {
   menu: Menu;
@@ -102,22 +25,8 @@ export function Sidebar({
   onProductSelect,
 }: SidebarProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
-  const [tagSectionOpen, setTagSectionOpen] = useState(false);
 
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
-  const tagGroups = useMemo(() => buildTagGroups(menu), [menu]);
-
-  const toggleTag = useCallback((tag: string) => {
-    setActiveTags((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
-      return next;
-    });
-  }, []);
-
-  const clearTags = useCallback(() => setActiveTags(new Set()), []);
 
   const toggleExpand = (ref: string) => {
     setExpandedCategories((prev) => {
@@ -166,9 +75,6 @@ export function Sidebar({
             const rawProduct = resolveRef(menu, childRef) as Product;
             if (!rawProduct) return null;
 
-            // Filter by active tags
-            if (!productMatchesTags(rawProduct, activeTags)) return null;
-
             // Resolve virtual products to their default sized variant
             let displayRef = childRef;
             let product = rawProduct;
@@ -205,51 +111,6 @@ export function Sidebar({
         <h2>Categories</h2>
         <span className="sidebar-count">{topCategories.length}</span>
       </div>
-
-      {/* ── Tag Filter Section ── */}
-      {tagGroups.length > 0 && (
-        <div className="sidebar-tag-filter">
-          <button
-            className={`sidebar-tag-toggle ${tagSectionOpen ? 'sidebar-tag-toggle--open' : ''}`}
-            onClick={() => setTagSectionOpen((v) => !v)}
-          >
-            <span className="sidebar-tag-toggle-icon">{tagSectionOpen ? '▾' : '▸'}</span>
-            <span>Filter by Tag</span>
-            {activeTags.size > 0 && (
-              <span className="sidebar-tag-active-count">{activeTags.size}</span>
-            )}
-          </button>
-          {tagSectionOpen && (
-            <div className="sidebar-tag-groups">
-              {tagGroups.map((group) => (
-                <div key={group.prefix} className="sidebar-tag-group">
-                  <div className="sidebar-tag-group-label">
-                    <span>{group.icon}</span> {group.label}
-                  </div>
-                  <div className="sidebar-tag-pills">
-                    {group.tags.map((tag) => (
-                      <button
-                        key={tag.raw}
-                        className={`sidebar-tag-pill ${activeTags.has(tag.raw) ? 'sidebar-tag-pill--active' : ''}`}
-                        onClick={() => toggleTag(tag.raw)}
-                        title={tag.raw}
-                      >
-                        {tag.label}
-                        <span className="sidebar-tag-pill-count">{tag.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {activeTags.size > 0 && (
-                <button className="sidebar-tag-clear" onClick={clearTags}>
-                  ✕ Clear filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       <ul className="sidebar-list">
         {topCategories.map(({ ref, category }) => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import type { Menu } from './types/menu';
 
@@ -55,6 +55,7 @@ function App() {
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
   const [showRefs, setShowRefs] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarWasOpenRef = useRef(true);
 
   // Derive active tab from current route path
   const activeTab = useMemo(() => {
@@ -63,6 +64,20 @@ function App() {
     if (path.startsWith('/diff')) return 'diff' as const;
     return 'menu' as const;
   }, [location.pathname]);
+
+  // Auto-collapse sidebar on constructs/diff pages, restore on menu page
+  useEffect(() => {
+    if (activeTab === 'constructs' || activeTab === 'diff') {
+      if (sidebarOpen) {
+        sidebarWasOpenRef.current = true;
+        setSidebarOpen(false);
+      }
+    } else {
+      if (sidebarWasOpenRef.current) {
+        setSidebarOpen(true);
+      }
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const menuSizeBytes = useMemo(() => {
     if (!menu) return 0;

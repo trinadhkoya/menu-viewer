@@ -1243,10 +1243,13 @@ export function filterProducts(
   items: ClassifiedProduct[],
   opts: {
     primaryType?: string | null;
+    primaryTypes?: Set<string> | null;
     behavioralTag?: string | null;
     structuralTag?: string | null;
+    structuralTags?: Set<string> | null;
     extraFlag?: string | null;
     mainCategory?: string | null;
+    productTags?: Set<string> | null;
     search?: string;
   },
 ): ClassifiedProduct[] {
@@ -1256,7 +1259,11 @@ export function filterProducts(
     result = result.filter((i) => i.mainCategoryRef === opts.mainCategory);
   }
 
-  if (opts.primaryType) {
+  // Multi-select primary types (AND — product must match ANY of the selected)
+  if (opts.primaryTypes && opts.primaryTypes.size > 0) {
+    const types = opts.primaryTypes;
+    result = result.filter((i) => types.has(i.primaryType));
+  } else if (opts.primaryType) {
     result = result.filter((i) => i.primaryType === opts.primaryType);
   }
 
@@ -1264,7 +1271,16 @@ export function filterProducts(
     result = result.filter((i) => i.behavioralTags.includes(opts.behavioralTag!));
   }
 
-  if (opts.structuralTag) {
+  // Multi-select structural tags (AND — product must have ALL selected tags)
+  if (opts.structuralTags && opts.structuralTags.size > 0) {
+    const tags = opts.structuralTags;
+    result = result.filter((i) => {
+      for (const t of tags) {
+        if (!i.structuralTags.includes(t)) return false;
+      }
+      return true;
+    });
+  } else if (opts.structuralTag) {
     result = result.filter((i) => i.structuralTags.includes(opts.structuralTag!));
   }
 
@@ -1283,6 +1299,14 @@ export function filterProducts(
         result = result.filter((i) => !i.flags.hasIngredientRefs && !i.flags.hasModifierGroupRefs);
         break;
     }
+  }
+
+  if (opts.productTags && opts.productTags.size > 0) {
+    const tags = opts.productTags;
+    result = result.filter((i) => {
+      const pTags = i.product.tags ?? [];
+      return pTags.some((t) => tags.has(t));
+    });
   }
 
   if (opts.search) {

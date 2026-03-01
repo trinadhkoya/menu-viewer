@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import type { Menu } from '../types/menu';
 import type { ClassifiedProduct } from '../utils/constructClassifier';
 import {
@@ -26,23 +26,105 @@ interface ConstructViewProps {
   activeBrand?: BrandId | null;
 }
 
+// ─── Tag-group helpers (moved from Sidebar) ───
+
+interface TagGroup {
+  prefix: string;
+  label: string;
+  icon: string;
+  tags: { raw: string; label: string; count: number }[];
+}
+
+const TAG_ORDER: [string, string, string][] = [
+  ['is.', 'Type', '🏷️'],
+  ['protein.', 'Protein', '🥩'],
+  ['spicelevel.', 'Spice', '🌶️'],
+  ['allergen.', 'Allergen', '⚠️'],
+  ['has.', 'Feature', '✦'],
+];
+
+function buildTagGroups(items: ClassifiedProduct[]): TagGroup[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    for (const t of item.product.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+
+  const groups: Record<string, { label: string; icon: string; tags: { raw: string; label: string; count: number }[] }> = {};
+
+  for (const [raw, count] of counts) {
+    if (raw.startsWith('core_product_') || raw.startsWith('dmbSizeGroup.') || raw.startsWith('sizeBadge.')) continue;
+
+    let matched = false;
+    for (const [prefix, label, icon] of TAG_ORDER) {
+      if (raw.startsWith(prefix)) {
+        if (!groups[prefix]) groups[prefix] = { label, icon, tags: [] };
+        const tagLabel = raw.slice(prefix.length).replace(/([a-z])([A-Z])/g, '$1 $2');
+        groups[prefix].tags.push({ raw, label: tagLabel, count });
+        matched = true;
+        break;
+      }
+    }
+    if (!matched && count >= 3) {
+      const key = '_other';
+      if (!groups[key]) groups[key] = { label: 'Other', icon: '📌', tags: [] };
+      groups[key].tags.push({ raw, label: raw, count });
+    }
+  }
+
+  const result: TagGroup[] = [];
+  for (const [prefix] of TAG_ORDER) {
+    if (groups[prefix]) {
+      groups[prefix].tags.sort((a, b) => b.count - a.count);
+      result.push({ prefix, ...groups[prefix] });
+    }
+  }
+  if (groups['_other']) {
+    groups['_other'].tags.sort((a, b) => b.count - a.count);
+    result.push({ prefix: '_other', ...groups['_other'] });
+  }
+  return result;
+}
+
+// ────────────────────────────────────────────
+
 const INITIAL_LIMIT = 120;
 const LOAD_BATCH = 120;
 
 export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructViewProps) {
+  const productGridRef = useRef<HTMLDivElement>(null);
+
+  const scrollToProducts = useCallback(() => {
+    requestAnimationFrame(() => {
+      productGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   const [activeMainCategory, setActiveMainCategory] = useState<string | null>(null);
   const [activePrimary, setActivePrimary] = useState<string | null>(null);
+  const [activePrimarySet, setActivePrimarySet] = useState<Set<string>>(new Set());
   const [activeBehavioral, setActiveBehavioral] = useState<string | null>(null);
   const [activeStructuralTag, setActiveStructuralTag] = useState<string | null>(null);
+  const [activeStructuralSet, setActiveStructuralSet] = useState<Set<string>>(new Set());
+  const [activeProductTags, setActiveProductTags] = useState<Set<string>>(new Set());
+  const [andMode, setAndMode] = useState(false);
+  const [primaryOpen, setPrimaryOpen] = useState(false);
+  const [structuralOpen, setStructuralOpen] = useState(false);
+  const [tagSectionOpen, setTagSectionOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [inspecting, setInspecting] = useState<ClassifiedProduct | null>(null);
   const [showReference, setShowReference] = useState(false);
+
+  // Auto-expand accordion when filter is active
+  const isPrimaryExpanded = primaryOpen || !!activePrimary || activePrimarySet.size > 0;
+  const isStructuralExpanded = structuralOpen || !!activeStructuralTag || activeStructuralSet.size > 0;
+  const isTagsExpanded = tagSectionOpen || activeProductTags.size > 0;
 
   // Classify all products once
   const classified = useMemo(() => classifyAllProducts(menu), [menu]);
   const mainCategoryStats = useMemo(() => getMainCategoryStats(classified), [classified]);
   const primaryStats = useMemo(() => getPrimaryTypeStats(classified), [classified]);
   const structuralTagStats = useMemo(() => getStructuralTagStats(classified), [classified]);
+  const tagGroups = useMemo(() => buildTagGroups(classified), [classified]);
   const categorySkeletons = useMemo(() => getCategorySkeletons(classified), [classified]);
 
   // Build a lookup map from category ref → skeleton
@@ -58,185 +140,419 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
   // Progressive product loading
   const [displayLimit, setDisplayLimit] = useState(INITIAL_LIMIT);
 
+  const toggleProductTag = useCallback((tag: string) => {
+    setActiveProductTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+    setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
+    scrollToProducts();
+  }, [scrollToProducts]);
+
+  const clearProductTags = useCallback(() => {
+    setActiveProductTags(new Set());
+    setInspecting(null);
+    setDisplayLimit(INITIAL_LIMIT);
+  }, []);
+
   // Filtered products
   const filtered = useMemo(
     () =>
       filterProducts(classified, {
         mainCategory: activeMainCategory,
-        primaryType: activePrimary,
+        primaryType: andMode ? null : activePrimary,
+        primaryTypes: andMode && activePrimarySet.size > 0 ? activePrimarySet : null,
         behavioralTag: activeBehavioral,
-        structuralTag: activeStructuralTag,
+        structuralTag: andMode ? null : activeStructuralTag,
+        structuralTags: andMode && activeStructuralSet.size > 0 ? activeStructuralSet : null,
+        productTags: activeProductTags.size > 0 ? activeProductTags : null,
         search: searchTerm.trim(),
       }),
-    [classified, activeMainCategory, activePrimary, activeBehavioral, activeStructuralTag, searchTerm],
+    [classified, activeMainCategory, activePrimary, activePrimarySet, activeBehavioral, activeStructuralTag, activeStructuralSet, activeProductTags, searchTerm, andMode],
   );
 
   const toggleMainCategory = useCallback((ref: string) => {
     setActiveMainCategory((prev) => (prev === ref ? null : ref));
     setInspecting(null);
     setDisplayLimit(INITIAL_LIMIT);
-  }, []);
+    scrollToProducts();
+  }, [scrollToProducts]);
 
   const togglePrimary = useCallback((id: string) => {
-    setActivePrimary((prev) => (prev === id ? null : id));
-    setActiveBehavioral(null);
-    setActiveStructuralTag(null);
+    if (andMode) {
+      setActivePrimarySet((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    } else {
+      setActivePrimary((prev) => (prev === id ? null : id));
+      setActiveBehavioral(null);
+      setActiveStructuralTag(null);
+    }
     setInspecting(null);
     setDisplayLimit(INITIAL_LIMIT);
-  }, []);
+    scrollToProducts();
+  }, [scrollToProducts, andMode]);
 
   const toggleBehavioral = useCallback((id: string) => {
     setActiveBehavioral((prev) => (prev === id ? null : id));
-    setActivePrimary(null);
-    setActiveStructuralTag(null);
+    if (!andMode) {
+      setActivePrimary(null);
+      setActiveStructuralTag(null);
+    }
     setInspecting(null);
     setDisplayLimit(INITIAL_LIMIT);
-  }, []);
+    scrollToProducts();
+  }, [scrollToProducts, andMode]);
 
   const toggleStructuralTag = useCallback((tag: string) => {
-    setActiveStructuralTag((prev) => (prev === tag ? null : tag));
-    setActivePrimary(null);
-    setActiveBehavioral(null);
+    if (andMode) {
+      setActiveStructuralSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(tag)) next.delete(tag); else next.add(tag);
+        return next;
+      });
+    } else {
+      setActiveStructuralTag((prev) => (prev === tag ? null : tag));
+      setActivePrimary(null);
+      setActiveBehavioral(null);
+    }
     setInspecting(null);
     setDisplayLimit(INITIAL_LIMIT);
-  }, []);
+    scrollToProducts();
+  }, [scrollToProducts, andMode]);
+
+  // Toggle AND mode — migrate current single selection into set, or vice-versa
+  const handleAndModeToggle = useCallback(() => {
+    setAndMode((prev) => {
+      const next = !prev;
+      if (next) {
+        // switching to AND mode — move single selections into sets
+        if (activePrimary) {
+          setActivePrimarySet(new Set([activePrimary]));
+          setActivePrimary(null);
+        }
+        if (activeStructuralTag) {
+          setActiveStructuralSet(new Set([activeStructuralTag]));
+          setActiveStructuralTag(null);
+        }
+      } else {
+        // switching back to single mode — take first from set
+        setActivePrimarySet((s) => { if (s.size > 0) setActivePrimary([...s][0]); return new Set(); });
+        setActiveStructuralSet((s) => { if (s.size > 0) setActiveStructuralTag([...s][0]); return new Set(); });
+      }
+      return next;
+    });
+  }, [activePrimary, activeStructuralTag]);
 
   const clearAll = useCallback(() => {
     setActiveMainCategory(null);
     setActivePrimary(null);
+    setActivePrimarySet(new Set());
     setActiveBehavioral(null);
     setActiveStructuralTag(null);
+    setActiveStructuralSet(new Set());
+    setActiveProductTags(new Set());
     setSearchTerm('');
     setInspecting(null);
     setDisplayLimit(INITIAL_LIMIT);
   }, []);
 
+  const hasActiveFilters = activeMainCategory || activePrimary || activePrimarySet.size > 0 || activeBehavioral || activeStructuralTag || activeStructuralSet.size > 0 || activeProductTags.size > 0 || searchTerm;
+
   return (
     <div className="construct-view">
-      {/* ── Header ── */}
-      <div className="construct-view-header">
-        <div className="construct-view-title-row">
-          <h2>MBDP Constructs</h2>
-          <span className="construct-view-count">
-            {filtered.length} / {classified.length} products
-          </span>
-          <button
-            className={`construct-ref-toggle ${showReference ? 'construct-ref-toggle--active' : ''}`}
-            onClick={() => setShowReference((p) => !p)}
-            title="Toggle construct reference table"
-          >
-            📋 {showReference ? 'Hide' : 'Show'} Reference
-          </button>
+      {/* ── Top bar: title + count + search ── */}
+      <div className="cv-topbar">
+        <div className="cv-topbar-left">
+          <h2 className="cv-title">Menu Constructs</h2>
+          <span className="cv-item-count">{filtered.length} items</span>
         </div>
-        <p className="construct-view-desc">
-          Products classified using the <strong>official MBDP construct system</strong> — 
-          5 primary types based on alternatives &amp; ingredientRefs, enriched with data-driven structural tags.
-        </p>
-      </div>
-
-      {/* ── Construct Reference (collapsible) ── */}
-      {showReference && (
-        <ConstructReference
-          classified={classified}
-          activePrimary={activePrimary}
-          activeBehavioral={activeBehavioral}
-          onSelectPrimary={togglePrimary}
-          onSelectBehavioral={toggleBehavioral}
-        />
-      )}
-
-      {/* ── Primary Type Filter ── */}
-      <div className="construct-toolbar">
-        <div className="construct-section-label">Primary Type</div>
-        <div className="construct-pills-row">
-          {primaryStats.map((s) => (
-            <ConstructTypePill
-              key={s.constructId}
-              construct={s.construct}
-              count={s.count}
-              isActive={activePrimary === s.constructId}
-              onClick={() => togglePrimary(s.constructId)}
-            />
-          ))}
-        </div>
-
-        {/* ── Structural Tags ── */}
-        <div className="construct-section-label" style={{ marginTop: 8 }}>Structural Tags</div>
-        <div className="construct-extra-flags">
-          {structuralTagStats.map((s) => (
-            <button
-              key={s.tagId}
-              className={`construct-extra-flag ${activeStructuralTag === s.tagId ? 'construct-extra-flag--active' : ''}`}
-              onClick={() => toggleStructuralTag(s.tagId)}
-            >
-              {s.tag.icon} {s.tag.shortName} <span className="construct-extra-count">{s.count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Search & Clear ── */}
-        <div className="construct-filter-row">
-          <div className="construct-search-bar">
+        <div className="cv-topbar-right">
+          <div className="cv-search-bar">
+            <span className="cv-search-icon">⌕</span>
             <input
               type="text"
-              placeholder="Search by name…"
+              placeholder="Search products…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="construct-search-input"
+              className="cv-search-input"
             />
           </div>
-          {(activeMainCategory || activePrimary || activeBehavioral || activeStructuralTag || searchTerm) && (
-            <button className="construct-clear-btn" onClick={clearAll}>
-              Clear All
-            </button>
-          )}
         </div>
       </div>
 
-      {/* ── Product Inspector ── */}
-      {inspecting && (
-        <ProductInspector
-          item={inspecting}
-          onClose={() => setInspecting(null)}
-          onProductSelect={onProductSelect}
-        />
+      {/* ── Quick filter pills bar — only visible when filters are active ── */}
+      {hasActiveFilters && (
+        <div className="cv-quick-bar">
+          <span className="cv-quick-label">FILTERS</span>
+          {activePrimary && primaryStats.filter(s => s.constructId === activePrimary).map((s) => (
+            <button
+              key={s.constructId}
+              className="cv-quick-pill cv-quick-pill--active"
+              onClick={() => togglePrimary(s.constructId)}
+            >
+              {s.construct.icon} {s.construct.shortName}
+              <span className="cv-quick-pill-chevron">✕</span>
+            </button>
+          ))}
+          {[...activePrimarySet].map((id) => {
+            const s = primaryStats.find(p => p.constructId === id);
+            return s ? (
+              <button
+                key={id}
+                className="cv-quick-pill cv-quick-pill--active"
+                onClick={() => togglePrimary(id)}
+              >
+                {s.construct.icon} {s.construct.shortName}
+                <span className="cv-quick-pill-chevron">✕</span>
+              </button>
+            ) : null;
+          })}
+          {activeStructuralTag && structuralTagStats.filter(s => s.tagId === activeStructuralTag).map((s) => (
+            <button
+              key={s.tagId}
+              className="cv-quick-pill cv-quick-pill--active"
+              onClick={() => toggleStructuralTag(s.tagId)}
+            >
+              {s.tag.icon} {s.tag.shortName}
+              <span className="cv-quick-pill-chevron">✕</span>
+            </button>
+          ))}
+          {[...activeStructuralSet].map((id) => {
+            const s = structuralTagStats.find(st => st.tagId === id);
+            return s ? (
+              <button
+                key={id}
+                className="cv-quick-pill cv-quick-pill--active"
+                onClick={() => toggleStructuralTag(id)}
+              >
+                {s.tag.icon} {s.tag.shortName}
+                <span className="cv-quick-pill-chevron">✕</span>
+              </button>
+            ) : null;
+          })}
+          {[...activeProductTags].map((tag) => (
+            <button
+              key={tag}
+              className="cv-quick-pill cv-quick-pill--active"
+              onClick={() => toggleProductTag(tag)}
+            >
+              {tag.replace(/^[^:]+:/, '')}
+              <span className="cv-quick-pill-chevron">✕</span>
+            </button>
+          ))}
+          {searchTerm && (
+            <span className="cv-quick-pill cv-quick-pill--active" onClick={() => setSearchTerm('')}>
+              "{searchTerm}"
+              <span className="cv-quick-pill-chevron">✕</span>
+            </span>
+          )}
+          <button className="cv-quick-clear" onClick={clearAll}>✕ Clear All</button>
+        </div>
       )}
 
-      {/* ── Product Grid ── */}
-      <div className="construct-product-grid">
-        {filtered.slice(0, displayLimit).map((item) => (
-          <ProductCard
-            key={item.ref}
-            item={item}
-            onSelect={() => onProductSelect(item.ref)}
-            onInspect={() => setInspecting(item)}
-            activeBrand={activeBrand}
-          />
-        ))}
-        {filtered.length > displayLimit && (
-          <button
-            className="construct-more construct-more--interactive"
-            onClick={() => setDisplayLimit((prev) => prev + LOAD_BATCH)}
-          >
-            <span className="construct-more-icon">▼</span>
-            Show {Math.min(LOAD_BATCH, filtered.length - displayLimit)} more
-            <span className="construct-more-remaining">
-              ({filtered.length - displayLimit} remaining)
-            </span>
-          </button>
-        )}
-        {filtered.length > INITIAL_LIMIT && displayLimit > INITIAL_LIMIT && filtered.length <= displayLimit && (
-          <button
-            className="construct-more construct-more--interactive construct-more--collapse"
-            onClick={() => setDisplayLimit(INITIAL_LIMIT)}
-          >
-            <span className="construct-more-icon">▲</span>
-            Show less
-          </button>
-        )}
-        {filtered.length === 0 && (
-          <div className="construct-empty">No products match the current filters.</div>
-        )}
+      {/* ── Two-column layout: filters left, grid right ── */}
+      <div className="cv-layout">
+        {/* ── Left: Filter Sidebar ── */}
+        <aside className="cv-filter-sidebar">
+          {/* AND / Multi-select toggle */}
+          <div className="cvf-mode-toggle">
+            <label className="cv-and-toggle" title="Enable multi-select (intersection) filtering">
+              <span className={`cv-and-label ${!andMode ? 'cv-and-label--active' : ''}`}>Single</span>
+              <span className={`cv-toggle-switch ${andMode ? 'cv-toggle-switch--on' : ''}`} onClick={handleAndModeToggle}>
+                <span className="cv-toggle-knob" />
+              </span>
+              <span className={`cv-and-label ${andMode ? 'cv-and-label--active' : ''}`}>Multi</span>
+            </label>
+          </div>
+
+          {/* Construct Reference — highlighted at top */}
+          <div className="cvf-section cvf-section--highlight">
+            <button
+              className="cvf-section-header cvf-section-header--toggle"
+              onClick={() => setShowReference((p) => !p)}
+            >
+              📋 REFERENCE
+              <span className="cvf-toggle-arrow">{showReference ? '▴' : '▾'}</span>
+            </button>
+            {showReference && (
+              <div className="cvf-reference-content">
+                <ConstructReference
+                  classified={classified}
+                  activePrimary={activePrimary}
+                  activeBehavioral={activeBehavioral}
+                  onSelectPrimary={togglePrimary}
+                  onSelectBehavioral={toggleBehavioral}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Primary Type — accordion */}
+          <div className="cvf-section">
+            <button
+              className="cvf-section-header cvf-section-header--toggle"
+              onClick={() => setPrimaryOpen((v) => !v)}
+            >
+              PRIMARY TYPE
+              {(activePrimary || activePrimarySet.size > 0) && (
+                <span className="cvf-active-badge">{andMode ? activePrimarySet.size : 1}</span>
+              )}
+              <span className="cvf-toggle-arrow">{isPrimaryExpanded ? '▴' : '▾'}</span>
+            </button>
+            {isPrimaryExpanded && (
+              <div className="cvf-checkbox-list">
+                {primaryStats.map((s) => {
+                  const isChecked = andMode ? activePrimarySet.has(s.constructId) : activePrimary === s.constructId;
+                  return (
+                    <label key={s.constructId} className={`cvf-checkbox-item ${isChecked ? 'cvf-checkbox-item--active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => togglePrimary(s.constructId)}
+                      />
+                      <span className="cvf-checkbox-icon">{s.construct.icon}</span>
+                      <span className="cvf-checkbox-label">{s.construct.shortName}</span>
+                      <span className="cvf-checkbox-count">({s.count})</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Structural Tags — accordion */}
+          <div className="cvf-section">
+            <button
+              className="cvf-section-header cvf-section-header--toggle"
+              onClick={() => setStructuralOpen((v) => !v)}
+            >
+              STRUCTURAL TAGS
+              {(activeStructuralTag || activeStructuralSet.size > 0) && (
+                <span className="cvf-active-badge">{andMode ? activeStructuralSet.size : 1}</span>
+              )}
+              <span className="cvf-toggle-arrow">{isStructuralExpanded ? '▴' : '▾'}</span>
+            </button>
+            {isStructuralExpanded && (
+              <div className="cvf-checkbox-list">
+                {structuralTagStats.map((s) => {
+                  const isChecked = andMode ? activeStructuralSet.has(s.tagId) : activeStructuralTag === s.tagId;
+                  return (
+                    <label key={s.tagId} className={`cvf-checkbox-item ${isChecked ? 'cvf-checkbox-item--active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleStructuralTag(s.tagId)}
+                      />
+                      <span className="cvf-checkbox-icon">{s.tag.icon}</span>
+                      <span className="cvf-checkbox-label">{s.tag.shortName}</span>
+                      <span className="cvf-checkbox-count">({s.count})</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Product Tags — accordion */}
+          {tagGroups.length > 0 && (
+            <div className="cvf-section">
+              <button
+                className="cvf-section-header cvf-section-header--toggle"
+                onClick={() => setTagSectionOpen((v) => !v)}
+              >
+                PRODUCT TAGS
+                {activeProductTags.size > 0 && (
+                  <span className="cvf-active-badge">{activeProductTags.size}</span>
+                )}
+                <span className="cvf-toggle-arrow">{isTagsExpanded ? '▴' : '▾'}</span>
+              </button>
+              {isTagsExpanded && (
+                <div className="cvf-tag-groups">
+                  {tagGroups.map((group) => (
+                    <div key={group.prefix} className="cvf-tag-group">
+                      <div className="cvf-tag-group-label">
+                        <span>{group.icon}</span> {group.label}
+                      </div>
+                      <div className="cvf-checkbox-list">
+                        {group.tags.map((tag) => (
+                          <label key={tag.raw} className={`cvf-checkbox-item ${activeProductTags.has(tag.raw) ? 'cvf-checkbox-item--active' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={activeProductTags.has(tag.raw)}
+                              onChange={() => toggleProductTag(tag.raw)}
+                            />
+                            <span className="cvf-checkbox-label">{tag.label}</span>
+                            <span className="cvf-checkbox-count">({tag.count})</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {activeProductTags.size > 0 && (
+                    <button className="cvf-clear-link" onClick={clearProductTags}>
+                      ✕ Clear tag filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* ── Right: Product Grid ── */}
+        <div className="cv-content">
+          {/* Product Inspector */}
+          {inspecting && (
+            <ProductInspector
+              item={inspecting}
+              onClose={() => setInspecting(null)}
+              onProductSelect={onProductSelect}
+            />
+          )}
+
+          {/* Product Grid */}
+          <div ref={productGridRef} className="construct-product-grid">
+            {filtered.slice(0, displayLimit).map((item) => (
+              <ProductCard
+                key={item.ref}
+                item={item}
+                onSelect={() => onProductSelect(item.ref)}
+                onInspect={() => setInspecting(item)}
+                activeBrand={activeBrand}
+              />
+            ))}
+            {filtered.length > displayLimit && (
+              <button
+                className="construct-more construct-more--interactive"
+                onClick={() => setDisplayLimit((prev) => prev + LOAD_BATCH)}
+              >
+                <span className="construct-more-icon">▼</span>
+                Show {Math.min(LOAD_BATCH, filtered.length - displayLimit)} more
+                <span className="construct-more-remaining">
+                  ({filtered.length - displayLimit} remaining)
+                </span>
+              </button>
+            )}
+            {filtered.length > INITIAL_LIMIT && displayLimit > INITIAL_LIMIT && filtered.length <= displayLimit && (
+              <button
+                className="construct-more construct-more--interactive construct-more--collapse"
+                onClick={() => setDisplayLimit(INITIAL_LIMIT)}
+              >
+                <span className="construct-more-icon">▲</span>
+                Show less
+              </button>
+            )}
+            {filtered.length === 0 && (
+              <div className="construct-empty">No products match the current filters.</div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -286,7 +602,9 @@ function ConstructReference({
       <div className="construct-reference-section">
         <h3>Single Product Constructs</h3>
         <div className="construct-reference-grid">
-          {CONSTRUCTS.filter((c) => c.category === 'single' && !c.id.startsWith('#')).map((c) => {
+          {CONSTRUCTS.filter((c) => c.category === 'single' && !c.id.startsWith('#'))
+            .sort((a, b) => (primaryCounts.get(b.id) ?? 0) - (primaryCounts.get(a.id) ?? 0))
+            .map((c) => {
             const count = primaryCounts.get(c.id) ?? 0;
             const isActive = activePrimary === c.id;
             return (
@@ -295,6 +613,7 @@ function ConstructReference({
                 className={`construct-reference-card ${isActive ? 'construct-reference-card--active' : ''} ${count === 0 ? 'construct-reference-card--empty' : ''}`}
                 onClick={() => count > 0 && onSelectPrimary(c.id)}
                 type="button"
+                title={`${c.engineeringTerm}\n${c.description}`}
               >
                 <div className="construct-ref-card-header">
                   <span className="construct-ref-card-icon">{c.icon}</span>
@@ -303,10 +622,6 @@ function ConstructReference({
                   {count > 0 && <span className="construct-ref-card-count">{count}</span>}
                 </div>
                 <div className="construct-ref-card-name">{c.name}</div>
-                <div className="construct-ref-card-eng">
-                  <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
-                </div>
-                <div className="construct-ref-card-desc">{c.description}</div>
               </button>
             );
           })}
@@ -316,7 +631,9 @@ function ConstructReference({
       <div className="construct-reference-section">
         <h3>Behavioral Sub-Constructs</h3>
         <div className="construct-reference-grid">
-          {CONSTRUCTS.filter((c) => c.category === 'single' && c.id.startsWith('#')).map((c) => {
+          {CONSTRUCTS.filter((c) => c.category === 'single' && c.id.startsWith('#'))
+            .sort((a, b) => (behavioralCounts.get(b.id) ?? 0) - (behavioralCounts.get(a.id) ?? 0))
+            .map((c) => {
             const count = behavioralCounts.get(c.id) ?? 0;
             const isActive = activeBehavioral === c.id;
             return (
@@ -325,6 +642,7 @@ function ConstructReference({
                 className={`construct-reference-card construct-reference-card--behavioral ${isActive ? 'construct-reference-card--active' : ''} ${count === 0 ? 'construct-reference-card--empty' : ''}`}
                 onClick={() => count > 0 && onSelectBehavioral(c.id)}
                 type="button"
+                title={`${c.engineeringTerm}\n${c.description}`}
               >
                 <div className="construct-ref-card-header">
                   <span className="construct-ref-card-icon">{c.icon}</span>
@@ -333,10 +651,6 @@ function ConstructReference({
                   {count > 0 && <span className="construct-ref-card-count">{count}</span>}
                 </div>
                 <div className="construct-ref-card-name">{c.name}</div>
-                <div className="construct-ref-card-eng">
-                  <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
-                </div>
-                <div className="construct-ref-card-desc">{c.description}</div>
               </button>
             );
           })}
@@ -350,6 +664,7 @@ function ConstructReference({
             <div
               key={c.id}
               className="construct-reference-card construct-reference-card--combo"
+              title={`${c.engineeringTerm}\n${c.description}`}
             >
               <div className="construct-ref-card-header">
                 <span className="construct-ref-card-icon">{c.icon}</span>
@@ -357,10 +672,6 @@ function ConstructReference({
                 <span className="construct-ref-card-short">{c.shortName}</span>
               </div>
               <div className="construct-ref-card-name">{c.name}</div>
-              <div className="construct-ref-card-eng">
-                <span className="construct-ref-card-eng-label">ENG:</span> {c.engineeringTerm}
-              </div>
-              <div className="construct-ref-card-desc">{c.description}</div>
             </div>
           ))}
         </div>
