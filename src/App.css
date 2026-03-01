@@ -316,7 +316,7 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --sidebar-width: 300px;
-  --header-height: 56px;
+  --header-height: 84px;
   --color-accent: #6366f1;
   --color-accent-hover: #818cf8;
   --color-available: #22c55e;
@@ -525,16 +525,13 @@ code {
 
 .app-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 0 20px;
-  height: var(--header-height);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
-  gap: 12px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -545,17 +542,48 @@ code {
   box-shadow: 0 2px 0 0 var(--color-accent), var(--shadow-sm);
 }
 
-.header-left {
+/* ── Header row layout ── */
+.header-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  width: 100%;
+}
+
+.header-row--search {
+  gap: 12px;
+  padding: 10px 0 6px;
+  justify-content: space-between;
+}
+
+.header-row--nav {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+
+.header-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
 }
 
-.header-right {
+/* ── Settings group (Hide IDs + Theme) ── */
+.header-settings {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px 4px;
+  flex-shrink: 0;
+}
+
+.header-settings-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
   flex-shrink: 0;
 }
 
@@ -593,8 +621,8 @@ code {
   gap: 6px;
   cursor: pointer;
   user-select: none;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  border-radius: calc(var(--radius-md) - 2px);
   transition: background var(--transition-fast);
 }
 
@@ -1617,17 +1645,17 @@ code {
   display: flex;
   align-items: center;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0 14px;
   gap: 8px;
-  width: 280px;
+  width: 360px;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .search-bar:focus-within {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .search-icon {
@@ -1641,8 +1669,8 @@ code {
   background: none;
   border: none;
   color: var(--color-text);
-  font-size: 0.85rem;
-  padding: 7px 0;
+  font-size: 0.88rem;
+  padding: 8px 0;
   outline: none;
 }
 
@@ -3555,14 +3583,14 @@ code {
 
 .theme-toggle {
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 6px 10px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  padding: 4px 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 5px;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
   white-space: nowrap;
@@ -3571,7 +3599,6 @@ code {
 .theme-toggle:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
-  border-color: var(--color-text-muted);
 }
 
 .theme-toggle-icon {

@@ -286,7 +286,8 @@ function App() {
   return (
     <div className={`app ${brandClass}`}>
       <header className="app-header">
-        <div className="header-left">
+        {/* Row 1: Search bar — full width, prominent */}
+        <div className="header-row header-row--search">
           <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
             {activeBrand && BRAND_ICONS[activeBrand] && (
               <span className="header-brand-icon">
@@ -295,36 +296,43 @@ function App() {
             )}
             <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
           </h1>
-          <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
-        </div>
-        <div className="header-right">
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          <div className="view-mode-toggle">
-            <button
-              className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
-              onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
-              title="Browse by category"
-            >
-              📂 Menu
-            </button>
-            <button
-              className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
-              onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
-              title="Browse by product construct"
-            >
-              🧬 Constructs
-            </button>
+        </div>
+
+        {/* Row 2: Navigation left, settings right */}
+        <div className="header-row header-row--nav">
+          <div className="header-nav-left">
+            <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
+            <div className="view-mode-toggle">
+              <button
+                className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
+                onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
+                title="Browse by category"
+              >
+                📂 Menu
+              </button>
+              <button
+                className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
+                onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
+                title="Browse by product construct"
+              >
+                🧬 Constructs
+              </button>
+            </div>
           </div>
-          <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
-            <input
-              type="checkbox"
-              checked={!showRefs}
-              onChange={() => setShowRefs((v) => !v)}
-            />
-            <span className="header-toggle-slider" />
-            <span className="header-toggle-label">Hide IDs</span>
-          </label>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <div className="header-settings">
+            <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
+              <input
+                type="checkbox"
+                checked={!showRefs}
+                onChange={() => setShowRefs((v) => !v)}
+              />
+              <span className="header-toggle-slider" />
+              <span className="header-toggle-label">Hide IDs</span>
+            </label>
+            <span className="header-settings-divider" />
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          </div>
         </div>
       </header>
 
