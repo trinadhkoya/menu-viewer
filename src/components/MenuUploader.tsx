@@ -308,11 +308,7 @@ const LOCATION_SUGGESTIONS: Record<BrandId, Record<string, string[]>> = {
     UAT:  ['0', '1', '3', '4', '5', '7', '8', '13', '19', '30', '35', 'MASTER'],
     Demo: ['0', '3', '4', '5', '13', 'MASTER'],
   },
-  sonic: {
-    QA:   ['0', 'MASTER'],
-    UAT:  ['0', 'MASTER'],
-    Demo: ['0', 'MASTER'],
-  },
+  sonic: {},
   dunkin: {
     QA:  ['0', '1234', '8016', '8017', '8018', '300577', '306106', '306107', '345295', '351257', '357492', '359739', '363554', '713026', 'MASTER'],
     UAT: ['0', '306106', '345295', 'MASTER'],
