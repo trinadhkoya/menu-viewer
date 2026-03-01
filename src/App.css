@@ -632,14 +632,13 @@ code {
   top: 0;
   z-index: 100;
   gap: 12px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .app-header--hidden {
-  transform: translateY(-100%);
-  opacity: 0;
+  /* disabled: header always visible */
+  /* transform: translateY(-100%); */
+  /* opacity: 0; */
   pointer-events: none;
 }
 

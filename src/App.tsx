@@ -55,22 +55,7 @@ function App() {
   const [showRefs, setShowRefs] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarWasOpenRef = useRef(true);
-  const [headerHidden, setHeaderHidden] = useState(false);
-  const lastScrollY = useRef(0);
   const mainRef = useRef<HTMLElement>(null);
-
-  // Auto-hide header on scroll down, reveal on scroll up
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const y = el.scrollTop;
-      setHeaderHidden(y > 48 && y > lastScrollY.current);
-      lastScrollY.current = y;
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
 
   // Derive active tab from current route path
   const activeTab = useMemo(() => {
@@ -315,7 +300,7 @@ function App() {
 
   return (
     <div className={`app ${brandClass}`}>
-      <header className={`app-header${headerHidden ? ' app-header--hidden' : ''}`}>
+      <header className="app-header">
         <div className="header-left">
           <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
             {activeBrand && (
