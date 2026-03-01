@@ -838,6 +838,60 @@ code {
   min-height: 100vh;
   padding: 24px;
   transition: background 0.5s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Floating monochrome line-icon background ── */
+.uploader-bg-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.uploader-bg-icon {
+  position: absolute;
+  color: var(--color-text, #333);
+  opacity: 0.06;
+  transform: rotate(var(--icon-rotation, 0deg));
+  animation: uploader-float var(--float-duration, 16s) ease-in-out var(--float-delay, 0s) infinite;
+  user-select: none;
+}
+
+/* Brand-themed: tinted with brand accent color */
+.uploader-container[class*="brand-"] .uploader-bg-icon {
+  color: var(--color-accent, var(--color-text));
+  opacity: 0.08;
+}
+
+@keyframes uploader-float {
+  0%, 100% {
+    transform: rotate(var(--icon-rotation, 0deg)) translateY(0px) scale(1);
+  }
+  25% {
+    transform: rotate(calc(var(--icon-rotation, 0deg) + 3deg)) translateY(-8px) scale(1.03);
+  }
+  50% {
+    transform: rotate(calc(var(--icon-rotation, 0deg) - 2deg)) translateY(-4px) scale(0.98);
+  }
+  75% {
+    transform: rotate(calc(var(--icon-rotation, 0deg) + 2deg)) translateY(-10px) scale(1.02);
+  }
+}
+
+/* Dark mode: slightly more visible against dark background */
+[data-theme="dark"] .uploader-bg-icon {
+  opacity: 0.08;
+}
+[data-theme="dark"] .uploader-container[class*="brand-"] .uploader-bg-icon {
+  opacity: 0.10;
+}
+
+/* Reduced motion: disable float animation */
+@media (prefers-reduced-motion: reduce) {
+  .uploader-bg-icon { animation: none; }
 }
 
 /* Brand-themed uploader background tint */
@@ -848,6 +902,8 @@ code {
 }
 
 .uploader-card {
+  position: relative;
+  z-index: 1;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -1313,8 +1369,8 @@ code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 8px 12px;
+  gap: 4px;
+  padding: 10px 8px;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);

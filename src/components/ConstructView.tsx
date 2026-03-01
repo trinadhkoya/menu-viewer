@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, memo } from 'react';
 import type { Menu } from '../types/menu';
 import type { ClassifiedProduct } from '../utils/constructClassifier';
 import {
@@ -522,8 +522,8 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
               <ProductCard
                 key={item.ref}
                 item={item}
-                onSelect={() => onProductSelect(item.ref)}
-                onInspect={() => setInspecting(item)}
+                onSelect={onProductSelect}
+                onInspect={setInspecting}
                 activeBrand={activeBrand}
               />
             ))}
@@ -570,7 +570,7 @@ interface ConstructReferenceProps {
   onSelectBehavioral: (id: string) => void;
 }
 
-function ConstructReference({
+const ConstructReference = memo(function ConstructReference({
   classified,
   activePrimary,
   activeBehavioral,
@@ -678,27 +678,33 @@ function ConstructReference({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────
 // Product Card
 // ─────────────────────────────────────────────
 
-function ProductCard({
+const ProductCard = memo(function ProductCard({
   item,
   onSelect,
   onInspect,
   activeBrand,
 }: {
   item: ClassifiedProduct;
-  onSelect: () => void;
-  onInspect: () => void;
+  onSelect: (ref: string) => void;
+  onInspect: (item: ClassifiedProduct) => void;
   activeBrand?: BrandId | null;
 }) {
   const { product } = item;
 
+  const handleSelect = useCallback(() => onSelect(item.ref), [onSelect, item.ref]);
+  const handleInspect = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onInspect(item);
+  }, [onInspect, item]);
+
   return (
-    <div className="construct-product-card" onClick={onSelect}>
+    <div className="construct-product-card" onClick={handleSelect}>
       <OptimizedImage
         src={product.imageUrl || getProductPlaceholder(activeBrand)}
         alt={product.displayName ?? ''}
@@ -741,10 +747,7 @@ function ProductCard({
         </div>
         <button
           className="construct-inspect-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onInspect();
-          }}
+          onClick={handleInspect}
           title="Inspect construct details"
         >
           🔍
@@ -752,7 +755,7 @@ function ProductCard({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────
 // Product Inspector — detailed construct analysis
