@@ -353,13 +353,24 @@ function ProductCard({
 
   return (
     <div className="construct-product-card" onClick={onSelect}>
-      {product.imageUrl && (
+      {product.imageUrl ? (
         <OptimizedImage
           src={product.imageUrl}
           alt={product.displayName ?? ''}
           className="construct-card-image"
           isCombo={product.isCombo}
         />
+      ) : (
+        <div className="construct-card-placeholder">
+          <svg viewBox="0 0 64 64" fill="none" width="40" height="40">
+            <ellipse cx="32" cy="38" rx="22" ry="8" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10 38c0 4.4 9.8 8 22 8s22-3.6 22-8" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M14 38c0-10 8-20 18-20s18 10 18 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M24 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+            <path d="M32 12c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+            <path d="M40 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+          </svg>
+        </div>
       )}
       <div className="construct-card-body">
         <div className="construct-card-header">

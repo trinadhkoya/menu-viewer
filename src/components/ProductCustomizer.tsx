@@ -559,6 +559,22 @@ function ModifierOptionRow({
             )}
           </div>
         )}
+        {/* Inline stepper — shown inside content area when item also has drill-down */}
+        {isSelected && hasDrillDown && actionType === ActionType.CHECK_BOX && maxQty > 1 && (
+          <div className="customizer-option-stepper customizer-option-stepper--inline" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="customizer-stepper-btn"
+              onClick={() => decrease(groupRef, itemRef)}
+              disabled={item.quantity <= 1}
+            >−</button>
+            <span className="customizer-stepper-qty">{item.quantity}</span>
+            <button
+              className="customizer-stepper-btn"
+              onClick={() => increase(groupRef, itemRef)}
+              disabled={item.quantity >= maxQty}
+            >+</button>
+          </div>
+        )}
       </div>
 
       {/* Drill-down button */}
@@ -573,13 +589,13 @@ function ModifierOptionRow({
         </button>
       )}
 
-      {/* Quantity Stepper */}
+      {/* Quantity Stepper — right-aligned for non-drillable items */}
       {isSelected && actionType === ActionType.CHECK_BOX && maxQty > 1 && !hasDrillDown && (
         <div className="customizer-option-stepper" onClick={(e) => e.stopPropagation()}>
           <button
             className="customizer-stepper-btn"
             onClick={() => decrease(groupRef, itemRef)}
-            disabled={item.quantity <= 0}
+            disabled={item.quantity <= 1}
           >−</button>
           <span className="customizer-stepper-qty">{item.quantity}</span>
           <button
@@ -1256,7 +1272,7 @@ function NestedOptionRow({
       </div>
       {isSelected && actionType === ActionType.CHECK_BOX && maxQty > 1 && (
         <div className="customizer-option-stepper" onClick={(e) => e.stopPropagation()}>
-          <button className="customizer-stepper-btn" onClick={() => onDecrease(groupRef, itemRef)} disabled={item.quantity <= 0}>−</button>
+          <button className="customizer-stepper-btn" onClick={() => onDecrease(groupRef, itemRef)} disabled={item.quantity <= 1}>−</button>
           <span className="customizer-stepper-qty">{item.quantity}</span>
           <button className="customizer-stepper-btn" onClick={() => onIncrease(groupRef, itemRef)} disabled={item.quantity >= maxQty}>+</button>
         </div>

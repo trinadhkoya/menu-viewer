@@ -145,8 +145,19 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
     <div className="product-detail">
       {/* Header */}
       <div className="detail-header">
-        {product.imageUrl && (
+        {product.imageUrl ? (
           <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} isCombo={product.isCombo} />
+        ) : (
+          <div className="detail-image-placeholder">
+            <svg viewBox="0 0 64 64" fill="none" width="64" height="64">
+              <ellipse cx="32" cy="38" rx="22" ry="8" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 38c0 4.4 9.8 8 22 8s22-3.6 22-8" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M14 38c0-10 8-20 18-20s18 10 18 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M24 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+              <path d="M32 12c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+              <path d="M40 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+            </svg>
+          </div>
         )}
         <div className="detail-title-area">
           <h2 className="detail-title">{product.displayName}</h2>

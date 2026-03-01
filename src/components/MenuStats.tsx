@@ -150,8 +150,16 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
               className="category-card"
               onClick={() => onCategorySelect?.(ref)}
             >
-              {category.imageUrl && (
+              {category.imageUrl ? (
                 <OptimizedImage src={category.imageUrl} alt={category.displayName} className="category-card-image" width={280} height={100} />
+              ) : (
+                <div className="category-card-placeholder">
+                  <svg viewBox="0 0 64 64" fill="none" width="36" height="36">
+                    <rect x="8" y="20" width="48" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M16 28h12M16 34h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+                    <circle cx="44" cy="31" r="5" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+                  </svg>
+                </div>
               )}
               <div className="category-card-body">
                 <strong>{category.displayName}</strong>
@@ -207,10 +215,16 @@ function ProductCard({ ref_, product, onClick }: ProductCardProps) {
         <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
       ) : (
         <div className="product-card-placeholder">
-          <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
-            <rect x="6" y="10" width="36" height="28" rx="3" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="17" cy="21" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M6 34l10-8 5 4 8-10 13 14" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          <svg viewBox="0 0 64 64" fill="none" width="48" height="48">
+            {/* Plate */}
+            <ellipse cx="32" cy="38" rx="22" ry="8" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10 38c0 4.4 9.8 8 22 8s22-3.6 22-8" stroke="currentColor" strokeWidth="1.5" />
+            {/* Food dome */}
+            <path d="M14 38c0-10 8-20 18-20s18 10 18 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            {/* Steam lines */}
+            <path d="M24 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+            <path d="M32 12c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+            <path d="M40 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
           </svg>
         </div>
       )}
