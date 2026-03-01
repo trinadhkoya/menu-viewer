@@ -374,6 +374,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
     const brand = BRANDS.find((b) => b.id === id)!;
     const qaEnv = brand.envs.find((e) => e.env === 'QA');
     setSelectedEnv(qaEnv ? 'QA' : brand.envs[0].env);
+    setLocationId('0');
     setError(null);
   }, []);
 

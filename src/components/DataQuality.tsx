@@ -497,7 +497,6 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                       <div className="dq-check-info">
                         <span className="dq-check-title">
                           {check.title}
-                          <CopyRef value={check.title} className="dq-check-title-copy" />
                           <span className={`dq-priority dq-priority--${check.priority}`}>{PRIORITY_LABEL[check.priority]}</span>
                         </span>
                         <span className="dq-check-desc">{check.description}</span>
@@ -871,6 +870,18 @@ function MissingFieldDetail({
   );
 }
 
+/** Diagnose why a tag is non-standard and suggest a fix */
+function diagnoseTag(tag: string): { reason: string; suggestion: string } {
+  const trimmed = tag.trim();
+  if (!trimmed) return { reason: 'Empty tag', suggestion: 'Remove or replace with namespace.value' };
+  const dotCount = (trimmed.match(/\./g) || []).length;
+  if (dotCount === 0) return { reason: 'Missing dot separator', suggestion: `namespace.${trimmed}` };
+  if (dotCount > 1) return { reason: 'Multiple dots', suggestion: trimmed.split('.').slice(0, 2).join('.') };
+  if (trimmed.startsWith('.')) return { reason: 'Starts with dot', suggestion: `namespace${trimmed}` };
+  if (trimmed.endsWith('.')) return { reason: 'Ends with dot', suggestion: `${trimmed}value` };
+  return { reason: 'Unknown format issue', suggestion: 'namespace.value' };
+}
+
 function MalformedTagsDetail({
   items,
   onProductSelect,
@@ -899,13 +910,24 @@ function MalformedTagsDetail({
               </div>
               <CopyRef value={m.productRef} />
             </div>
-            <div className="dq-children" style={{ padding: '6px 14px 12px' }}>
-              {m.badTags.map((tag) => (
-                <span key={tag} className="dq-child">
-                  <span className="dq-child-dot dq-child-dot--miss" />
-                  <code className="dq-child-flag dq-child-flag--miss">{tag}</code>
-                </span>
-              ))}
+            <div className="dq-malformed-tags">
+              {m.badTags.map((tag) => {
+                const { reason, suggestion } = diagnoseTag(tag);
+                return (
+                  <div key={tag} className="dq-malformed-tag-row">
+                    <div className="dq-malformed-tag-current">
+                      <span className="dq-child-dot dq-child-dot--miss" />
+                      <code className="dq-malformed-tag-value">{tag}</code>
+                      <span className="dq-malformed-tag-reason">{reason}</span>
+                    </div>
+                    <div className="dq-malformed-tag-fix">
+                      <span className="dq-malformed-tag-arrow">→</span>
+                      <code className="dq-malformed-tag-suggestion">{suggestion}</code>
+                      <span className="dq-malformed-tag-hint">expected: namespace.value</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
