@@ -13,10 +13,14 @@ export interface OperationHours {
 }
 
 export interface Nutrient {
-  name?: string;
-  value?: number;
-  unit?: string;
-  dailyValue?: number;
+  label: string | null;
+  weight: Weight;
+  dailyValuePercentage?: number;
+}
+
+export interface Weight {
+  value: number;
+  unit: string;
 }
 
 export interface Nutrition {

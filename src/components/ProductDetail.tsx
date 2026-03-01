@@ -344,11 +344,13 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                             <span className="size-variant-cal">{sizeProduct.calories} cal</span>
                           )}
                           <div className="size-variant-badges">
-                            {isDefault && <span className="mini-badge default">Default</span>}
-                            {sizeProduct.isAvailable != null && (
-                              <span className={`availability-dot ${sizeProduct.isAvailable ? 'available' : 'unavailable'}`} title={sizeProduct.isAvailable ? 'Available' : 'Unavailable'} />
-                            )}
-                            {overrides && <OverrideBadge overrides={overrides} />}
+                            <span className="size-variant-badges-flex">
+                              {isDefault && <span className="mini-badge default">Default</span>}
+                              {sizeProduct.isAvailable != null && (
+                                <span className={`availability-dot ${sizeProduct.isAvailable ? 'available' : 'unavailable'}`} title={sizeProduct.isAvailable ? 'Available' : 'Unavailable'} />
+                              )}
+                              {overrides && <OverrideBadge overrides={overrides} />}
+                            </span>
                           </div>
                         </div>
                         <span className="size-variant-arrow">→</span>
@@ -861,10 +863,10 @@ function NutritionPanel({ nutrition }: { nutrition: NonNullable<Product['nutriti
           <tbody>
             {Object.entries(nutrition.macroNutrients).map(([key, nutrient]) => (
               <tr key={key}>
-                <td>{nutrient.name || key}</td>
-                <td>{nutrient.value ?? '-'}</td>
-                <td>{nutrient.unit ?? '-'}</td>
-                <td>{nutrient.dailyValue != null ? `${nutrient.dailyValue}%` : '-'}</td>
+                <td>{nutrient.label || key}</td>
+                  <td>{nutrient.weight.value ?? '-'}</td>
+                  <td>{nutrient.weight.unit ?? '-'}</td>
+                  <td>{nutrient.dailyValuePercentage != null ? `${nutrient.dailyValuePercentage}%` : '-'}</td>
               </tr>
             ))}
           </tbody>

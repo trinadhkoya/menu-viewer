@@ -1,3 +1,9 @@
+/* Flex alignment for size variant badges */
+.size-variant-badges-flex {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 /* ============================================
    Menupedia — App Styles
    ============================================ */

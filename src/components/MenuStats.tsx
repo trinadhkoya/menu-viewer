@@ -207,14 +207,17 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
       <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
-        {(product.price != null || product.calories != null) && (
+        {(product.price != null || product?.nutrition?.totalCalories != null || product.isAvailable != null) && (
           <div className="product-card-meta">
             {product.price != null && (
               <span className="product-card-price">${product.price.toFixed(2)}</span>
             )}
-            {product.calories != null && (
-              <span className="product-card-cal">{product.calories} cal</span>
+            {product?.nutrition?.totalCalories != null && (
+              <span className="product-card-cal">{product.nutrition.totalCalories} cal</span>
             )}
+            {product.isAvailable != null && (
+            <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} title={product.isAvailable ? 'Available' : 'Unavailable'} />
+          )}
           </div>
         )}
       </div>
