@@ -6,6 +6,7 @@ import { ProductCompare } from './ProductCompare';
 import { ProductCustomizer } from './ProductCustomizer';
 import type { BrandId } from './MenuUploader';
 import type { SavedCustomization } from '../utils/productCustomization';
+import { getProductPlaceholder } from '../utils/placeholderImage';
 import {
   getProductIngredients,
   getProductModifierGroups,
@@ -149,14 +150,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
           <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} isCombo={product.isCombo} />
         ) : (
           <div className="detail-image-placeholder">
-            <svg viewBox="0 0 64 64" fill="none" width="64" height="64">
-              <ellipse cx="32" cy="38" rx="22" ry="8" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10 38c0 4.4 9.8 8 22 8s22-3.6 22-8" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M14 38c0-10 8-20 18-20s18 10 18 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M24 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-              <path d="M32 12c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-              <path d="M40 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-            </svg>
+            <img src={getProductPlaceholder(activeBrand)} alt="Product placeholder" className="detail-placeholder-img" />
           </div>
         )}
         <div className="detail-title-area">
@@ -206,9 +200,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                 onClick={() => onProductSelect?.(virtualRef)}
                 title={`Navigate to ${virtualProduct.displayName}`}
               >
-                {virtualProduct.imageUrl && (
-                  <OptimizedImage src={virtualProduct.imageUrl} alt="" className="virtual-parent-thumb" width={32} height={32} />
-                )}
+                <OptimizedImage src={virtualProduct.imageUrl || getProductPlaceholder(activeBrand)} alt="" className="virtual-parent-thumb" width={32} height={32} />
                 <span className="virtual-parent-name">{virtualProduct.displayName}</span>
                 <span className="badge badge--virtual" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>Virtual</span>
                 <span className="virtual-parent-arrow">→</span>
@@ -337,9 +329,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                         onClick={() => onProductSelect?.(ref)}
                         title={`Navigate to ${sizeProduct.displayName}`}
                       >
-                        {sizeProduct.imageUrl && (
-                          <OptimizedImage src={sizeProduct.imageUrl} alt={sizeProduct.displayName ?? ''} className="size-variant-image" width={64} height={64} />
-                        )}
+                        <OptimizedImage src={sizeProduct.imageUrl || getProductPlaceholder(activeBrand)} alt={sizeProduct.displayName ?? ''} className="size-variant-image" width={64} height={64} />
                         <div className="size-variant-body">
                           <span className="size-variant-label">
                             {sizeProduct.ctaLabel || sizeProduct.displayName}
@@ -393,15 +383,13 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                     onClick={() => onProductSelect?.(bundleTarget.ref)}
                     title={`Navigate to ${bundleTarget.displayName}`}
                   >
-                    {bundleTarget.product.imageUrl && (
-                      <OptimizedImage
-                        src={bundleTarget.product.imageUrl}
+                    <OptimizedImage
+                        src={bundleTarget.product.imageUrl || getProductPlaceholder(activeBrand)}
                         alt={bundleTarget.displayName}
                         className="bundle-ref-image"
                         width={64}
                         height={64}
                       />
-                    )}
                     <div className="bundle-ref-body">
                       <span className="bundle-ref-label">🍱 Meal / Combo</span>
                       <span className="bundle-ref-name">{bundleTarget.displayName}</span>

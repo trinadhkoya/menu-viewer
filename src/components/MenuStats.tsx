@@ -1,7 +1,9 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import type { Menu, Product } from '../types/menu';
+import type { BrandId } from './MenuUploader';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
+import { getProductPlaceholder } from '../utils/placeholderImage';
 import {
   getMenuStats,
   getTopLevelCategories,
@@ -17,9 +19,10 @@ interface MenuStatsProps {
   selectedCategoryRef: string | null;
   onProductSelect: (productRef: string, categoryName?: string) => void;
   onCategorySelect?: (categoryRef: string) => void;
+  activeBrand?: BrandId | null;
 }
 
-export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect }: MenuStatsProps) {
+export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect, activeBrand }: MenuStatsProps) {
   const stats = useMemo(() => getMenuStats(menu), [menu]);
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
 
@@ -101,8 +104,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
               key={ref}
               ref_={ref}
               product={product}
-              onClick={() => onProductSelect(ref, categoryData.displayName ?? undefined)}
-            />
+              onClick={() => onProductSelect(ref, categoryData.displayName ?? undefined)}              activeBrand={activeBrand}            />
           ))}
         </div>
         )}
@@ -150,17 +152,7 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
               className="category-card"
               onClick={() => onCategorySelect?.(ref)}
             >
-              {category.imageUrl ? (
-                <OptimizedImage src={category.imageUrl} alt={category.displayName} className="category-card-image" width={280} height={100} />
-              ) : (
-                <div className="category-card-placeholder">
-                  <svg viewBox="0 0 64 64" fill="none" width="36" height="36">
-                    <rect x="8" y="20" width="48" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M16 28h12M16 34h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
-                    <circle cx="44" cy="31" r="5" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-                  </svg>
-                </div>
-              )}
+              <OptimizedImage src={category.imageUrl || getProductPlaceholder(activeBrand)} alt={category.displayName} className="category-card-image" width={280} height={100} />
               <div className="category-card-body">
                 <strong>{category.displayName}</strong>
                 <CopyRef value={ref} display={getRefId(ref)} />
@@ -180,9 +172,10 @@ interface ProductCardProps {
   ref_: string;
   product: Product;
   onClick: () => void;
+  activeBrand?: BrandId | null;
 }
 
-function ProductCard({ ref_, product, onClick }: ProductCardProps) {
+function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) {
   const [showTip, setShowTip] = useState(false);
   const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,23 +204,7 @@ function ProductCard({ ref_, product, onClick }: ProductCardProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {product.imageUrl ? (
-        <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
-      ) : (
-        <div className="product-card-placeholder">
-          <svg viewBox="0 0 64 64" fill="none" width="48" height="48">
-            {/* Plate */}
-            <ellipse cx="32" cy="38" rx="22" ry="8" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10 38c0 4.4 9.8 8 22 8s22-3.6 22-8" stroke="currentColor" strokeWidth="1.5" />
-            {/* Food dome */}
-            <path d="M14 38c0-10 8-20 18-20s18 10 18 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            {/* Steam lines */}
-            <path d="M24 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-            <path d="M32 12c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-            <path d="M40 14c0-2 2-4 0-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-          </svg>
-        </div>
-      )}
+      <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
       <div className="product-card-body">
         <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
         {(product.price != null || product.calories != null) && (

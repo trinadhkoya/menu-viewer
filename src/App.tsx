@@ -353,10 +353,10 @@ function App() {
           {mainContent ?? (
             <Routes>
               <Route path="/menu" element={
-                <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} />
+                <MenuStats menu={menu} selectedCategoryRef={selectedCategoryRef} onProductSelect={handleProductSelect} onCategorySelect={handleCategorySelect} activeBrand={activeBrand} />
               } />
               <Route path="/constructs" element={
-                <ConstructView menu={menu} onProductSelect={handleProductSelect} />
+                <ConstructView menu={menu} onProductSelect={handleProductSelect} activeBrand={activeBrand} />
               } />
               <Route path="/diff" element={
                 <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />

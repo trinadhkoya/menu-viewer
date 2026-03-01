@@ -10,6 +10,8 @@ interface OptimizedImageProps {
   height?: number;
   /** Show combo overlay styling */
   isCombo?: boolean;
+  /** Image to display when both thumbnail and original fail */
+  fallbackSrc?: string;
 }
 
 // ── Global loaded-image cache ──────────────────────────────
@@ -76,6 +78,7 @@ export function OptimizedImage({
   width,
   height,
   isCombo = false,
+  fallbackSrc,
 }: OptimizedImageProps) {
   const thumbUrl = toThumbnail(src, width ?? 280);
   const alreadyCached = _loadedCache.has(thumbUrl);
@@ -165,14 +168,25 @@ export function OptimizedImage({
 
       {/* Error fallback — both thumbnail and original failed */}
       {error && (
-        <div className="optimized-image-error">
-          <svg className="optimized-image-error-icon" viewBox="0 0 48 48" fill="none" width="36" height="36">
-            <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="16" cy="20" r="4" stroke="currentColor" strokeWidth="2" fill="none" />
-            <path d="M4 34 l12-10 6 5 10-12 12 17" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" />
-          </svg>
-          <span className="optimized-image-error-text">Image unavailable</span>
-        </div>
+        fallbackSrc ? (
+          <img
+            src={fallbackSrc}
+            alt={alt || 'Fallback'}
+            width={width}
+            height={height}
+            className="optimized-image optimized-image--loaded optimized-image--fallback"
+            style={{ objectFit: 'contain', opacity: 0.6 }}
+          />
+        ) : (
+          <div className="optimized-image-error">
+            <svg className="optimized-image-error-icon" viewBox="0 0 48 48" fill="none" width="36" height="36">
+              <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+              <circle cx="16" cy="20" r="4" stroke="currentColor" strokeWidth="2" fill="none" />
+              <path d="M4 34 l12-10 6 5 10-12 12 17" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" />
+            </svg>
+            <span className="optimized-image-error-text">Image unavailable</span>
+          </div>
+        )
       )}
     </div>
   );
