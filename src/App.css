@@ -1276,10 +1276,21 @@ code {
   background: var(--color-accent);
   color: #fff;
   font-size: 1.25rem;
-  cursor: pointer;
+  cursor: grab;
   box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent) 45%, transparent),
               0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, top 0.3s ease, left 0.3s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fab-diff.fab-dragging {
+  cursor: grabbing;
+  transform: scale(1.12);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--color-accent) 55%, transparent),
+              0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .fab-diff::before,

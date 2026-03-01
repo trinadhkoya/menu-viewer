@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import type { Menu } from './types/menu';
 
@@ -75,6 +75,69 @@ function App() {
     const stored = loadMenuFromStorage();
     return [{ label: stored?.displayName || 'Menu', type: 'root' }];
   });
+
+  // --- Draggable FAB state ---
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  const [fabDragging, setFabDragging] = useState(false);
+  const fabDragRef = useRef<{
+    startX: number; startY: number;
+    startLeft: number; startTop: number;
+    moved: boolean;
+  } | null>(null);
+
+  const handleFabPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const btn = e.currentTarget;
+    btn.setPointerCapture(e.pointerId);
+    const rect = btn.getBoundingClientRect();
+    fabDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+      moved: false,
+    };
+    const onMove = (ev: PointerEvent) => {
+      const drag = fabDragRef.current;
+      if (!drag) return;
+      const dx = ev.clientX - drag.startX;
+      const dy = ev.clientY - drag.startY;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 5) {
+        drag.moved = true;
+        setFabDragging(true);
+      }
+      if (drag.moved) {
+        const size = 56;
+        const nx = Math.max(0, Math.min(window.innerWidth - size, drag.startLeft + dx));
+        const ny = Math.max(0, Math.min(window.innerHeight - size, drag.startTop + dy));
+        setFabPos({ x: nx, y: ny });
+      }
+    };
+    const onUp = (ev: PointerEvent) => {
+      btn.releasePointerCapture(ev.pointerId);
+      btn.removeEventListener('pointermove', onMove);
+      btn.removeEventListener('pointerup', onUp);
+      const drag = fabDragRef.current;
+      if (!drag?.moved) {
+        // It was a click — navigate
+        navigate('/diff');
+        setSelectedProductRef(null);
+      } else {
+        // Snap to nearest horizontal edge
+        const size = 56;
+        const margin = 28;
+        const midX = window.innerWidth / 2;
+        setFabPos(prev => {
+          if (!prev) return prev;
+          const snappedX = prev.x + size / 2 < midX ? margin : window.innerWidth - size - margin;
+          return { ...prev, x: snappedX };
+        });
+      }
+      setFabDragging(false);
+      fabDragRef.current = null;
+    };
+    btn.addEventListener('pointermove', onMove);
+    btn.addEventListener('pointerup', onUp);
+  }, [navigate]);
 
   const handleMenuLoad = useCallback((loadedMenu: Menu, brand?: BrandId) => {
     // Clear any existing menu state first
@@ -249,11 +312,12 @@ function App() {
         </div>
       </header>
 
-      {/* Floating Diff button */}
+      {/* Floating Diff button — draggable */}
       {menu && activeTab !== 'diff' && (
         <button
-          className="fab-diff"
-          onClick={() => { navigate('/diff'); setSelectedProductRef(null); }}
+          className={`fab-diff${fabDragging ? ' fab-dragging' : ''}`}
+          style={fabPos ? { top: fabPos.y, left: fabPos.x, bottom: 'auto', right: 'auto' } : undefined}
+          onPointerDown={handleFabPointerDown}
           title="Compare menus across environments"
         >
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
