@@ -695,27 +695,40 @@ code {
 .sidebar-collapse-btn {
   position: absolute;
   top: 50%;
-  right: -14px;
+  right: -16px;
   transform: translateY(-50%);
   z-index: 20;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 16px;
+  height: 64px;
+  border-radius: 0 6px 6px 0;
   border: 1px solid var(--color-border);
+  border-left: none;
   background: var(--color-surface);
   color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
   transition: all 0.2s ease;
+  padding: 0;
 }
 .sidebar-collapse-btn:hover {
+  width: 20px;
   border-color: var(--color-accent);
   color: var(--color-accent);
   background: var(--color-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+.sidebar-collapse-btn--collapsed {
+  right: -20px;
+  width: 20px;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 6px 6px 0;
+}
+.sidebar-collapse-btn--collapsed:hover {
+  width: 24px;
+  right: -24px;
 }
 
 .sidebar-footer {
@@ -1817,6 +1830,127 @@ code {
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
+}
+
+/* ── Sidebar Tag Filter ── */
+.sidebar-tag-filter {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sidebar-tag-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.15s;
+}
+.sidebar-tag-toggle:hover {
+  color: var(--color-accent);
+}
+.sidebar-tag-toggle--open {
+  color: var(--color-accent);
+}
+.sidebar-tag-toggle-icon {
+  font-size: 0.65rem;
+  width: 10px;
+  display: inline-block;
+}
+.sidebar-tag-active-count {
+  margin-left: auto;
+  background: var(--color-accent);
+  color: white;
+  font-size: 0.62rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+
+.sidebar-tag-groups {
+  padding: 4px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-tag-group-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sidebar-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.sidebar-tag-pill:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.04);
+}
+.sidebar-tag-pill--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: white;
+}
+.sidebar-tag-pill--active:hover {
+  background: var(--color-accent);
+  color: white;
+  opacity: 0.9;
+}
+.sidebar-tag-pill-count {
+  font-size: 0.6rem;
+  opacity: 0.6;
+  font-weight: 700;
+}
+.sidebar-tag-pill--active .sidebar-tag-pill-count {
+  opacity: 0.8;
+}
+
+.sidebar-tag-clear {
+  border: none;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  transition: opacity 0.15s;
+}
+.sidebar-tag-clear:hover {
+  opacity: 0.7;
 }
 
 .sidebar-list {

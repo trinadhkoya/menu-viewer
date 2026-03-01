@@ -351,11 +351,11 @@ function App() {
             </div>
           </div>
           <button
-            className="sidebar-collapse-btn"
+            className={`sidebar-collapse-btn ${sidebarOpen ? '' : 'sidebar-collapse-btn--collapsed'}`}
             onClick={() => setSidebarOpen((v) => !v)}
             title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
               {sidebarOpen ? (
                 <path d="M10.354 3.354a.5.5 0 00-.708-.708l-5 5a.5.5 0 000 .708l5 5a.5.5 0 00.708-.708L5.707 8l4.647-4.646z"/>
               ) : (
