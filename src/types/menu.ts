@@ -103,6 +103,7 @@ export interface Product {
   parentIds?: string[];
   isExclusive?: boolean;
   quantity?: Quantity;
+  customAttributes?: Record<string, string | string[]>;
 }
 
 export interface Category extends ProductGroup {

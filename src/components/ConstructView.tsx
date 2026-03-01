@@ -121,6 +121,8 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
   const structuralTagStats = useMemo(() => getStructuralTagStats(classified), [classified]);
   const tagGroups = useMemo(() => buildTagGroups(classified), [classified]);
 
+
+
   // Progressive product loading
   const [displayLimit, setDisplayLimit] = useState(INITIAL_LIMIT);
 

@@ -31,6 +31,7 @@ import { SearchResults } from './components/SearchResults';
 import { MenuStats } from './components/MenuStats';
 import { ConstructView } from './components/ConstructView';
 import { DiffView } from './components/DiffView';
+import { DataQuality, useDataQualityCount } from './components/DataQuality';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
@@ -61,13 +62,16 @@ function App() {
   const activeTab = useMemo(() => {
     const path = location.pathname;
     if (path.startsWith('/constructs')) return 'constructs' as const;
+    if (path.startsWith('/data-quality')) return 'data-quality' as const;
     if (path.startsWith('/diff')) return 'diff' as const;
     return 'menu' as const;
   }, [location.pathname]);
 
+  const dqCount = useDataQualityCount(menu);
+
   // Auto-collapse sidebar on constructs/diff pages, restore on menu page
   useEffect(() => {
-    if (activeTab === 'constructs' || activeTab === 'diff') {
+    if (activeTab === 'constructs' || activeTab === 'data-quality' || activeTab === 'diff') {
       if (sidebarOpen) {
         sidebarWasOpenRef.current = true;
         // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync: match sidebar to route
@@ -337,6 +341,13 @@ function App() {
             >
               🧬 Constructs
             </button>
+            <button
+              className={`view-mode-btn ${activeTab === 'data-quality' ? 'active' : ''}`}
+              onClick={() => { navigate('/data-quality'); setSelectedProductRef(null); }}
+              title="Data quality checks"
+            >
+              🩺 Quality{dqCount > 0 && <span className="dq-tab-badge">{dqCount}</span>}
+            </button>
           </div>
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
         </div>
@@ -404,6 +415,9 @@ function App() {
               } />
               <Route path="/constructs" element={
                 <ConstructView menu={menu} onProductSelect={handleProductSelect} activeBrand={activeBrand} />
+              } />
+              <Route path="/data-quality" element={
+                <DataQuality menu={menu} onProductSelect={handleProductSelect} />
               } />
               <Route path="/diff" element={
                 <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />

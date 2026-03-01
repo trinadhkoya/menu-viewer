@@ -658,3 +658,725 @@ export function getMenuStats(menu: Menu) {
     isAvailable: menu.isAvailable,
   };
 }
+
+// ─────────────────────────────────────────────
+// Data Quality: Recipe group missing default
+// ─────────────────────────────────────────────
+
+export interface RecipeNoDefaultChild {
+  ref: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export interface RecipeNoDefaultGroup {
+  groupRef: string;
+  groupName: string;
+  children: RecipeNoDefaultChild[];
+}
+
+export interface RecipeNoDefaultMismatch {
+  productRef: string;
+  productName: string;
+  groups: RecipeNoDefaultGroup[];
+}
+
+/**
+ * Find products whose ingredientRefs include a productGroup with
+ * isRecipe=true where none of the child products have isDefault=true.
+ *
+ * This indicates a recipe ingredient group that has no default selection,
+ * which can cause issues in the mobile app's customization flow.
+ */
+export function getRecipeNoDefaultMismatches(menu: Menu): RecipeNoDefaultMismatch[] {
+  const results: RecipeNoDefaultMismatch[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+
+  for (const [pid, product] of Object.entries(products)) {
+    const irefs = product.ingredientRefs;
+    if (!irefs) continue;
+
+    const badGroups: RecipeNoDefaultGroup[] = [];
+
+    for (const iref of Object.keys(irefs)) {
+      if (!iref.startsWith('productGroups.')) continue;
+      const pgId = iref.slice('productGroups.'.length);
+      const pg = productGroups[pgId];
+      if (!pg) continue;
+      if (!isRecipeGroup(pg)) continue;
+      if (!pg.childRefs) continue;
+
+      const children: RecipeNoDefaultChild[] = [];
+      let hasDefault = false;
+
+      for (const [cref, override] of Object.entries(pg.childRefs)) {
+        const cpId = cref.startsWith('products.') ? cref.slice('products.'.length) : cref;
+        const cp = products[cpId];
+        const isDefaultProduct = cp?.isDefault === true;
+        const isDefaultOverride = override != null && typeof override === 'object' &&
+          (override as Record<string, unknown>).isDefault === true;
+        const isDefault = isDefaultProduct || isDefaultOverride;
+        if (isDefault) hasDefault = true;
+        children.push({
+          ref: cref,
+          name: cp?.displayName ?? cpId,
+          isDefault,
+        });
+      }
+
+      if (!hasDefault && children.length > 0) {
+        badGroups.push({
+          groupRef: iref,
+          groupName: pg.displayName ?? pgId,
+          children,
+        });
+      }
+    }
+
+    if (badGroups.length > 0) {
+      const productRef = pid.startsWith('products.') ? pid : `products.${pid}`;
+      results.push({
+        productRef,
+        productName: product.displayName ?? pid,
+        groups: badGroups,
+      });
+    }
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Virtual products with missing ctaLabel
+// ─────────────────────────────────────────────
+
+export interface CtaMissingSizedProduct {
+  ref: string;
+  name: string;
+  ctaLabel: string | null;
+}
+
+export interface CtaMissingSizeGroup {
+  groupRef: string;
+  groupName: string;
+  children: CtaMissingSizedProduct[];
+}
+
+export interface VirtualMissingCtaLabel {
+  productRef: string;
+  productName: string;
+  /** Size groups containing children with missing ctaLabel */
+  groups: CtaMissingSizeGroup[];
+  /** Direct product refs with missing ctaLabel (not via a group) */
+  directProducts: CtaMissingSizedProduct[];
+}
+
+/**
+ * Find virtual products whose sized/related products have ctaLabel
+ * missing or set to empty string.
+ *
+ * Virtual products have `relatedProducts` which can contain:
+ *  - Direct `products.*` refs
+ *  - Nested groupings (e.g. `alternatives`) containing `productGroups.*`
+ *    whose childRefs point to the actual sized products
+ *
+ * For each final product, we check both the override ctaLabel and the
+ * product-level ctaLabel. If both are missing/empty, it's flagged.
+ */
+export function getVirtualMissingCtaLabel(menu: Menu): VirtualMissingCtaLabel[] {
+  const results: VirtualMissingCtaLabel[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+
+  const isMissing = (val: unknown): boolean =>
+    val == null || (typeof val === 'string' && val.trim() === '');
+
+  for (const [pid, product] of Object.entries(products)) {
+    if (!product.isVirtual) continue;
+    const rp = product.relatedProducts;
+    if (!rp) continue;
+
+    const badGroups: CtaMissingSizeGroup[] = [];
+    const badDirect: CtaMissingSizedProduct[] = [];
+
+    for (const [rkey, rval] of Object.entries(rp)) {
+      if (rkey.startsWith('products.')) {
+        // Direct product ref
+        const rpId = rkey.slice('products.'.length);
+        const rProduct = products[rpId];
+        const overrideCta = rval != null && typeof rval === 'object'
+          ? (rval as Record<string, unknown>).ctaLabel
+          : undefined;
+        if (isMissing(overrideCta) && isMissing(rProduct?.ctaLabel)) {
+          badDirect.push({
+            ref: rkey,
+            name: rProduct?.displayName ?? rpId,
+            ctaLabel: null,
+          });
+        }
+      } else if (rval != null && typeof rval === 'object') {
+        // Nested grouping (e.g. 'alternatives')
+        for (const [gref, _gval] of Object.entries(rval as Record<string, unknown>)) {
+          if (!gref.startsWith('productGroups.')) continue;
+          const pgId = gref.slice('productGroups.'.length);
+          const pg = productGroups[pgId];
+          if (!pg?.childRefs) continue;
+
+          const missing: CtaMissingSizedProduct[] = [];
+          for (const [cref, cov] of Object.entries(pg.childRefs)) {
+            if (!cref.startsWith('products.')) continue;
+            const cpId = cref.slice('products.'.length);
+            const cp = products[cpId];
+            const overrideCta = cov != null && typeof cov === 'object'
+              ? (cov as Record<string, unknown>).ctaLabel
+              : undefined;
+            const productCta = cp?.ctaLabel;
+            if (isMissing(overrideCta) && isMissing(productCta)) {
+              missing.push({
+                ref: cref,
+                name: cp?.displayName ?? cpId,
+                ctaLabel: null,
+              });
+            }
+          }
+
+          if (missing.length > 0) {
+            badGroups.push({
+              groupRef: gref,
+              groupName: pg.displayName ?? pgId,
+              children: missing,
+            });
+          }
+        }
+      }
+    }
+
+    if (badGroups.length > 0 || badDirect.length > 0) {
+      const productRef = pid.startsWith('products.') ? pid : `products.${pid}`;
+      results.push({
+        productRef,
+        productName: product.displayName ?? pid,
+        groups: badGroups,
+        directProducts: badDirect,
+      });
+    }
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
+// Shared: Collect category-visible products
+// ─────────────────────────────────────────────
+
+/**
+ * Walk the category tree starting from `rootCategoryRef` and collect
+ * every product ref that is reachable. This gives us the "menu-visible"
+ * products — the ones customers actually see — filtering out ingredient-
+ * level sub-products that only exist inside recipe / modifier groups.
+ */
+function getVisibleProductRefs(menu: Menu): Set<string> {
+  const visible = new Set<string>();
+  const visited = new Set<string>();
+
+  function walk(ref: string) {
+    if (visited.has(ref)) return;
+    visited.add(ref);
+
+    const ns = getRefNamespace(ref);
+    const id = getRefId(ref);
+
+    if (ns === 'categories') {
+      const cat = menu.categories?.[id];
+      if (!cat?.childRefs) return;
+      for (const cr of Object.keys(cat.childRefs)) {
+        walk(cr);
+      }
+    } else if (ns === 'productGroups') {
+      const pg = menu.productGroups?.[id];
+      if (!pg?.childRefs) return;
+      for (const cr of Object.keys(pg.childRefs)) {
+        walk(cr);
+      }
+    } else if (ns === 'products') {
+      visible.add(id);
+    }
+  }
+
+  if (menu.rootCategoryRef) walk(menu.rootCategoryRef);
+  return visible;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Products missing description
+// ─────────────────────────────────────────────
+
+export interface MissingDescSizedProduct {
+  ref: string;
+  name: string;
+}
+
+export interface MissingDescSizeGroup {
+  groupRef: string;
+  groupName: string;
+  children: MissingDescSizedProduct[];
+}
+
+export interface ProductMissingDescription {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  /**
+   * For virtual products only: true when the virtual parent itself has a
+   * description, meaning sized children can inherit it.
+   */
+  parentHasDescription: boolean;
+  /** For virtual products: size groups whose sized children have no description */
+  groups: MissingDescSizeGroup[];
+  /** For virtual products: direct related product refs missing description */
+  directProducts: MissingDescSizedProduct[];
+}
+
+/**
+ * Internal helper: scan all category-visible products for missing descriptions.
+ * Returns every hit regardless of whether the parent can provide inheritance.
+ */
+function _scanMissingDescriptions(menu: Menu): ProductMissingDescription[] {
+  const results: ProductMissingDescription[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+  const visible = getVisibleProductRefs(menu);
+
+  const isEmpty = (val: unknown): boolean =>
+    val == null || (typeof val === 'string' && val.trim() === '');
+
+  for (const pid of visible) {
+    const product = products[pid];
+    if (!product) continue;
+    const isVirt = Boolean(product.isVirtual);
+
+    if (isVirt) {
+      const rp = product.relatedProducts;
+      if (!rp) continue;
+
+      const parentHasDesc = !isEmpty(product.description);
+      const badGroups: MissingDescSizeGroup[] = [];
+      const badDirect: MissingDescSizedProduct[] = [];
+
+      for (const [rkey, rval] of Object.entries(rp)) {
+        if (rkey.startsWith('products.')) {
+          const rpId = rkey.slice('products.'.length);
+          const rProduct = products[rpId];
+          if (isEmpty(rProduct?.description)) {
+            badDirect.push({ ref: rkey, name: rProduct?.displayName ?? rpId });
+          }
+        } else if (rval != null && typeof rval === 'object') {
+          for (const [gref] of Object.entries(rval as Record<string, unknown>)) {
+            if (!gref.startsWith('productGroups.')) continue;
+            const pgId = gref.slice('productGroups.'.length);
+            const pg = productGroups[pgId];
+            if (!pg?.childRefs) continue;
+
+            const missing: MissingDescSizedProduct[] = [];
+            for (const cref of Object.keys(pg.childRefs)) {
+              if (!cref.startsWith('products.')) continue;
+              const cpId = cref.slice('products.'.length);
+              const cp = products[cpId];
+              if (isEmpty(cp?.description)) {
+                missing.push({ ref: cref, name: cp?.displayName ?? cpId });
+              }
+            }
+            if (missing.length > 0) {
+              badGroups.push({ groupRef: gref, groupName: pg.displayName ?? pgId, children: missing });
+            }
+          }
+        }
+      }
+
+      if (badGroups.length > 0 || badDirect.length > 0) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: true,
+          parentHasDescription: parentHasDesc,
+          groups: badGroups,
+          directProducts: badDirect,
+        });
+      }
+    } else {
+      if (isEmpty(product.description)) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: false,
+          parentHasDescription: false,
+          groups: [],
+          directProducts: [],
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Products with genuinely missing descriptions (warnings).
+ *
+ * - Non-virtual products with no description.
+ * - Virtual products where the parent itself has NO description
+ *   AND sized children also have no description (nothing to inherit).
+ */
+export function getProductsMissingDescription(menu: Menu): ProductMissingDescription[] {
+  return _scanMissingDescriptions(menu).filter(
+    (m) => !m.isVirtual || !m.parentHasDescription,
+  );
+}
+
+/**
+ * Virtual products whose sized children have no description, but the
+ * virtual parent DOES have one — so the description can be inherited.
+ *
+ * These are not errors, just observations worth noting.
+ */
+export function getDescriptionInheritableObservations(menu: Menu): ProductMissingDescription[] {
+  return _scanMissingDescriptions(menu).filter(
+    (m) => m.isVirtual && m.parentHasDescription,
+  );
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Products missing image
+// ─────────────────────────────────────────────
+
+export interface MissingImgSizedProduct {
+  ref: string;
+  name: string;
+}
+
+export interface MissingImgSizeGroup {
+  groupRef: string;
+  groupName: string;
+  children: MissingImgSizedProduct[];
+}
+
+export interface ProductMissingImage {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  /** For virtual products: size groups whose sized children have no image */
+  groups: MissingImgSizeGroup[];
+  /** For virtual products: direct related product refs missing image */
+  directProducts: MissingImgSizedProduct[];
+}
+
+/**
+ * Find category-visible products that have no image.
+ *
+ * - Non-virtual products: check `image` and `imageUrl` on the product.
+ * - Virtual products: follow `relatedProducts` chain to sized products
+ *   and check each of their `image` / `imageUrl` fields.
+ *
+ * Does NOT drill into ingredientRefs.
+ */
+export function getProductsMissingImage(menu: Menu): ProductMissingImage[] {
+  const results: ProductMissingImage[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+  const visible = getVisibleProductRefs(menu);
+
+  const hasImage = (p: Product | undefined): boolean => {
+    if (!p) return false;
+    const img = p.image || p.imageUrl;
+    return typeof img === 'string' && img.trim() !== '';
+  };
+
+  for (const pid of visible) {
+    const product = products[pid];
+    if (!product) continue;
+    const isVirt = Boolean(product.isVirtual);
+
+    if (isVirt) {
+      const rp = product.relatedProducts;
+      if (!rp) continue;
+
+      const badGroups: MissingImgSizeGroup[] = [];
+      const badDirect: MissingImgSizedProduct[] = [];
+
+      for (const [rkey, rval] of Object.entries(rp)) {
+        if (rkey.startsWith('products.')) {
+          const rpId = rkey.slice('products.'.length);
+          const rProduct = products[rpId];
+          if (!hasImage(rProduct)) {
+            badDirect.push({ ref: rkey, name: rProduct?.displayName ?? rpId });
+          }
+        } else if (rval != null && typeof rval === 'object') {
+          for (const [gref] of Object.entries(rval as Record<string, unknown>)) {
+            if (!gref.startsWith('productGroups.')) continue;
+            const pgId = gref.slice('productGroups.'.length);
+            const pg = productGroups[pgId];
+            if (!pg?.childRefs) continue;
+
+            const missing: MissingImgSizedProduct[] = [];
+            for (const cref of Object.keys(pg.childRefs)) {
+              if (!cref.startsWith('products.')) continue;
+              const cpId = cref.slice('products.'.length);
+              const cp = products[cpId];
+              if (!hasImage(cp)) {
+                missing.push({ ref: cref, name: cp?.displayName ?? cpId });
+              }
+            }
+            if (missing.length > 0) {
+              badGroups.push({ groupRef: gref, groupName: pg.displayName ?? pgId, children: missing });
+            }
+          }
+        }
+      }
+
+      if (badGroups.length > 0 || badDirect.length > 0) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: true,
+          groups: badGroups,
+          directProducts: badDirect,
+        });
+      }
+    } else {
+      if (!hasImage(product)) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: false,
+          groups: [],
+          directProducts: [],
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Products missing keywords/tags
+// ─────────────────────────────────────────────
+
+export interface MissingTagSizedProduct {
+  ref: string;
+  name: string;
+}
+
+export interface MissingTagSizeGroup {
+  groupRef: string;
+  groupName: string;
+  children: MissingTagSizedProduct[];
+}
+
+export interface ProductMissingTags {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  parentHasTags: boolean;
+  groups: MissingTagSizeGroup[];
+  directProducts: MissingTagSizedProduct[];
+}
+
+export interface ProductMissingSearchKeywords {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  parentHasKeywords: boolean;
+  groups: MissingTagSizeGroup[];
+  directProducts: MissingTagSizedProduct[];
+}
+
+/* ── Predicate helpers ── */
+
+function _hasTags(p: Product | undefined): boolean {
+  if (!p) return false;
+  return Array.isArray(p.tags) && p.tags.length > 0;
+}
+
+function _hasSearchKeywords(p: Product | undefined): boolean {
+  if (!p) return false;
+  const ca = p.customAttributes;
+  if (ca) {
+    const kw = ca.keywords;
+    if (Array.isArray(kw) && kw.length > 0) return true;
+  }
+  return false;
+}
+
+/* ── Generic scanner shared by both checks ── */
+
+interface _MissingFieldResult {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  parentHasField: boolean;
+  groups: MissingTagSizeGroup[];
+  directProducts: MissingTagSizedProduct[];
+}
+
+function _scanMissingField(
+  menu: Menu,
+  hasField: (p: Product | undefined) => boolean,
+): _MissingFieldResult[] {
+  const results: _MissingFieldResult[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+  const visible = getVisibleProductRefs(menu);
+
+  for (const pid of visible) {
+    const product = products[pid];
+    if (!product) continue;
+    const isVirt = Boolean(product.isVirtual);
+
+    if (isVirt) {
+      const rp = product.relatedProducts;
+      if (!rp) continue;
+
+      const parentHas = hasField(product);
+      const badGroups: MissingTagSizeGroup[] = [];
+      const badDirect: MissingTagSizedProduct[] = [];
+
+      for (const [rkey, rval] of Object.entries(rp)) {
+        if (rkey.startsWith('products.')) {
+          const rpId = rkey.slice('products.'.length);
+          const rProduct = products[rpId];
+          if (!hasField(rProduct)) {
+            badDirect.push({ ref: rkey, name: rProduct?.displayName ?? rpId });
+          }
+        } else if (rval != null && typeof rval === 'object') {
+          for (const [gref] of Object.entries(rval as Record<string, unknown>)) {
+            if (!gref.startsWith('productGroups.')) continue;
+            const pgId = gref.slice('productGroups.'.length);
+            const pg = productGroups[pgId];
+            if (!pg?.childRefs) continue;
+
+            const missing: MissingTagSizedProduct[] = [];
+            for (const cref of Object.keys(pg.childRefs)) {
+              if (!cref.startsWith('products.')) continue;
+              const cpId = cref.slice('products.'.length);
+              const cp = products[cpId];
+              if (!hasField(cp)) {
+                missing.push({ ref: cref, name: cp?.displayName ?? cpId });
+              }
+            }
+            if (missing.length > 0) {
+              badGroups.push({ groupRef: gref, groupName: pg.displayName ?? pgId, children: missing });
+            }
+          }
+        }
+      }
+
+      if (badGroups.length > 0 || badDirect.length > 0) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: true,
+          parentHasField: parentHas,
+          groups: badGroups,
+          directProducts: badDirect,
+        });
+      }
+    } else {
+      if (!hasField(product)) {
+        results.push({
+          productRef: `products.${pid}`,
+          productName: product.displayName ?? pid,
+          isVirtual: false,
+          parentHasField: false,
+          groups: [],
+          directProducts: [],
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+/* ── Tags (classification metadata) ── */
+
+function _toMissingTags(r: _MissingFieldResult): ProductMissingTags {
+  return { ...r, parentHasTags: r.parentHasField };
+}
+
+export function getProductsMissingTags(menu: Menu): ProductMissingTags[] {
+  return _scanMissingField(menu, _hasTags)
+    .filter((m) => !m.isVirtual || !m.parentHasField)
+    .map(_toMissingTags);
+}
+
+export function getTagsInheritableObservations(menu: Menu): ProductMissingTags[] {
+  return _scanMissingField(menu, _hasTags)
+    .filter((m) => m.isVirtual && m.parentHasField)
+    .map(_toMissingTags);
+}
+
+/* ── Search keywords (customAttributes.keywords) ── */
+
+function _toMissingKeywords(r: _MissingFieldResult): ProductMissingSearchKeywords {
+  return { ...r, parentHasKeywords: r.parentHasField };
+}
+
+export function getProductsMissingKeywords(menu: Menu): ProductMissingSearchKeywords[] {
+  return _scanMissingField(menu, _hasSearchKeywords)
+    .filter((m) => !m.isVirtual || !m.parentHasField)
+    .map(_toMissingKeywords);
+}
+
+export function getKeywordsInheritableObservations(menu: Menu): ProductMissingSearchKeywords[] {
+  return _scanMissingField(menu, _hasSearchKeywords)
+    .filter((m) => m.isVirtual && m.parentHasField)
+    .map(_toMissingKeywords);
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Non-standard tag format
+// ─────────────────────────────────────────────
+//
+// Standard format: "namespace.value"  (e.g. "is.Drink", "allergen.Egg")
+// Non-standard:    bare strings, underscored prefixes, missing dot, etc.
+
+/** Regex: at least one non-dot char, then a dot, then at least one non-dot char. */
+const STANDARD_TAG_RE = /^[^.]+\.[^.]+$/;
+
+export interface MalformedTagProduct {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  badTags: string[];
+}
+
+/**
+ * Returns products whose `tags` array contains entries that don't follow
+ * the standard `namespace.value` convention (e.g. `is.Drink`, `protein.Beef`).
+ *
+ * Only considers category-visible products that actually have tags.
+ */
+export function getProductsWithMalformedTags(menu: Menu): MalformedTagProduct[] {
+  const results: MalformedTagProduct[] = [];
+  const products = menu.products || {};
+  const visible = getVisibleProductRefs(menu);
+
+  for (const pid of visible) {
+    const product = products[pid];
+    if (!product?.tags || product.tags.length === 0) continue;
+
+    const bad = product.tags.filter((t) => !STANDARD_TAG_RE.test(t));
+    if (bad.length > 0) {
+      results.push({
+        productRef: `products.${pid}`,
+        productName: product.displayName ?? pid,
+        isVirtual: Boolean(product.isVirtual),
+        badTags: bad,
+      });
+    }
+  }
+
+  return results;
+}

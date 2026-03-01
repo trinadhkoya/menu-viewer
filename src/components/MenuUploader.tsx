@@ -295,6 +295,30 @@ export const BRANDS: BrandInfo[] = [
 
 ];
 
+// ── Suggested location IDs per brand + environment ──
+// Extracted from known test/QA payloads. Easy to extend.
+const LOCATION_SUGGESTIONS: Record<BrandId, Record<string, string[]>> = {
+  arbys: {
+    QA:   ['0', '300577', '99980', '99981', '99982', '99983', '99984', '99985', '99995', 'MASTER'],
+    UAT:  ['0', '99948', '99949', '99982', '99985', '99987', '99995', 'MASTER'],
+    Demo: ['0', '99949', '99985', 'MASTER'],
+  },
+  bww: {
+    QA:   ['0', '4', '5', '7', '8', '13', '19', '30', '99985', 'MASTER'],
+    UAT:  ['0', '1', '3', '4', '5', '7', '8', '13', '19', '30', '35', 'MASTER'],
+    Demo: ['0', '3', '4', '5', '13', 'MASTER'],
+  },
+  sonic: {
+    QA:   ['0', 'MASTER'],
+    UAT:  ['0', 'MASTER'],
+    Demo: ['0', 'MASTER'],
+  },
+  dunkin: {
+    QA:  ['0', '1234', '8016', '8017', '8018', '300577', '306106', '306107', '345295', '351257', '357492', '359739', '363554', '713026', 'MASTER'],
+    UAT: ['0', '306106', '345295', 'MASTER'],
+  },
+};
+
 interface MenuUploaderProps { onMenuLoad: (menu: Menu, brand?: BrandId) => void }
 
 export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
@@ -312,6 +336,8 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   const [selectedBrand, setSelectedBrand] = useState<BrandId>('arbys');
   const [selectedEnv, setSelectedEnv] = useState('QA');
   const [locationId, setLocationId] = useState('0');
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
 
   const switchTab = useCallback((t: Tab) => { setTab(t); setError(null); }, []);
 
@@ -326,6 +352,25 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
     const loc = locationId.trim();
     return loc ? `${base.replace(/\/$/, '')}/${loc}` : base;
   }, [currentEnvData, locationId]);
+
+  // Filtered suggestions for current brand + env
+  const filteredSuggestions = useMemo(() => {
+    const all = LOCATION_SUGGESTIONS[selectedBrand]?.[selectedEnv] ?? [];
+    const q = locationId.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((s) => s.toLowerCase().includes(q));
+  }, [selectedBrand, selectedEnv, locationId]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // When brand changes, reset env to first available
   const handleBrandChange = useCallback((id: BrandId) => {
@@ -631,17 +676,41 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
                 ))}
               </div>
 
-              {/* Location ID */}
-              <div className="brand-row">
+              {/* Location ID with suggestions */}
+              <div className="brand-row" ref={locationRef}>
                 <label className="brand-label">Location / Path</label>
-                <input
-                  type="text"
-                  className="url-input"
-                  placeholder="e.g. MASTER, 12345"
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  disabled={loading}
-                />
+                <div className="loc-input-wrap">
+                  <input
+                    type="text"
+                    className="url-input"
+                    placeholder="e.g. MASTER, 12345"
+                    value={locationId}
+                    onChange={(e) => { setLocationId(e.target.value); setSuggestionsOpen(true); }}
+                    onFocus={() => setSuggestionsOpen(true)}
+                    disabled={loading}
+                    autoComplete="off"
+                  />
+                  {suggestionsOpen && filteredSuggestions.length > 0 && (
+                    <div className="loc-suggestions">
+                      <div className="loc-suggestions-header">
+                        Suggested locations
+                      </div>
+                      <div className="loc-suggestions-list">
+                        {filteredSuggestions.map((s) => (
+                          <button
+                            key={s}
+                            className={`loc-suggestion-item ${s === locationId ? 'loc-suggestion-item--active' : ''}`}
+                            onClick={() => { setLocationId(s); setSuggestionsOpen(false); }}
+                          >
+                            <span className="loc-suggestion-id">{s}</span>
+                            {s === 'MASTER' && <span className="loc-suggestion-tag">Master menu</span>}
+                            {s === '0' && <span className="loc-suggestion-tag">Default</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Built URL preview */}
