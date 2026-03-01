@@ -64,6 +64,7 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
 
   // Clear saved customization when navigating to a different product
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on product change
     setSavedCustomization(null);
     setCustomizeMode(false);
   }, [productRef]);

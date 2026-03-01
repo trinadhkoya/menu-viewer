@@ -229,6 +229,7 @@ type Tab = 'upload' | 'paste' | 'url' | 'brand';
 
 interface HeaderEntry { key: string; value: string }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const DEFAULT_HEADERS: HeaderEntry[] = [
   { key: 'accept', value: 'application/json, text/plain, */*' },
   { key: 'x-session-id', value: '0b0d4a53-d150-4733-8d8b-a614d79426bd' },
@@ -254,6 +255,7 @@ export interface BrandInfo {
   envs: { env: string; api: string }[];
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const BRANDS: BrandInfo[] = [
   {
     id: 'arbys', label: "Arby's",
@@ -350,9 +352,6 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
           const detected = detectBrand(parsed as Menu);
           if (detected) {
             resolvedBrand = detected.brand;
-            console.info(
-              `[menupedia] Auto-detected brand: ${detected.brand} (${detected.confidence}) — ${detected.reason}`,
-            );
           }
         }
         onMenuLoad(parsed as Menu, resolvedBrand);

@@ -7,12 +7,10 @@ const BRAND_PLACEHOLDERS: Record<BrandId, string> = {
   sonic: '/placeholders/sonic.png',
 };
 
-const DEFAULT_PLACEHOLDER = '/placeholders/default.png';
-
 /**
  * Returns the brand-specific product fallback image path.
- * Falls back to the generic placeholder when brand is unknown.
+ * Falls back to the Arbys placeholder when brand is unknown.
  */
 export function getProductPlaceholder(brand: BrandId | null | undefined): string {
-  return brand ? BRAND_PLACEHOLDERS[brand] ?? DEFAULT_PLACEHOLDER : DEFAULT_PLACEHOLDER;
+  return brand ? BRAND_PLACEHOLDERS[brand] ?? BRAND_PLACEHOLDERS.arbys : BRAND_PLACEHOLDERS.arbys;
 }

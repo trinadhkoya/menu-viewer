@@ -206,12 +206,12 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
     >
       <div className="product-card-image-wrapper">
         <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
-        <span
-          className={`availability-dot overlay ${product.isAvailable ? 'available' : 'unavailable'}`}
-        />
       </div>
       <div className="product-card-body">
-        <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+        <div className="product-card-name-row">
+          <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+          <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+        </div>
         <CopyRef value={ref_} display={getRefId(ref_)} />
         {(product.price != null || product?.nutrition?.totalCalories != null) && (
           <div className="product-card-meta">

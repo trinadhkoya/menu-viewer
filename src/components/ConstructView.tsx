@@ -6,15 +6,11 @@ import {
   classifyAllProducts,
   getPrimaryTypeStats,
   getStructuralTagStats,
-  getMainCategoryStats,
-  getCategorySkeletons,
   filterProducts,
   getConstruct,
   getStructuralTag,
 } from '../utils/constructClassifier';
-import type { CategorySkeleton } from '../utils/constructClassifier';
 import { getRefId } from '../utils/menuHelpers';
-import { ConstructTypePill } from './ConstructBadge';
 import { OptimizedImage } from './OptimizedImage';
 import { CopyRef } from './CopyRef';
 import type { BrandId } from './MenuUploader';
@@ -121,21 +117,9 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
 
   // Classify all products once
   const classified = useMemo(() => classifyAllProducts(menu), [menu]);
-  const mainCategoryStats = useMemo(() => getMainCategoryStats(classified), [classified]);
   const primaryStats = useMemo(() => getPrimaryTypeStats(classified), [classified]);
   const structuralTagStats = useMemo(() => getStructuralTagStats(classified), [classified]);
   const tagGroups = useMemo(() => buildTagGroups(classified), [classified]);
-  const categorySkeletons = useMemo(() => getCategorySkeletons(classified), [classified]);
-
-  // Build a lookup map from category ref → skeleton
-  const skeletonMap = useMemo(() => {
-    const map = new Map<string, CategorySkeleton>();
-    for (const sk of categorySkeletons) map.set(sk.ref, sk);
-    return map;
-  }, [categorySkeletons]);
-
-  // Which skeleton detail panel is expanded
-  const [expandedSkeleton, setExpandedSkeleton] = useState<string | null>(null);
 
   // Progressive product loading
   const [displayLimit, setDisplayLimit] = useState(INITIAL_LIMIT);
@@ -173,13 +157,6 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
       }),
     [classified, activeMainCategory, activePrimary, activePrimarySet, activeBehavioral, activeStructuralTag, activeStructuralSet, activeProductTags, searchTerm, andMode],
   );
-
-  const toggleMainCategory = useCallback((ref: string) => {
-    setActiveMainCategory((prev) => (prev === ref ? null : ref));
-    setInspecting(null);
-    setDisplayLimit(INITIAL_LIMIT);
-    scrollToProducts();
-  }, [scrollToProducts]);
 
   const togglePrimary = useCallback((id: string) => {
     if (andMode) {
@@ -712,14 +689,14 @@ const ProductCard = memo(function ProductCard({
           className="construct-card-image"
           isCombo={product.isCombo}
         />
-        <span
-          className={`availability-dot overlay ${product.isAvailable ? 'available' : 'unavailable'}`}
-        />
       </div>
       <div className="construct-card-body">
-        <span className="construct-card-name">
-          {product.displayName || getRefId(item.ref)}
-        </span>
+        <div className="product-card-name-row">
+          <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
+          <span className="construct-card-name">
+            {product.displayName || getRefId(item.ref)}
+          </span>
+        </div>
         <CopyRef
           value={item.ref}
           display={getRefId(item.ref)}
@@ -988,138 +965,6 @@ function DataItem({ label, value }: { label: string; value: string }) {
     <div className="inspector-data-item">
       <span className="inspector-data-label">{label}</span>
       <span className="inspector-data-value">{value}</span>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Skeleton Detail Panel — shows product schema analysis for a category
-// ─────────────────────────────────────────────
-
-const FREQ_COLORS: Record<string, string> = {
-  always: '#22c55e',
-  common: '#3b82f6',
-  sometimes: '#f59e0b',
-  rare: '#ef4444',
-};
-
-function SkeletonDetailPanel({
-  skeleton,
-  onClose,
-}: {
-  skeleton: CategorySkeleton;
-  onClose: () => void;
-}) {
-  const [showAllFields, setShowAllFields] = useState(false);
-  const visibleFields = showAllFields ? skeleton.fields : skeleton.fields.slice(0, 12);
-
-  return (
-    <div className="skeleton-detail-panel">
-      <div className="skeleton-detail-header">
-        <div className="skeleton-detail-title">
-          <span className="skeleton-detail-icon">🧬</span>
-          <div>
-            <h4>{skeleton.name} — Product Schema</h4>
-            <span className="skeleton-detail-code">{skeleton.skeletonCode}</span>
-          </div>
-        </div>
-        <button className="skeleton-detail-close" onClick={onClose}>✕</button>
-      </div>
-
-      <div className="skeleton-detail-name">
-        <span className={`skeleton-name-tag ${skeleton.isHomogeneous ? 'skeleton-name-tag--homo' : 'skeleton-name-tag--mixed'}`}>
-          {skeleton.isHomogeneous ? '✓ Homogeneous' : `⚠ ${skeleton.shapeCount} distinct shapes`}
-        </span>
-        <span className="skeleton-product-count">{skeleton.productCount} products</span>
-        <span className="skeleton-product-count">{skeleton.fields.length} fields detected</span>
-      </div>
-
-      {/* ── Schema Shapes ── */}
-      <div className="skeleton-section">
-        <div className="skeleton-section-label">Schema Shapes (product fingerprints)</div>
-        <div className="skeleton-shapes">
-          {skeleton.shapes.slice(0, 8).map((shape) => (
-            <div
-              key={shape.fingerprint}
-              className={`skeleton-shape-row ${shape.fingerprint === skeleton.dominantShape.fingerprint ? 'skeleton-shape-row--dominant' : ''}`}
-            >
-              <div className="skeleton-shape-header">
-                <code className="skeleton-shape-fp">{shape.fingerprint}</code>
-                <span className="skeleton-shape-pct-badge">{shape.pct}%</span>
-                <span className="skeleton-shape-count">{shape.count} products</span>
-              </div>
-              <div className="skeleton-shape-name">{shape.shapeName}</div>
-              <div className="skeleton-shape-bar-track">
-                <div
-                  className="skeleton-shape-bar-fill"
-                  style={{ width: `${shape.pct}%` }}
-                />
-              </div>
-              <div className="skeleton-shape-examples">
-                {shape.examples.map((ex, i) => (
-                  <span key={i} className="skeleton-shape-example">{ex}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-          {skeleton.shapes.length > 8 && (
-            <div className="skeleton-shape-more">+{skeleton.shapes.length - 8} more shapes</div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Field Presence Table ── */}
-      <div className="skeleton-section">
-        <div className="skeleton-section-label">Field Presence</div>
-        <div className="skeleton-field-table">
-          <div className="skeleton-field-header-row">
-            <span className="skeleton-field-col-name">Field</span>
-            <span className="skeleton-field-col-freq">Frequency</span>
-            <span className="skeleton-field-col-bar">Presence</span>
-            <span className="skeleton-field-col-type">Type(s)</span>
-          </div>
-          {visibleFields.map((f) => (
-            <div
-              key={f.key}
-              className={`skeleton-field-row ${f.isStructural ? 'skeleton-field-row--structural' : ''}`}
-            >
-              <span className="skeleton-field-name">
-                {f.isStructural && <span className="skeleton-structural-dot" />}
-                {f.key}
-              </span>
-              <span
-                className="skeleton-field-freq"
-                style={{ color: FREQ_COLORS[f.frequency] }}
-              >
-                {f.frequency}
-              </span>
-              <div className="skeleton-field-bar-track">
-                <div
-                  className="skeleton-field-bar-fill"
-                  style={{
-                    width: `${f.pct}%`,
-                    backgroundColor: FREQ_COLORS[f.frequency],
-                  }}
-                />
-                <span className="skeleton-field-pct-label">{f.pct}%</span>
-              </div>
-              <span className="skeleton-field-types">
-                {f.valueTypes.map((vt, i) => (
-                  <code key={i} className="skeleton-type-tag">{vt.type}</code>
-                ))}
-              </span>
-            </div>
-          ))}
-        </div>
-        {skeleton.fields.length > 12 && (
-          <button
-            className="skeleton-show-more-btn"
-            onClick={() => setShowAllFields((p) => !p)}
-          >
-            {showAllFields ? 'Show Less' : `Show All ${skeleton.fields.length} Fields`}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

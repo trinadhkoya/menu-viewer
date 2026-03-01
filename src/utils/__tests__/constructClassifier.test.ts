@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Menu } from '../../types/menu';
+import type { Menu, Product } from '../../types/menu';
 import {
   classifyAllProducts,
   computeFlags,
@@ -366,7 +366,7 @@ describe('computeFlags', () => {
         alternatives: { 'productGroups.size': {} },
         bundle: {},
       },
-    } as any);
+    } as unknown as Product);
 
     expect(flags.isVirtual).toBe(true);
     expect(flags.isCombo).toBe(true);
@@ -377,7 +377,7 @@ describe('computeFlags', () => {
   });
 
   it('returns false for empty/missing fields', () => {
-    const flags = computeFlags({ displayName: 'Bare' } as any);
+    const flags = computeFlags({ displayName: 'Bare' } as unknown as Product);
 
     expect(flags.isVirtual).toBe(false);
     expect(flags.isCombo).toBe(false);
@@ -388,12 +388,12 @@ describe('computeFlags', () => {
   });
 
   it('hasAlternatives is false when relatedProducts has no alternatives key', () => {
-    const flags = computeFlags({ displayName: 'Test', relatedProducts: {} } as any);
+    const flags = computeFlags({ displayName: 'Test', relatedProducts: {} } as unknown as Product);
     expect(flags.hasAlternatives).toBe(false);
   });
 
   it('hasIngredientRefs is false for empty object', () => {
-    const flags = computeFlags({ displayName: 'Test', ingredientRefs: {} } as any);
+    const flags = computeFlags({ displayName: 'Test', ingredientRefs: {} } as unknown as Product);
     expect(flags.hasIngredientRefs).toBe(false);
   });
 });
@@ -612,10 +612,8 @@ describe('bundle references', () => {
   it('products without bundle have no bundleTargetRef or bundleSources', () => {
     const menu = buildBundleMenu();
     const classified = classifyAllProducts(menu);
-    const water = classified.find((c) => c.ref === 'products.water');
-
     // water is not in the menu categories (only entrees and meals)
-    // Let me just check products without bundle from the result
+    // Check products without bundle from the result
     const gyroMeal = classified.find((c) => c.ref === 'products.gyro-meal');
     expect(gyroMeal!.bundleTargetRef).toBeUndefined();
   });

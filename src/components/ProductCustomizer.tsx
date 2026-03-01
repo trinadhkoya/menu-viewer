@@ -694,7 +694,7 @@ function NestedIngredientCustomizer() {
 
 function NestedIngredientCustomizerInner({
   menu,
-  parentGroupRef,
+  parentGroupRef: _parentGroupRef, // eslint-disable-line @typescript-eslint/no-unused-vars -- required by interface
   parentItemRef,
   product,
   existingState,

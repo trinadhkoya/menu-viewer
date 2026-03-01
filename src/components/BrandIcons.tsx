@@ -152,6 +152,7 @@ export const DunkinIcon: React.FC<IconProps> = ({ size = S, className }) => (
 );
 
 /** Map brand-id → icon component */
+// eslint-disable-next-line react-refresh/only-export-components
 export const BRAND_ICONS: Record<string, React.FC<IconProps>> = {
   arbys: ArbysIcon,
   bww: BwwIcon,

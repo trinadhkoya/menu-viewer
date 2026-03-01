@@ -99,7 +99,7 @@ export function OptimizedImage({
     if (!el) return;
 
     if (!('IntersectionObserver' in window)) {
-      setInView(true);
+      setInView(true); // eslint-disable-line react-hooks/set-state-in-effect -- fallback for missing IO
       return;
     }
 
@@ -133,10 +133,6 @@ export function OptimizedImage({
     <div
       ref={containerRef}
       className={`optimized-image-wrapper ${className}`}
-      style={{
-        width: width ? `${width}px` : undefined,
-        height: height ? `${height}px` : undefined,
-      }}
     >
       {/* Food-themed skeleton placeholder */}
       {!loaded && (

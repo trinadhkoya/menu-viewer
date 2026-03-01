@@ -35,7 +35,6 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { MenupediaLogo } from './components/MenupediaLogo';
-import { BRAND_ICONS } from './components/BrandIcons';
 import './App.css';
 
 interface BreadcrumbItem {
@@ -56,6 +55,22 @@ function App() {
   const [showRefs, setShowRefs] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarWasOpenRef = useRef(true);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Auto-hide header on scroll down, reveal on scroll up
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const y = el.scrollTop;
+      setHeaderHidden(y > 48 && y > lastScrollY.current);
+      lastScrollY.current = y;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Derive active tab from current route path
   const activeTab = useMemo(() => {
@@ -70,6 +85,7 @@ function App() {
     if (activeTab === 'constructs' || activeTab === 'diff') {
       if (sidebarOpen) {
         sidebarWasOpenRef.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync: match sidebar to route
         setSidebarOpen(false);
       }
     } else {
@@ -285,54 +301,45 @@ function App() {
 
   return (
     <div className={`app ${brandClass}`}>
-      <header className="app-header">
-        {/* Row 1: Search bar — full width, prominent */}
-        <div className="header-row header-row--search">
+      <header className={`app-header${headerHidden ? ' app-header--hidden' : ''}`}>
+        <div className="header-left">
           <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
-            {activeBrand && BRAND_ICONS[activeBrand] && (
+            {activeBrand && (
               <span className="header-brand-icon">
-                {(() => { const Icon = BRAND_ICONS[activeBrand]; return <Icon size={26} />; })()}
+                <img src={`/placeholders/${activeBrand}.png`} alt={activeBrand} width={26} height={26} />
               </span>
             )}
             <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
+            {menu && (
+              <span className="header-menu-size" title="Loaded menu file size">
+                {menuSizeBytes < 1024
+                  ? `${menuSizeBytes} B`
+                  : menuSizeBytes < 1048576
+                    ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
+                    : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
+              </span>
+            )}
           </h1>
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
-
-        {/* Row 2: Navigation left, settings right */}
-        <div className="header-row header-row--nav">
-          <div className="header-nav-left">
-            <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
-            <div className="view-mode-toggle">
-              <button
-                className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
-                onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
-                title="Browse by category"
-              >
-                📂 Menu
-              </button>
-              <button
-                className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
-                onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
-                title="Browse by product construct"
-              >
-                🧬 Constructs
-              </button>
-            </div>
+        <div className="header-right">
+          <div className="view-mode-toggle">
+            <button
+              className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
+              onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
+              title="Browse by category"
+            >
+              📂 Menu
+            </button>
+            <button
+              className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
+              onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
+              title="Browse by product construct"
+            >
+              🧬 Constructs
+            </button>
           </div>
-          <div className="header-settings">
-            <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
-              <input
-                type="checkbox"
-                checked={!showRefs}
-                onChange={() => setShowRefs((v) => !v)}
-              />
-              <span className="header-toggle-slider" />
-              <span className="header-toggle-label">Hide IDs</span>
-            </label>
-            <span className="header-settings-divider" />
-            <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          </div>
+          <SearchBar value={searchQuery} onChange={setSearchQuery} />
         </div>
       </header>
 
@@ -361,15 +368,17 @@ function App() {
               onProductSelect={handleProductSelect}
             />
             <div className="sidebar-footer">
-              <div className="sidebar-toggle-row">
-                <span className="sidebar-footer-label">Menu size</span>
-                <span className="sidebar-footer-value">
-                  {menuSizeBytes < 1024
-                    ? `${menuSizeBytes} B`
-                    : menuSizeBytes < 1048576
-                      ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
-                      : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
-                </span>
+              <div className="sidebar-settings">
+                <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
+                  <input
+                    type="checkbox"
+                    checked={!showRefs}
+                    onChange={() => setShowRefs((v) => !v)}
+                  />
+                  <span className="header-toggle-slider" />
+                  <span className="header-toggle-label">Hide IDs</span>
+                </label>
+                <ThemeToggle theme={theme} onToggle={toggleTheme} />
               </div>
             </div>
           </div>
@@ -388,7 +397,7 @@ function App() {
           </button>
         </aside>
 
-        <main className="app-main">
+        <main className="app-main" ref={mainRef}>
           {mainContent ?? (
             <Routes>
               <Route path="/menu" element={

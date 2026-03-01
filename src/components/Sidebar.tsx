@@ -86,6 +86,9 @@ export function Sidebar({
               }
             }
 
+            const isVirtual = rawProduct.isVirtual && displayRef !== childRef;
+            const virtualName = isVirtual ? (rawProduct.displayName || getRefId(childRef)) : null;
+
             return (
               <li
                 key={childRef}
@@ -94,7 +97,10 @@ export function Sidebar({
               >
                 <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
                 {product.isCombo && <span className="sidebar-combo-icon">🍔+🍟</span>}
-                <span className="sidebar-item-name">{product.displayName || getRefId(displayRef)}</span>
+                <div className="sidebar-item-text">
+                  <span className="sidebar-item-name">{product.displayName || getRefId(displayRef)}</span>
+                  {virtualName && <span className="sidebar-virtual-parent">{virtualName}</span>}
+                </div>
                 {product.price != null && <span className="sidebar-price">${product.price.toFixed(2)}</span>}
               </li>
             );

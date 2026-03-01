@@ -59,6 +59,12 @@
   --color-brand-bg-weak: #F3F3F3;
   --color-brand-gradient-from: #000000;
   --color-brand-gradient-to: #DC0032;
+  /* Border radii — Arby's: sharp/square across the board */
+  --brand-radius-card: 0px;
+  --brand-radius-button: 0px;
+  --brand-radius-badge: 0px;
+  --brand-radius-input: 0px;
+  --brand-radius-base-card: 0px;
   /* Shadows — shadow base #000000 */
   --shadow-brand-10: rgba(0, 0, 0, 0.10);
   --shadow-brand-15: rgba(0, 0, 0, 0.15);
@@ -77,6 +83,12 @@
   --color-brand-bg-weak: #FFF8ED;
   --color-brand-gradient-from: #FF8612;
   --color-brand-gradient-to: #F5193A;
+  /* Border radii — BWW: slight rounding (2px cards, 6px base) */
+  --brand-radius-card: 2px;
+  --brand-radius-button: 2px;
+  --brand-radius-badge: 2px;
+  --brand-radius-input: 2px;
+  --brand-radius-base-card: 6px;
   /* Shadows — shadow base #1a1716 */
   --shadow-brand-10: rgba(26, 23, 22, 0.10);
   --shadow-brand-15: rgba(26, 23, 22, 0.15);
@@ -95,6 +107,12 @@
   --color-brand-bg-weak: #F1F2F3;
   --color-brand-gradient-from: #E40046;
   --color-brand-gradient-to: #E40046;
+  /* Border radii — Sonic: pill buttons, 6px cards */
+  --brand-radius-card: 6px;
+  --brand-radius-button: 100px;
+  --brand-radius-badge: 100px;
+  --brand-radius-input: 2px;
+  --brand-radius-base-card: 6px;
   /* Shadows — shadow base #0f2130 */
   --shadow-brand-10: rgba(15, 33, 48, 0.10);
   --shadow-brand-15: rgba(15, 33, 48, 0.15);
@@ -113,6 +131,12 @@
   --color-brand-bg-weak: #F8F4F1;
   --color-brand-gradient-from: #C63663;
   --color-brand-gradient-to: #FF9C54;
+  /* Border radii — Dunkin': pill buttons/badges, 8px PLP cards */
+  --brand-radius-card: 8px;
+  --brand-radius-button: 100px;
+  --brand-radius-badge: 100px;
+  --brand-radius-input: 8px;
+  --brand-radius-base-card: 10px;
   /* Shadows — shadow base #3E342F */
   --shadow-brand-10: rgba(62, 52, 47, 0.10);
   --shadow-brand-15: rgba(62, 52, 47, 0.15);
@@ -316,13 +340,65 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --sidebar-width: 300px;
-  --header-height: 84px;
+  --header-height: 56px;
   --color-accent: #6366f1;
   --color-accent-hover: #818cf8;
   --color-available: #22c55e;
   --color-unavailable: #ef4444;
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
+}
+
+/* ---------- Brand-aware border-radius overrides ---------- */
+/* When a brand is active, cards/buttons/badges/inputs adopt the
+   brand's native mobile border-radius values via CSS custom props.
+   Cross-brand comparison:
+     Arby's  → 0px everywhere (sharp/square)
+     BWW     → 2px cards & buttons, 6px base card
+     Dunkin' → 8px cards, 100px pill buttons/badges
+     Sonic   → 6px cards, 100px pill buttons/badges              */
+
+[class*="brand-"] .product-card,
+[class*="brand-"] .construct-product-card,
+[class*="brand-"] .construct-more {
+  border-radius: var(--brand-radius-card);
+}
+
+[class*="brand-"] .category-card {
+  border-radius: var(--brand-radius-base-card);
+}
+
+[class*="brand-"] .view-mode-toggle {
+  border-radius: var(--brand-radius-button);
+}
+
+[class*="brand-"] .view-mode-btn {
+  border-radius: var(--brand-radius-button);
+}
+
+[class*="brand-"] .search-bar {
+  border-radius: var(--brand-radius-button);
+}
+
+[class*="brand-"] .badge,
+[class*="brand-"] .mini-badge {
+  border-radius: var(--brand-radius-badge);
+}
+
+[class*="brand-"] .construct-badge {
+  border-radius: var(--brand-radius-badge);
+}
+
+[class*="brand-"] .construct-reference-card {
+  border-radius: var(--brand-radius-card);
+}
+
+[class*="brand-"] .stat-card {
+  border-radius: var(--brand-radius-base-card);
+}
+
+[class*="brand-"] .search-card {
+  border-radius: var(--brand-radius-base-card);
 }
 
 /* ---------- Dark theme (default) ---------- */
@@ -525,15 +601,25 @@ code {
 
 .app-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
+  height: var(--header-height);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: 12px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.app-header--hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Brand gradient accent bar below header */
@@ -542,49 +628,41 @@ code {
   box-shadow: 0 2px 0 0 var(--color-accent), var(--shadow-sm);
 }
 
-/* ── Header row layout ── */
-.header-row {
+/* ── Header layout ── */
+.header-left {
   display: flex;
   align-items: center;
-  width: 100%;
-}
-
-.header-row--search {
-  gap: 12px;
-  padding: 10px 0 6px;
-  justify-content: space-between;
-}
-
-.header-row--nav {
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0 8px;
-}
-
-.header-nav-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
 }
 
-/* ── Settings group (Hide IDs + Theme) ── */
-.header-settings {
+.header-menu-size {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  padding: 0;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  opacity: 0.6;
+}
+
+.header-right {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 3px 4px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.header-settings-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--color-border);
-  flex-shrink: 0;
+/* ── Sidebar settings (Hide IDs + Theme) ── */
+.sidebar-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .app-title {
@@ -601,12 +679,29 @@ code {
 .header-brand-icon {
   display: flex;
   align-items: center;
-  animation: header-icon-in 0.3s ease-out;
+  animation: header-icon-in 0.35s ease-out;
 }
 
-.header-brand-icon svg {
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+.header-brand-icon img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--color-brand-bg-weak, #f5f5f5);
+  padding: 3px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.08),
+    0 3px 8px rgba(0,0,0,0.12),
+    0 0 0 1px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.header-brand-icon img:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.1),
+    0 6px 14px rgba(0,0,0,0.15),
+    0 0 0 1px rgba(0,0,0,0.06);
 }
 
 @keyframes header-icon-in {
@@ -2003,6 +2098,28 @@ code {
   line-height: 1.3;
 }
 
+.sidebar-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-item-text .sidebar-item-name {
+  flex: none;
+}
+
+.sidebar-virtual-parent {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
 .sidebar-badge {
   font-size: 0.68rem;
   color: var(--color-text-muted);
@@ -3379,14 +3496,19 @@ code {
   position: relative;
 }
 
-.product-card-image-wrapper .availability-dot.overlay {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-}
-
 .product-card-body {
   padding: 10px 12px;
+}
+
+.product-card-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.product-card-name-row .availability-dot {
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .product-card-name {
@@ -5592,12 +5714,6 @@ body,
 
 .construct-card-image-wrapper {
   position: relative;
-}
-
-.construct-card-image-wrapper .availability-dot.overlay {
-  position: absolute;
-  top: 8px;
-  left: 8px;
 }
 
 .construct-card-image {
