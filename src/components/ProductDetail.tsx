@@ -148,14 +148,16 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
       {/* Header */}
       <div className="detail-header">
         {product.imageUrl ? (
-          <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} isCombo={product.isCombo} />
+          <div style={{ viewTransitionName: `product-${productRef.replace(/[^a-zA-Z0-9]/g, '-')}-img` }}>
+            <OptimizedImage src={product.imageUrl} alt={product.displayName ?? ''} className="detail-image" width={160} height={160} isCombo={product.isCombo} />
+          </div>
         ) : (
-          <div className="detail-image-placeholder">
+          <div className="detail-image-placeholder" style={{ viewTransitionName: `product-${productRef.replace(/[^a-zA-Z0-9]/g, '-')}-img` }}>
             <img src={getProductPlaceholder(activeBrand)} alt="Product placeholder" className="detail-placeholder-img" />
           </div>
         )}
         <div className="detail-title-area">
-          <h2 className="detail-title">{product.displayName}</h2>
+          <h2 className="detail-title" style={{ viewTransitionName: `product-${productRef.replace(/[^a-zA-Z0-9]/g, '-')}-name` }}>{product.displayName}</h2>
           <CopyRef value={productRef} className="detail-ref" />
           <div className="detail-badges">
             <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} title={product.isAvailable ? 'Available' : 'Unavailable'} />

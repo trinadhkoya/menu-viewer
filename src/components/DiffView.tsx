@@ -3,7 +3,7 @@ import type { Menu } from '../types/menu';
 import type { BrandId } from './MenuUploader';
 import { BRANDS, DEFAULT_HEADERS } from './MenuUploader';
 import { diffMenus, formatValue, isJsonBlock } from '../utils/menuDiff';
-import type { MenuDiffResult, EntityDiff, DiffStatus } from '../utils/menuDiff';
+import type { MenuDiffResult, EntityDiff, DiffStatus, RefDetail } from '../utils/menuDiff';
 
 interface DiffViewProps {
   menu: Menu;
@@ -188,6 +188,79 @@ function StatusBadge({ status }: { status: DiffStatus }) {
 }
 
 // ─────────────────────────────────────────────
+// Ref Detail Row (expandable)
+// ─────────────────────────────────────────────
+
+function RefDetailRow({
+  field,
+  leftSummary,
+  rightSummary,
+  detail,
+  expanded,
+  onToggle,
+}: {
+  field: string;
+  leftSummary: string;
+  rightSummary: string;
+  detail: RefDetail;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const totalChanges = detail.added.length + detail.removed.length + detail.modified.length;
+
+  return (
+    <>
+      <tr className="diff-ref-summary-row" onClick={onToggle} style={{ cursor: 'pointer' }}>
+        <td className="diff-field-name">
+          <span className="diff-ref-toggle">{expanded ? '▾' : '▸'}</span>
+          {field}
+        </td>
+        <td className="diff-field-left">{leftSummary}</td>
+        <td className="diff-field-right">{rightSummary}</td>
+      </tr>
+      {expanded && totalChanges > 0 && (
+        <tr className="diff-ref-detail-row">
+          <td colSpan={3}>
+            <div className="diff-ref-detail-container">
+              {detail.added.length > 0 && (
+                <div className="diff-ref-group diff-ref-group--added">
+                  <span className="diff-ref-group-label">+ Added ({detail.added.length})</span>
+                  <div className="diff-ref-keys">
+                    {detail.added.map((k) => (
+                      <code key={k} className="diff-ref-key diff-ref-key--added">{k}</code>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {detail.removed.length > 0 && (
+                <div className="diff-ref-group diff-ref-group--removed">
+                  <span className="diff-ref-group-label">− Removed ({detail.removed.length})</span>
+                  <div className="diff-ref-keys">
+                    {detail.removed.map((k) => (
+                      <code key={k} className="diff-ref-key diff-ref-key--removed">{k}</code>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {detail.modified.length > 0 && (
+                <div className="diff-ref-group diff-ref-group--modified">
+                  <span className="diff-ref-group-label">~ Modified ({detail.modified.length})</span>
+                  <div className="diff-ref-keys">
+                    {detail.modified.map((k) => (
+                      <code key={k} className="diff-ref-key diff-ref-key--modified">{k}</code>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Diff Detail Panel
 // ─────────────────────────────────────────────
 
@@ -202,8 +275,16 @@ function DiffDetail({
   rightLabel: string;
   onClose: () => void;
 }) {
-  const changedCount = item.fields.length;
-  return (
+  const changedCount = item.fields.length;  const [expandedRefs, setExpandedRefs] = useState<Set<string>>(new Set());
+
+  const toggleRef = (field: string) => {
+    setExpandedRefs((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      return next;
+    });
+  };  return (
     <div className="diff-detail-panel">
       <div className="diff-detail-header">
         <div className="diff-detail-header-left">
@@ -262,7 +343,20 @@ function DiffDetail({
                   const lv = formatValue(f.left);
                   const rv = formatValue(f.right);
                   const isBlock = isJsonBlock(lv) || isJsonBlock(rv);
-                  return (
+                  const rd = f.refDetail;
+                  const isExpanded = expandedRefs.has(f.field);
+
+                  return rd ? (
+                    <RefDetailRow
+                      key={f.field}
+                      field={f.field}
+                      leftSummary={lv}
+                      rightSummary={rv}
+                      detail={rd}
+                      expanded={isExpanded}
+                      onToggle={() => toggleRef(f.field)}
+                    />
+                  ) : (
                     <tr key={f.field} className={isBlock ? 'diff-row--json' : ''}>
                       <td className="diff-field-name">{f.field}</td>
                       <td className="diff-field-left">

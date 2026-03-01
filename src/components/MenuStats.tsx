@@ -175,6 +175,11 @@ interface ProductCardProps {
   activeBrand?: BrandId | null;
 }
 
+/** CSS-safe view-transition-name from a product ref */
+function vtName(ref: string, suffix: string) {
+  return `product-${ref.replace(/[^a-zA-Z0-9]/g, '-')}-${suffix}`;
+}
+
 function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) {
   const [showTip, setShowTip] = useState(false);
   const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null);
@@ -204,13 +209,13 @@ function ProductCard({ ref_, product, onClick, activeBrand }: ProductCardProps) 
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="product-card-image-wrapper">
+      <div className="product-card-image-wrapper" style={{ viewTransitionName: vtName(ref_, 'img') }}>
         <OptimizedImage src={product.imageUrl || getProductPlaceholder(activeBrand)} alt={product.displayName ?? ''} className="product-card-image" width={280} height={120} isCombo={product.isCombo} />
       </div>
       <div className="product-card-body">
         <div className="product-card-name-row">
           <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
-          <span className="product-card-name">{product.displayName || getRefId(ref_)}</span>
+          <span className="product-card-name" style={{ viewTransitionName: vtName(ref_, 'name') }}>{product.displayName || getRefId(ref_)}</span>
         </div>
         <CopyRef value={ref_} display={getRefId(ref_)} />
         {(product.price != null || product?.nutrition?.totalCalories != null) && (

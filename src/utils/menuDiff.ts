@@ -17,10 +17,20 @@ import type { Menu, Product, Category } from '../types/menu';
 
 export type DiffStatus = 'added' | 'removed' | 'changed' | 'unchanged';
 
+export interface RefDetail {
+  leftCount: number;
+  rightCount: number;
+  added: string[];
+  removed: string[];
+  modified: string[];
+}
+
 export interface FieldDiff {
   field: string;
   left: unknown;
   right: unknown;
+  /** Structured breakdown for ref/object fields */
+  refDetail?: RefDetail;
 }
 
 export interface EntityDiff {
@@ -207,6 +217,13 @@ function diffEntity<T extends Record<string, unknown>>(
           field,
           left: `${lKeys.length} refs`,
           right: parts.length ? parts.join(', ') : `${rKeys.length} refs`,
+          refDetail: {
+            leftCount: lKeys.length,
+            rightCount: rKeys.length,
+            added,
+            removed,
+            modified: changed,
+          },
         });
       } else {
         diffs.push({ field, left: lv, right: rv });

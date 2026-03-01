@@ -680,9 +680,12 @@ const ProductCard = memo(function ProductCard({
     onInspect(item);
   }, [onInspect, item]);
 
+  const vtName = (suffix: string) =>
+    `product-${item.ref.replace(/[^a-zA-Z0-9]/g, '-')}-${suffix}`;
+
   return (
     <div className="construct-product-card" onClick={handleSelect}>
-      <div className="construct-card-image-wrapper">
+      <div className="construct-card-image-wrapper" style={{ viewTransitionName: vtName('img') }}>
         <OptimizedImage
           src={product.imageUrl || getProductPlaceholder(activeBrand)}
           alt={product.displayName ?? ''}
@@ -693,7 +696,7 @@ const ProductCard = memo(function ProductCard({
       <div className="construct-card-body">
         <div className="product-card-name-row">
           <span className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`} />
-          <span className="construct-card-name">
+          <span className="construct-card-name" style={{ viewTransitionName: vtName('name') }}>
             {product.displayName || getRefId(item.ref)}
           </span>
         </div>

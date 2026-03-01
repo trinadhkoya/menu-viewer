@@ -199,8 +199,15 @@ function App() {
 
   const handleProductSelect = useCallback(
     (productRef: string, categoryName?: string) => {
-      setSelectedProductRef(productRef);
-      setSearchQuery('');
+      const update = () => {
+        setSelectedProductRef(productRef);
+        setSearchQuery('');
+      };
+      if (document.startViewTransition) {
+        document.startViewTransition(update);
+      } else {
+        update();
+      }
       const productId = productRef.includes('.') ? productRef.substring(productRef.indexOf('.') + 1) : productRef;
       const product = menu?.products?.[productId];
       const crumbs: BreadcrumbItem[] = [{ label: menu?.displayName || 'Menu', type: 'root' }];
@@ -246,17 +253,24 @@ function App() {
 
   const handleBreadcrumbClick = useCallback(
     (item: BreadcrumbItem) => {
-      if (item.type === 'root') {
-        setSelectedProductRef(null);
-        setSelectedCategoryRef(null);
-        setBreadcrumbs([{ label: menu?.displayName || 'Menu', type: 'root' }]);
-      } else if (item.type === 'category' && item.ref) {
-        setSelectedProductRef(null);
-        setSelectedCategoryRef(item.ref);
-        setBreadcrumbs([
-          { label: menu?.displayName || 'Menu', type: 'root' },
-          { label: item.label, ref: item.ref, type: 'category' },
-        ]);
+      const update = () => {
+        if (item.type === 'root') {
+          setSelectedProductRef(null);
+          setSelectedCategoryRef(null);
+          setBreadcrumbs([{ label: menu?.displayName || 'Menu', type: 'root' }]);
+        } else if (item.type === 'category' && item.ref) {
+          setSelectedProductRef(null);
+          setSelectedCategoryRef(item.ref);
+          setBreadcrumbs([
+            { label: menu?.displayName || 'Menu', type: 'root' },
+            { label: item.label, ref: item.ref, type: 'category' },
+          ]);
+        }
+      };
+      if (document.startViewTransition) {
+        document.startViewTransition(update);
+      } else {
+        update();
       }
     },
     [menu],
