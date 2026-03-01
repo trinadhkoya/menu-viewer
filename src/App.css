@@ -1,3 +1,9 @@
+/* Flex alignment for size variant badges */
+.size-variant-badges-flex {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 /* ============================================
    Menupedia — App Styles
    ============================================ */
@@ -3341,6 +3347,16 @@ code {
   color: var(--color-text-secondary);
 }
 
+.product-card-image-wrapper {
+  position: relative;
+}
+
+.product-card-image-wrapper .availability-dot.overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
 .product-card-body {
   padding: 10px 12px;
 }
@@ -3394,6 +3410,13 @@ code {
   font-size: 1.05rem;
   color: var(--color-accent);
   letter-spacing: -0.02em;
+}
+
+.product-card-dot {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  line-height: 1;
 }
 
 .product-card-cal {
@@ -5540,6 +5563,16 @@ body,
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+.construct-card-image-wrapper {
+  position: relative;
+}
+
+.construct-card-image-wrapper .availability-dot.overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
 .construct-card-image {
   width: 100%;
   aspect-ratio: 16 / 10;
@@ -5567,12 +5600,6 @@ body,
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.construct-card-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .construct-card-name {

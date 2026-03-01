@@ -705,21 +705,21 @@ const ProductCard = memo(function ProductCard({
 
   return (
     <div className="construct-product-card" onClick={handleSelect}>
-      <OptimizedImage
-        src={product.imageUrl || getProductPlaceholder(activeBrand)}
-        alt={product.displayName ?? ''}
-        className="construct-card-image"
-        isCombo={product.isCombo}
-      />
+      <div className="construct-card-image-wrapper">
+        <OptimizedImage
+          src={product.imageUrl || getProductPlaceholder(activeBrand)}
+          alt={product.displayName ?? ''}
+          className="construct-card-image"
+          isCombo={product.isCombo}
+        />
+        <span
+          className={`availability-dot overlay ${product.isAvailable ? 'available' : 'unavailable'}`}
+        />
+      </div>
       <div className="construct-card-body">
-        <div className="construct-card-header">
-          <span
-            className={`availability-dot ${product.isAvailable ? 'available' : 'unavailable'}`}
-          />
-          <span className="construct-card-name">
-            {product.displayName || getRefId(item.ref)}
-          </span>
-        </div>
+        <span className="construct-card-name">
+          {product.displayName || getRefId(item.ref)}
+        </span>
         <CopyRef
           value={item.ref}
           display={getRefId(item.ref)}
