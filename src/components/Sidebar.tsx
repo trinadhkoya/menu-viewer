@@ -119,8 +119,6 @@ export function Sidebar({
 
   const clearTags = useCallback(() => setActiveTags(new Set()), []);
 
-  const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
-
   const toggleExpand = (ref: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
