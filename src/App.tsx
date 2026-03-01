@@ -36,6 +36,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { useTheme } from './hooks/useTheme';
 import { MenupediaLogo } from './components/MenupediaLogo';
 import { BRAND_ICONS } from './components/BrandIcons';
+import { BRANDS } from './components/MenuUploader';
 import './App.css';
 
 interface BreadcrumbItem {
@@ -270,45 +271,74 @@ function App() {
   return (
     <div className={`app ${brandClass}`}>
       <header className="app-header">
-        <div className="header-left">
-          <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
-            {activeBrand && BRAND_ICONS[activeBrand] && (
-              <span className="header-brand-icon">
-                {(() => { const Icon = BRAND_ICONS[activeBrand]; return <Icon size={26} />; })()}
-              </span>
-            )}
-            <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
-          </h1>
-          <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
-        </div>
-        <div className="header-right">
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          <div className="view-mode-toggle">
-            <button
-              className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
-              onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
-              title="Browse by category"
-            >
-              📂 Menu
-            </button>
-            <button
-              className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
-              onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
-              title="Browse by product construct"
-            >
-              🧬 Constructs
-            </button>
+        {/* Row 1: Logo — Brand Tabs — Actions */}
+        <div className="header-row header-row--top">
+          <div className="header-left">
+            <h1 className="app-title" onClick={handleReset} style={{ cursor: 'pointer' }}>
+              <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
+            </h1>
           </div>
-          <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
-            <input
-              type="checkbox"
-              checked={!showRefs}
-              onChange={() => setShowRefs((v) => !v)}
-            />
-            <span className="header-toggle-slider" />
-            <span className="header-toggle-label">Hide IDs</span>
-          </label>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          {/* Airbnb-style centered brand tabs */}
+          <nav className="header-brand-nav" aria-label="Brand selector">
+            {BRANDS.map((b) => {
+              const Icon = BRAND_ICONS[b.id];
+              const isActive = activeBrand === b.id;
+              return (
+                <button
+                  key={b.id}
+                  className={`header-brand-tab${isActive ? ' header-brand-tab--active' : ''}`}
+                  onClick={() => {
+                    if (activeBrand !== b.id) {
+                      setActiveBrand(b.id);
+                      try { localStorage.setItem(BRAND_KEY, b.id); } catch { /* ignore */ }
+                    }
+                  }}
+                  title={b.label}
+                >
+                  {Icon && <Icon size={20} />}
+                  <span className="header-brand-tab-label">{b.label}</span>
+                  {isActive && <span className="header-brand-tab-indicator" />}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="header-right">
+            {/* View mode tabs */}
+            <div className="view-mode-toggle">
+              <button
+                className={`view-mode-btn ${activeTab === 'menu' ? 'active' : ''}`}
+                onClick={() => { navigate('/menu'); setSelectedProductRef(null); }}
+                title="Browse by category"
+              >
+                📂 Menu
+              </button>
+              <button
+                className={`view-mode-btn ${activeTab === 'constructs' ? 'active' : ''}`}
+                onClick={() => { navigate('/constructs'); setSelectedProductRef(null); }}
+                title="Browse by product construct"
+              >
+                🧬 Constructs
+              </button>
+            </div>
+            <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
+              <input
+                type="checkbox"
+                checked={!showRefs}
+                onChange={() => setShowRefs((v) => !v)}
+              />
+              <span className="header-toggle-slider" />
+              <span className="header-toggle-label">Hide IDs</span>
+            </label>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          </div>
+        </div>
+
+        {/* Row 2: Search + Breadcrumb */}
+        <div className="header-row header-row--bottom">
+          <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
+          <SearchBar value={searchQuery} onChange={setSearchQuery} />
         </div>
       </header>
 
