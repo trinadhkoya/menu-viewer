@@ -1372,7 +1372,7 @@ function UnreferencedEntitiesDetail({
           <span key={e.ref} className="dq-child">
             <span className="dq-child-dot dq-child-dot--miss" />
             <span className="dq-child-name">{e.name}</span>
-            <code className="dq-child-flag dq-child-flag--miss">{e.ref}</code>
+            <CopyRef value={e.ref} />
             {e.childCount > 0 && (
               <code className="dq-child-flag">{e.childCount} childRefs</code>
             )}

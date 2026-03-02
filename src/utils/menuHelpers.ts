@@ -1132,16 +1132,26 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
     }
   }
 
-  // Check categories
+  // Check categories (skip root-like categories — those whose childRefs
+  // contain sub-categories are alternative/legacy root entries and are
+  // naturally unreferenced by design, just like rootCategoryRef itself)
   for (const [key, cat] of Object.entries(menu.categories ?? {})) {
     const fullRef = key.startsWith('categories.') ? key : `categories.${key}`;
     const shortKey = key.startsWith('categories.') ? key.replace('categories.', '') : key;
     if (!allRefs.has(fullRef) && !allRefs.has(shortKey) && !allRefs.has(key)) {
+      // If this category's childRefs point to other categories, it's a root-like
+      // entry (alternative root / legacy root) — skip it
+      const childKeys = cat.childRefs ? Object.keys(cat.childRefs) : [];
+      const isRootLike = childKeys.some(
+        (cr) => cr.startsWith('categories.') || (menu.categories && cr in menu.categories),
+      );
+      if (isRootLike) continue;
+
       results.push({
         ref: fullRef,
         name: cat.displayName ?? key,
         entityType: 'category',
-        childCount: cat.childRefs ? Object.keys(cat.childRefs).length : 0,
+        childCount: childKeys.length,
       });
     }
   }

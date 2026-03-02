@@ -326,4 +326,56 @@ describe('getUnreferencedEntities', () => {
     });
     expect(getUnreferencedEntities(menu)).toEqual([]);
   });
+
+  it('excludes root-like unreferenced categories (childRefs contain sub-categories)', () => {
+    const menu = makeMenu({
+      rootCategoryRef: 'categories.root',
+      categories: {
+        'categories.root': {
+          displayName: 'Root',
+          childRefs: { 'categories.burgers': {} },
+        },
+        'categories.burgers': {
+          displayName: 'Burgers',
+          childRefs: { 'products.a': {} },
+        },
+        // This is an alternative root — childRefs point to sub-categories
+        'categories.menu-root-alt': {
+          displayName: 'Menu Root',
+          childRefs: { 'categories.burgers': {}, 'categories.drinks': {} },
+        },
+        'categories.drinks': {
+          displayName: 'Drinks',
+          childRefs: { 'products.b': {} },
+        },
+      } as unknown as Menu['categories'],
+    });
+    const results = getUnreferencedEntities(menu);
+    // "drinks" is not in root's childRefs, but it IS in menu-root-alt's childRefs
+    // which means "drinks" IS referenced. "menu-root-alt" is root-like → excluded.
+    expect(results).toEqual([]);
+  });
+
+  it('still flags unreferenced leaf categories (childRefs only contain products)', () => {
+    const menu = makeMenu({
+      rootCategoryRef: 'categories.root',
+      categories: {
+        'categories.root': {
+          displayName: 'Root',
+          childRefs: { 'categories.used': {} },
+        },
+        'categories.used': {
+          displayName: 'Used',
+          childRefs: { 'products.a': {} },
+        },
+        'categories.orphan-leaf': {
+          displayName: 'Orphan Leaf',
+          childRefs: { 'products.b': {} },
+        },
+      } as unknown as Menu['categories'],
+    });
+    const results = getUnreferencedEntities(menu);
+    expect(results).toHaveLength(1);
+    expect(results[0].ref).toBe('categories.orphan-leaf');
+  });
 });
