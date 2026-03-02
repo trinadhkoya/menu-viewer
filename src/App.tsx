@@ -464,7 +464,7 @@ function App() {
                 <DataQuality menu={menu} onProductSelect={handleProductSelect} />
               } />
               <Route path="/diff" element={
-                <DiffView menu={menu} activeBrand={activeBrand} onMenuLoad={handleMenuLoad} />
+                <DiffView menu={menu} activeBrand={activeBrand} activeLocationId={activeLocationId} onMenuLoad={handleMenuLoad} />
               } />
               <Route path="/" element={<Navigate to="/menu" replace />} />
               <Route path="*" element={<Navigate to="/menu" replace />} />

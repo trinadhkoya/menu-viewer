@@ -8,6 +8,7 @@ import type { MenuDiffResult, EntityDiff, DiffStatus, RefDetail } from '../utils
 interface DiffViewProps {
   menu: Menu;
   activeBrand: BrandId | null;
+  activeLocationId?: string | null;
   onMenuLoad?: (menu: Menu, brand?: BrandId) => void;
 }
 
@@ -60,7 +61,8 @@ function EnvPicker({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!data.products && !data.categories) throw new Error('Invalid menu JSON');
-      onMenuLoaded(data as Menu, `${currentBrand.label} ${env}`);
+      const locSuffix = loc && loc !== '0' ? ` · ${loc}` : '';
+      onMenuLoaded(data as Menu, `${currentBrand.label} ${env}${locSuffix}`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -381,7 +383,7 @@ function DiffDetail({
 // Main DiffView
 // ─────────────────────────────────────────────
 
-export function DiffView({ menu, activeBrand, onMenuLoad }: DiffViewProps) {
+export function DiffView({ menu, activeBrand, activeLocationId, onMenuLoad }: DiffViewProps) {
   const [compareMenu, setCompareMenu] = useState<Menu | null>(null);
   const [compareLabel, setCompareLabel] = useState('');
   const [tab, setTab] = useState<DiffTab>('products');
@@ -390,7 +392,9 @@ export function DiffView({ menu, activeBrand, onMenuLoad }: DiffViewProps) {
   const [selectedItem, setSelectedItem] = useState<EntityDiff | null>(null);
   const [showBaseChanger, setShowBaseChanger] = useState(false);
 
-  const leftLabel = menu.displayName || 'Current Menu';
+  const leftLabel = activeLocationId && activeLocationId !== '0'
+    ? `${BRANDS.find(b => b.id === activeBrand)?.label ?? 'Menu'} · ${activeLocationId}`
+    : (menu.displayName || 'Current Menu');
 
   const handleBaseMenuLoaded = useCallback((m: Menu, label: string) => {
     // Find the brand id from the label if possible
@@ -412,6 +416,17 @@ export function DiffView({ menu, activeBrand, onMenuLoad }: DiffViewProps) {
     setFilter('all');
     setSearchTerm('');
   }, []);
+
+  const handleSwap = useCallback(() => {
+    if (!compareMenu || !onMenuLoad) return;
+    const oldBase = menu;
+    const oldBaseLabel = leftLabel;
+    const matchedBrand = BRANDS.find(b => compareLabel.startsWith(b.label));
+    onMenuLoad(compareMenu, matchedBrand?.id);
+    setCompareMenu(oldBase);
+    setCompareLabel(oldBaseLabel);
+    setSelectedItem(null);
+  }, [menu, compareMenu, leftLabel, compareLabel, onMenuLoad]);
 
   const diff = useMemo<MenuDiffResult | null>(() => {
     if (!compareMenu) return null;
@@ -559,9 +574,9 @@ export function DiffView({ menu, activeBrand, onMenuLoad }: DiffViewProps) {
             <span className="diff-env-label-marker">A</span>
             <span>{diff.leftLabel}</span>
           </div>
-          <div className="diff-env-label-vs-small">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 7l4-4 4 4M8 17l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
+          <button className="diff-swap-btn" onClick={handleSwap} title="Swap base and comparison menus">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+          </button>
           <div className="diff-env-label diff-env-label--right">
             <span className="diff-env-label-marker">B</span>
             <span>{diff.rightLabel}</span>
