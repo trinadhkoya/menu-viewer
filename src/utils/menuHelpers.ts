@@ -1159,6 +1159,180 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
   return results;
 }
 
+// ─────────────────────────────────────────────
+// Data Quality: Missing nutrition
+// ─────────────────────────────────────────────
+
+export interface ProductMissingNutrition {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+}
+
+/**
+ * Find all products that have no `nutrition` object at all (or an empty one).
+ * Counts ALL products in the menu, not just category-visible ones.
+ */
+export function getProductsMissingNutrition(menu: Menu): ProductMissingNutrition[] {
+  const results: ProductMissingNutrition[] = [];
+  for (const [key, p] of Object.entries(menu.products ?? {})) {
+    const n = p.nutrition;
+    if (!n || typeof n !== 'object' || Object.keys(n).length === 0) {
+      results.push({
+        productRef: `products.${key}`,
+        productName: p.displayName ?? key,
+        isVirtual: Boolean((p as Record<string, unknown>).isVirtual),
+      });
+    }
+  }
+  return results;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Calories = 0
+// ─────────────────────────────────────────────
+
+export interface ProductZeroCalories {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  totalCalories: number;
+}
+
+/**
+ * Find products that HAVE a nutrition object but report totalCalories = 0.
+ * These may be data entry errors (legitimate zero-calorie items are rare).
+ */
+export function getProductsWithZeroCalories(menu: Menu): ProductZeroCalories[] {
+  const results: ProductZeroCalories[] = [];
+  for (const [key, p] of Object.entries(menu.products ?? {})) {
+    const n = p.nutrition;
+    if (!n || typeof n !== 'object' || Object.keys(n).length === 0) continue;
+    if (n.totalCalories === 0) {
+      results.push({
+        productRef: `products.${key}`,
+        productName: p.displayName ?? key,
+        isVirtual: Boolean((p as Record<string, unknown>).isVirtual),
+        totalCalories: 0,
+      });
+    }
+  }
+  return results;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Orphaned products (not category-reachable)
+// ─────────────────────────────────────────────
+
+export interface OrphanedProduct {
+  productRef: string;
+  productName: string;
+  isVirtual: boolean;
+  /** Where the product IS referenced (productGroup, modifierGroup, or nowhere) */
+  foundIn: 'productGroup' | 'modifierGroup' | 'nowhere';
+  /** The ref of the group that contains it, if any */
+  foundInRef?: string;
+}
+
+/**
+ * Find products not reachable from the category tree.
+ * Walks from rootCategoryRef through all categories (but NOT into productGroups)
+ * to collect category-reachable product refs. Products not in that set are orphaned.
+ *
+ * For each orphan, also indicates WHERE it lives (productGroup, modifierGroup, or nowhere).
+ */
+export function getOrphanedProducts(menu: Menu): OrphanedProduct[] {
+  const categories = menu.categories ?? {};
+  const products = menu.products ?? {};
+  const productGroups = menu.productGroups ?? {};
+  const modifierGroups = menu.modifierGroups ?? {};
+
+  // Walk category tree ONLY (not into productGroups) to find category-reachable products
+  const reachable = new Set<string>();
+  const visitedCats = new Set<string>();
+
+  function walkCat(ref: string) {
+    const id = ref.startsWith('categories.') ? ref.replace('categories.', '') : ref;
+    if (visitedCats.has(id)) return;
+    visitedCats.add(id);
+    const cat = categories[id];
+    if (!cat?.childRefs) return;
+    for (const cr of Object.keys(cat.childRefs)) {
+      const crNs = cr.indexOf('.') > 0 ? cr.substring(0, cr.indexOf('.')) : '';
+      if (crNs === 'categories') {
+        walkCat(cr);
+      } else if (crNs === 'products') {
+        reachable.add(cr.replace('products.', ''));
+      } else if (categories[cr]) {
+        walkCat(cr);
+      } else if (products[cr]) {
+        reachable.add(cr);
+      }
+    }
+  }
+
+  if (menu.rootCategoryRef) walkCat(menu.rootCategoryRef);
+
+  // Build results for products NOT in reachable
+  const results: OrphanedProduct[] = [];
+  for (const [key, p] of Object.entries(products)) {
+    if (reachable.has(key)) continue;
+
+    // Determine where this orphan lives
+    let foundIn: OrphanedProduct['foundIn'] = 'nowhere';
+    let foundInRef: string | undefined;
+
+    for (const [pgKey, pg] of Object.entries(productGroups)) {
+      if (pg.childRefs && (products[key] !== undefined) &&
+          (pg.childRefs[key] !== undefined || pg.childRefs[`products.${key}`] !== undefined)) {
+        foundIn = 'productGroup';
+        foundInRef = `productGroups.${pgKey}`;
+        break;
+      }
+    }
+
+    if (foundIn === 'nowhere') {
+      for (const [mgKey, mg] of Object.entries(modifierGroups)) {
+        if (mg.childRefs &&
+            (mg.childRefs[key] !== undefined || mg.childRefs[`products.${key}`] !== undefined)) {
+          foundIn = 'modifierGroup';
+          foundInRef = `modifierGroups.${mgKey}`;
+          break;
+        }
+      }
+    }
+
+    // Also check inline modifierGroupRefs childRefs
+    if (foundIn === 'nowhere') {
+      outer:
+      for (const prod of Object.values(products)) {
+        if (prod.modifierGroupRefs && typeof prod.modifierGroupRefs === 'object') {
+          for (const mgVal of Object.values(prod.modifierGroupRefs)) {
+            if (mgVal && typeof mgVal === 'object' && 'childRefs' in mgVal) {
+              const cr = (mgVal as { childRefs?: Record<string, unknown> }).childRefs;
+              if (cr && (cr[key] !== undefined || cr[`products.${key}`] !== undefined)) {
+                foundIn = 'modifierGroup';
+                foundInRef = 'inline';
+                break outer;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    results.push({
+      productRef: `products.${key}`,
+      productName: p.displayName ?? key,
+      isVirtual: Boolean((p as Record<string, unknown>).isVirtual),
+      foundIn,
+      foundInRef,
+    });
+  }
+
+  return results;
+}
+
 
 /**
  * An orphaned virtual product — one that has NEITHER relatedProducts.alternatives

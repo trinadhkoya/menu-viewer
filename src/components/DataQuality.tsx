@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
-import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs, getOrphanedVirtualProducts, getUnreferencedEntities } from '../utils/menuHelpers';
-import type { OrphanedVirtualProduct, UnreferencedEntity } from '../utils/menuHelpers';
+import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs, getOrphanedVirtualProducts, getUnreferencedEntities, getProductsMissingNutrition, getProductsWithZeroCalories, getOrphanedProducts } from '../utils/menuHelpers';
+import type { OrphanedVirtualProduct, UnreferencedEntity, OrphanedProduct } from '../utils/menuHelpers';
 import { CopyRef } from './CopyRef';
 
 /* ── Animated counter hook ── */
@@ -144,6 +144,24 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
       <line x1="4" y1="4" x2="20" y2="20" />
     </svg>
   ),
+  'missing-nutrition': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8h1a4 4 0 010 8h-1" /><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" />
+    </svg>
+  ),
+  'zero-calories': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
+      <line x1="2" y1="2" x2="22" y2="22" />
+    </svg>
+  ),
+  'orphaned-products': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="9" y1="9" x2="15" y2="15" /><line x1="15" y1="9" x2="9" y2="15" />
+    </svg>
+  ),
 };
 
 interface DataQualityProps {
@@ -194,6 +212,9 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const virtualWithIngredients = useMemo(() => getVirtualProductsWithIngredientRefs(menu), [menu]);
   const orphanedVirtuals = useMemo(() => getOrphanedVirtualProducts(menu), [menu]);
   const unreferencedEntities = useMemo(() => getUnreferencedEntities(menu), [menu]);
+  const missingNutrition = useMemo(() => getProductsMissingNutrition(menu), [menu]);
+  const zeroCalories = useMemo(() => getProductsWithZeroCalories(menu), [menu]);
+  const orphanedProducts = useMemo(() => getOrphanedProducts(menu), [menu]);
 
   /** Health score: % of checks that are clean.
    *  Each check type contributes equally; a check with 0 issues → 100%, >0 → 0%. */
@@ -210,10 +231,13 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       virtualWithIngredients.length,
       orphanedVirtuals.length,
       unreferencedEntities.length,
+      missingNutrition.length,
+      zeroCalories.length,
+      orphanedProducts.length,
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities, missingNutrition, zeroCalories, orphanedProducts]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -302,6 +326,21 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       rows.push(['Unreferenced ' + ue.entityType, 'warning', 'medium', ue.name, ue.ref, '', '', '', ue.childCount + ' childRefs']);
     }
 
+    // Missing nutrition
+    for (const mn of missingNutrition) {
+      rows.push(['Missing nutrition', 'warning', 'high', mn.productName, mn.productRef, mn.isVirtual ? 'Yes' : 'No', '', '', 'no nutrition object']);
+    }
+
+    // Zero calories
+    for (const zc of zeroCalories) {
+      rows.push(['Calories = 0', 'warning', 'high', zc.productName, zc.productRef, zc.isVirtual ? 'Yes' : 'No', '', '', 'totalCalories=0']);
+    }
+
+    // Orphaned products
+    for (const op of orphanedProducts) {
+      rows.push(['Orphaned product', 'warning', 'high', op.productName, op.productRef, op.isVirtual ? 'Yes' : 'No', '', '', `foundIn=${op.foundIn}${op.foundInRef ? ' (' + op.foundInRef + ')' : ''}`]);
+    }
+
     const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -310,7 +349,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     a.download = `data-quality-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities, missingNutrition, zeroCalories, orphanedProducts]);
 
   /** All quality checks — add new ones here */
   const checks: QualityCheck[] = useMemo(() => {
@@ -507,9 +546,56 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       });
     }
 
+    if (missingNutrition.length > 0) {
+      const totalProducts = Object.keys(menu.products ?? {}).length;
+      list.push({
+        id: 'missing-nutrition',
+        title: 'Missing nutrition data',
+        description:
+          `${missingNutrition.length} of ${totalProducts} product${totalProducts !== 1 ? 's' : ''} have no nutrition object. This is a major data gap affecting calorie display and allergen information.`,
+        severity: 'warning',
+        priority: 'high',
+        count: missingNutrition.length,
+        icon: '🍽️',
+      });
+    }
+
+    if (zeroCalories.length > 0) {
+      list.push({
+        id: 'zero-calories',
+        title: 'Products with totalCalories = 0',
+        description:
+          `${zeroCalories.length} product${zeroCalories.length !== 1 ? 's' : ''} have a nutrition object but report totalCalories = 0. These are likely data entry errors — truly zero-calorie items are rare.`,
+        severity: 'warning',
+        priority: 'high',
+        count: zeroCalories.length,
+        icon: '🔢',
+      });
+    }
+
+    if (orphanedProducts.length > 0) {
+      const inPG = orphanedProducts.filter(p => p.foundIn === 'productGroup').length;
+      const inMG = orphanedProducts.filter(p => p.foundIn === 'modifierGroup').length;
+      const nowhere = orphanedProducts.filter(p => p.foundIn === 'nowhere').length;
+      const parts2: string[] = [];
+      if (inPG > 0) parts2.push(`${inPG} in productGroups`);
+      if (inMG > 0) parts2.push(`${inMG} in modifierGroups`);
+      if (nowhere > 0) parts2.push(`${nowhere} truly nowhere`);
+      list.push({
+        id: 'orphaned-products',
+        title: 'Orphaned products (not in any category)',
+        description:
+          `${orphanedProducts.length} product${orphanedProducts.length !== 1 ? 's' : ''} not reachable from the category tree. Breakdown: ${parts2.join(', ')}. Most are modifier-level products living only inside productGroups.`,
+        severity: 'warning',
+        priority: 'high',
+        count: orphanedProducts.length,
+        icon: '📦',
+      });
+    }
+
     list.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
     return list;
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities, missingNutrition, zeroCalories, orphanedProducts, menu.products]);
 
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -799,6 +885,29 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                     {isActive && check.id === 'unreferenced-entities' && (
                       <UnreferencedEntitiesDetail
                         items={unreferencedEntities}
+                      />
+                    )}
+
+                    {isActive && check.id === 'missing-nutrition' && (
+                      <SimpleProductListDetail
+                        items={missingNutrition}
+                        onProductSelect={onProductSelect}
+                        badgeLabel="no nutrition"
+                      />
+                    )}
+
+                    {isActive && check.id === 'zero-calories' && (
+                      <SimpleProductListDetail
+                        items={zeroCalories}
+                        onProductSelect={onProductSelect}
+                        badgeLabel="totalCalories = 0"
+                      />
+                    )}
+
+                    {isActive && check.id === 'orphaned-products' && (
+                      <OrphanedProductsDetail
+                        items={orphanedProducts}
+                        onProductSelect={onProductSelect}
                       />
                     )}
                   </div>
@@ -1412,8 +1521,113 @@ export function useDataQualityCount(menu: Menu | null): number {
       getProductsWithMalformedTags(menu).length +
       getVirtualProductsWithIngredientRefs(menu).length +
       getOrphanedVirtualProducts(menu).length +
-      getUnreferencedEntities(menu).length
+      getUnreferencedEntities(menu).length +
+      getProductsMissingNutrition(menu).length +
+      getProductsWithZeroCalories(menu).length +
+      getOrphanedProducts(menu).length
       // inheritable observations intentionally excluded (info only)
     );
   }, [menu]);
+}
+
+/* ── SimpleProductListDetail — reusable for flat product lists (missing nutrition, zero calories) ── */
+function SimpleProductListDetail({
+  items,
+  onProductSelect,
+  badgeLabel,
+}: {
+  items: { productRef: string; productName: string; isVirtual: boolean }[];
+  onProductSelect: (ref: string) => void;
+  badgeLabel: string;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? items : items.slice(0, 50);
+
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        <div className="dq-product-card">
+          <div className="dq-product-detail" style={{ paddingTop: 4 }}>
+            <div className="dq-children">
+              {visible.map((p) => (
+                <span key={p.productRef} className="dq-child">
+                  <span className="dq-child-dot dq-child-dot--miss" />
+                  <button className="dq-child-name dq-child-name--link" onClick={() => onProductSelect(p.productRef)}>
+                    {p.productName}
+                  </button>
+                  <CopyRef value={p.productRef} />
+                  {p.isVirtual && <code className="dq-child-flag">virtual</code>}
+                  <code className="dq-child-flag dq-child-flag--miss">{badgeLabel}</code>
+                </span>
+              ))}
+            </div>
+            {items.length > 50 && (
+              <button className="dq-show-all-btn" onClick={() => setShowAll((v) => !v)}>
+                {showAll ? 'Show less' : `Show all ${items.length} products`}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── OrphanedProductsDetail — grouped by foundIn ── */
+function OrphanedProductsDetail({
+  items,
+  onProductSelect,
+}: {
+  items: OrphanedProduct[];
+  onProductSelect: (ref: string) => void;
+}) {
+  const inPG = items.filter(p => p.foundIn === 'productGroup');
+  const inMG = items.filter(p => p.foundIn === 'modifierGroup');
+  const inNowhere = items.filter(p => p.foundIn === 'nowhere');
+
+  const [pgShowAll, setPgShowAll] = useState(false);
+  const [mgShowAll, setMgShowAll] = useState(false);
+  const [nowhereShowAll, setNowhereShowAll] = useState(false);
+
+  const renderGroup = (label: string, groupItems: OrphanedProduct[], showAll: boolean, setShowAll: (v: boolean) => void) => (
+    <div className="dq-group">
+      <div className="dq-group-header">
+        <span className="dq-group-name">{label} ({groupItems.length})</span>
+      </div>
+      <div className="dq-children">
+        {(showAll ? groupItems : groupItems.slice(0, 30)).map((p) => (
+          <span key={p.productRef} className="dq-child">
+            <span className="dq-child-dot dq-child-dot--miss" />
+            <button className="dq-child-name dq-child-name--link" onClick={() => onProductSelect(p.productRef)}>
+              {p.productName}
+            </button>
+            <CopyRef value={p.productRef} />
+            {p.isVirtual && <code className="dq-child-flag">virtual</code>}
+            {p.foundInRef && p.foundInRef !== 'inline' && (
+              <code className="dq-child-flag">{p.foundInRef}</code>
+            )}
+          </span>
+        ))}
+      </div>
+      {groupItems.length > 30 && (
+        <button className="dq-show-all-btn" onClick={() => setShowAll(!showAll)}>
+          {showAll ? 'Show less' : `Show all ${groupItems.length}`}
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        <div className="dq-product-card">
+          <div className="dq-product-detail" style={{ paddingTop: 4 }}>
+            {inPG.length > 0 && renderGroup('In productGroups (modifier-level)', inPG, pgShowAll, setPgShowAll)}
+            {inMG.length > 0 && renderGroup('In modifierGroups', inMG, mgShowAll, setMgShowAll)}
+            {inNowhere.length > 0 && renderGroup('Truly unreferenced (nowhere)', inNowhere, nowhereShowAll, setNowhereShowAll)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
