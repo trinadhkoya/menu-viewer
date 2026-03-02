@@ -491,14 +491,53 @@ export function ProductDetail({ menu, productRef, activeBrand, onProductSelect }
                   <tr>
                     <td className="info-label">Operation Hours</td>
                     <td>
-                      {Object.entries(product.operationHours).map(([day, hours]) => (
-                        <div key={day} className="op-hours-row">
-                          <strong>{day}:</strong>{' '}
-                          {hours
-                            ? hours.map((h, i) => <span key={i}>{h.start} - {h.end}</span>)
-                            : 'Closed'}
-                        </div>
-                      ))}
+                      {(() => {
+                        const entries = Object.entries(product.operationHours);
+                        // Build a string signature per day for comparison
+                        const sig = (hours: { start: string; end: string }[] | null) =>
+                          hours ? hours.map(h => `${h.start}-${h.end}`).join(',') : 'closed';
+                        const allSigs = entries.map(([, h]) => sig(h as { start: string; end: string }[] | null));
+                        const allSame = allSigs.length > 1 && allSigs.every(s => s === allSigs[0]);
+
+                        if (allSame) {
+                          const [, hours] = entries[0];
+                          const hArr = hours as { start: string; end: string }[] | null;
+                          return (
+                            <div className="op-hours-row">
+                              <strong>Every day:</strong>{' '}
+                              {hArr
+                                ? hArr.map((h, i) => <span key={i}>{h.start} – {h.end}</span>)
+                                : 'Closed'}
+                            </div>
+                          );
+                        }
+
+                        // Group consecutive days with the same hours
+                        const groups: { days: string[]; hours: { start: string; end: string }[] | null }[] = [];
+                        for (const [day, hours] of entries) {
+                          const s = sig(hours as { start: string; end: string }[] | null);
+                          const last = groups[groups.length - 1];
+                          if (last && sig(last.hours) === s) {
+                            last.days.push(day);
+                          } else {
+                            groups.push({ days: [day], hours: hours as { start: string; end: string }[] | null });
+                          }
+                        }
+
+                        return groups.map((g, gi) => {
+                          const label = g.days.length === 1
+                            ? g.days[0]
+                            : `${g.days[0]} – ${g.days[g.days.length - 1]}`;
+                          return (
+                            <div key={gi} className="op-hours-row">
+                              <strong>{label}:</strong>{' '}
+                              {g.hours
+                                ? g.hours.map((h, i) => <span key={i}>{h.start} – {h.end}</span>)
+                                : 'Closed'}
+                            </div>
+                          );
+                        });
+                      })()}
                     </td>
                   </tr>
                 )}

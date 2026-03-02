@@ -23,9 +23,20 @@ interface MenuStatsProps {
   activeBrand?: BrandId | null;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(2)} MB`;
+}
+
 export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCategorySelect, onNavigate, activeBrand }: MenuStatsProps) {
   const stats = useMemo(() => getMenuStats(menu), [menu]);
   const topCategories = useMemo(() => getTopLevelCategories(menu), [menu]);
+
+  const menuSizeLabel = useMemo(() => {
+    try { return formatBytes(new Blob([JSON.stringify(menu)]).size); }
+    catch { return null; }
+  }, [menu]);
 
   // If a category is selected, show its products
   const categoryEntity = selectedCategoryRef ? resolveRef(menu, selectedCategoryRef) : null;
@@ -83,6 +94,8 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
     { key: 'modifierGroups', label: 'Modifier Groups', value: stats.totalModifierGroups },
     { key: 'productGroups', label: 'Product Groups', value: stats.totalProductGroups },
   ], [stats]);
+
+  const payloadPill = menuSizeLabel ? { key: 'payload', label: 'Payload', display: menuSizeLabel } : null;
 
   if (selectedCategoryRef && categoryData) {
     return (
@@ -154,6 +167,12 @@ export function MenuStats({ menu, selectedCategoryRef, onProductSelect, onCatego
               <span className="ms-stat-pill-label">{s.label}</span>
             </button>
           ))}
+          {payloadPill && (
+            <span className="ms-stat-pill ms-stat-pill--payload" title="Total menu JSON payload size">
+              <span className="ms-stat-pill-value">{payloadPill.display}</span>
+              <span className="ms-stat-pill-label">{payloadPill.label}</span>
+            </span>
+          )}
         </div>
 
         {/* Quick actions row */}

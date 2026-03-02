@@ -492,6 +492,7 @@ export function ConstructView({ menu, onProductSelect, activeBrand }: ConstructV
               item={inspecting}
               onClose={() => setInspecting(null)}
               onProductSelect={onProductSelect}
+              onFilterByConstruct={(id) => { setInspecting(null); togglePrimary(id); }}
             />
           )}
 
@@ -747,10 +748,12 @@ function ProductInspector({
   item,
   onClose,
   onProductSelect,
+  onFilterByConstruct,
 }: {
   item: ClassifiedProduct;
   onClose: () => void;
   onProductSelect: (ref: string) => void;
+  onFilterByConstruct: (constructId: string) => void;
 }) {
   const { product, primaryConstruct, behavioralTags, structuralTags, flags } = item;
 
@@ -771,12 +774,15 @@ function ProductInspector({
         <section className="inspector-section">
           <h4>Primary Construct Type</h4>
           <div className="inspector-construct-match">
-            <span
-              className="inspector-construct-badge"
+            <button
+              className="inspector-construct-badge inspector-construct-badge--clickable"
               style={{ '--construct-color': primaryConstruct.color } as React.CSSProperties}
+              onClick={() => onFilterByConstruct(primaryConstruct.id)}
+              title={`Show all ${primaryConstruct.shortName} products`}
             >
               {primaryConstruct.icon} {primaryConstruct.id}: {primaryConstruct.shortName}
-            </span>
+              <span className="inspector-construct-link-icon">→</span>
+            </button>
             <p className="inspector-construct-name">{primaryConstruct.name}</p>
             <p className="inspector-construct-desc">{primaryConstruct.description}</p>
             <p className="inspector-construct-eng">

@@ -1160,61 +1160,188 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
 }
 
 // ─────────────────────────────────────────────
-// Data Quality: Missing nutrition
+// Shared: walk category tree to collect visible product keys
+// ─────────────────────────────────────────────
+
+/** Collect product keys reachable from the category tree (not into productGroups). */
+function getCategoryVisibleProductKeys(menu: Menu): Set<string> {
+  const categories = menu.categories ?? {};
+  const products = menu.products ?? {};
+  const reachable = new Set<string>();
+  const visited = new Set<string>();
+
+  function walk(ref: string) {
+    const id = ref.startsWith('categories.') ? ref.replace('categories.', '') : ref;
+    if (visited.has(id)) return;
+    visited.add(id);
+    const cat = categories[id];
+    if (!cat?.childRefs) return;
+    for (const cr of Object.keys(cat.childRefs)) {
+      const ns = cr.indexOf('.') > 0 ? cr.substring(0, cr.indexOf('.')) : '';
+      if (ns === 'categories') { walk(cr); }
+      else if (ns === 'products') { reachable.add(cr.replace('products.', '')); }
+      else if (categories[cr]) { walk(cr); }
+      else if (products[cr]) { reachable.add(cr); }
+    }
+  }
+
+  if (menu.rootCategoryRef) walk(menu.rootCategoryRef);
+  return reachable;
+}
+
+/** Returns true when a product has a non-empty nutrition object. */
+function hasNutrition(p: Product): boolean {
+  const n = p.nutrition;
+  return !!n && typeof n === 'object' && Object.keys(n).length > 0;
+}
+
+/**
+ * Resolve the sized children of a virtual product.
+ * Virtual → relatedProducts.alternatives → productGroups → childRefs → products.
+ */
+function resolveSizedChildren(
+  product: Product,
+  products: Record<string, Product>,
+  productGroups: Record<string, ProductGroup>,
+): Product[] {
+  const alt = product.relatedProducts?.alternatives;
+  if (!alt || typeof alt !== 'object') return [];
+  const children: Product[] = [];
+  for (const pgRef of Object.keys(alt)) {
+    const pgId = pgRef.startsWith('productGroups.') ? pgRef.replace('productGroups.', '') : pgRef;
+    const pg = productGroups[pgId];
+    if (!pg?.childRefs) continue;
+    for (const ck of Object.keys(pg.childRefs)) {
+      const stripped = ck.startsWith('products.') ? ck.replace('products.', '') : ck;
+      const child = products[ck] ?? products[stripped];
+      if (child) children.push(child);
+    }
+  }
+  return children;
+}
+
+// ─────────────────────────────────────────────
+// Data Quality: Missing nutrition (category-scoped)
 // ─────────────────────────────────────────────
 
 export interface ProductMissingNutrition {
   productRef: string;
   productName: string;
+  /** 'direct' = non-virtual missing nutrition, 'virtual' = has sized children missing, 'virtual-no-alternatives' = virtual with no sizing info */
+  checkType: 'direct' | 'virtual' | 'virtual-no-alternatives';
+  /** For virtual: how many sized children total */
+  sizedTotal?: number;
+  /** For virtual: how many sized children are missing nutrition */
+  sizedMissing?: number;
 }
 
 /**
- * Find non-virtual products that have no `nutrition` object at all (or an empty one).
- * Virtual products are containers — their sized children (non-virtual) are checked directly.
+ * Find category-visible products missing nutrition info.
+ * Non-virtual → direct check on nutrition object.
+ * Virtual → resolve sized children via relatedProducts.alternatives → PG → childRefs;
+ *           flag if any sized child is missing nutrition.
  */
 export function getProductsMissingNutrition(menu: Menu): ProductMissingNutrition[] {
+  const products = menu.products ?? {};
+  const productGroups = menu.productGroups ?? {};
+  const visible = getCategoryVisibleProductKeys(menu);
   const results: ProductMissingNutrition[] = [];
-  for (const [key, p] of Object.entries(menu.products ?? {})) {
-    if ((p as Record<string, unknown>).isVirtual) continue;
-    const n = p.nutrition;
-    if (!n || typeof n !== 'object' || Object.keys(n).length === 0) {
-      results.push({
-        productRef: `products.${key}`,
-        productName: p.displayName ?? key,
-      });
+
+  for (const key of visible) {
+    const p = products[key];
+    if (!p) continue;
+
+    if ((p as Record<string, unknown>).isVirtual) {
+      const sized = resolveSizedChildren(p, products, productGroups);
+      if (sized.length === 0) {
+        // Virtual with no resolvable alternatives
+        results.push({
+          productRef: `products.${key}`,
+          productName: p.displayName ?? key,
+          checkType: 'virtual-no-alternatives',
+        });
+        continue;
+      }
+      const missing = sized.filter((c) => !hasNutrition(c));
+      if (missing.length > 0) {
+        results.push({
+          productRef: `products.${key}`,
+          productName: p.displayName ?? key,
+          checkType: 'virtual',
+          sizedTotal: sized.length,
+          sizedMissing: missing.length,
+        });
+      }
+    } else {
+      if (!hasNutrition(p)) {
+        results.push({
+          productRef: `products.${key}`,
+          productName: p.displayName ?? key,
+          checkType: 'direct',
+        });
+      }
     }
   }
+
   return results;
 }
 
 // ─────────────────────────────────────────────
-// Data Quality: Calories = 0
+// Data Quality: Calories = 0 (category-scoped)
 // ─────────────────────────────────────────────
 
 export interface ProductZeroCalories {
   productRef: string;
   productName: string;
   totalCalories: number;
+  /** 'direct' = non-virtual with cal=0, 'virtual' = has sized children with cal=0 */
+  checkType: 'direct' | 'virtual';
+  /** For virtual: how many sized children total */
+  sizedTotal?: number;
+  /** For virtual: how many sized children have cal=0 */
+  sizedZero?: number;
 }
 
 /**
- * Find non-virtual products that HAVE a nutrition object but report totalCalories = 0.
- * Virtual products are containers — their sized children (non-virtual) are checked directly.
+ * Find category-visible products with totalCalories = 0.
+ * Non-virtual → direct check.
+ * Virtual → resolve sized children; flag if any has totalCalories = 0.
  */
 export function getProductsWithZeroCalories(menu: Menu): ProductZeroCalories[] {
+  const products = menu.products ?? {};
+  const productGroups = menu.productGroups ?? {};
+  const visible = getCategoryVisibleProductKeys(menu);
   const results: ProductZeroCalories[] = [];
-  for (const [key, p] of Object.entries(menu.products ?? {})) {
-    if ((p as Record<string, unknown>).isVirtual) continue;
-    const n = p.nutrition;
-    if (!n || typeof n !== 'object' || Object.keys(n).length === 0) continue;
-    if (n.totalCalories === 0) {
-      results.push({
-        productRef: `products.${key}`,
-        productName: p.displayName ?? key,
-        totalCalories: 0,
-      });
+
+  for (const key of visible) {
+    const p = products[key];
+    if (!p) continue;
+
+    if ((p as Record<string, unknown>).isVirtual) {
+      const sized = resolveSizedChildren(p, products, productGroups);
+      const zeroes = sized.filter((c) => hasNutrition(c) && c.nutrition!.totalCalories === 0);
+      if (zeroes.length > 0) {
+        results.push({
+          productRef: `products.${key}`,
+          productName: p.displayName ?? key,
+          totalCalories: 0,
+          checkType: 'virtual',
+          sizedTotal: sized.length,
+          sizedZero: zeroes.length,
+        });
+      }
+    } else {
+      if (hasNutrition(p) && p.nutrition!.totalCalories === 0) {
+        results.push({
+          productRef: `products.${key}`,
+          productName: p.displayName ?? key,
+          totalCalories: 0,
+          checkType: 'direct',
+        });
+      }
     }
   }
+
   return results;
 }
 

@@ -57,6 +57,7 @@ function App() {
   const [selectedModifierGroupRef, setSelectedModifierGroupRef] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState<BrandId | null>(loadBrandFromStorage);
+  const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
   const [showRefs, setShowRefs] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarWasOpenRef = useRef(true);
@@ -88,14 +89,6 @@ function App() {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const menuSizeBytes = useMemo(() => {
-    if (!menu) return 0;
-    try {
-      return new Blob([JSON.stringify(menu)]).size;
-    } catch {
-      return 0;
-    }
-  }, [menu]);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>(() => {
     const stored = loadMenuFromStorage();
     return [{ label: stored?.displayName || 'Menu', type: 'root' }];
@@ -164,7 +157,7 @@ function App() {
     btn.addEventListener('pointerup', onUp);
   }, [navigate]);
 
-  const handleMenuLoad = useCallback((loadedMenu: Menu, brand?: BrandId) => {
+  const handleMenuLoad = useCallback((loadedMenu: Menu, brand?: BrandId, locId?: string) => {
     // Clear any existing menu state first
     localStorage.removeItem(STORAGE_KEY);
     setSelectedProductRef(null);
@@ -173,6 +166,7 @@ function App() {
     setSelectedModifierGroupRef(null);
     setSearchQuery('');
     setActiveBrand(brand ?? null);
+    setActiveLocationId(locId ?? null);
     // Persist the brand for reload
     try {
       if (brand) {
@@ -283,6 +277,7 @@ function App() {
     setSelectedModifierGroupRef(null);
     setSearchQuery('');
     setActiveBrand(null);
+    setActiveLocationId(null);
     setBreadcrumbs([{ label: 'Menu', type: 'root' }]);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(BRAND_KEY);
@@ -361,17 +356,21 @@ function App() {
               </span>
             )}
             <MenupediaLogo size={22} color={activeBrand ? 'var(--color-accent)' : undefined} />
-            {menu && (
-              <span className="header-menu-size" title="Loaded menu file size">
-                {menuSizeBytes < 1024
-                  ? `${menuSizeBytes} B`
-                  : menuSizeBytes < 1048576
-                    ? `${(menuSizeBytes / 1024).toFixed(1)} KB`
-                    : `${(menuSizeBytes / 1048576).toFixed(2)} MB`}
-              </span>
-            )}
-
           </h1>
+          {menu && (
+            <div className="header-meta-pills">
+              {activeLocationId && (
+                <span className="header-pill header-pill--location" title={`Location ID: ${activeLocationId}`}>
+                  <svg className="header-pill-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+                  {activeLocationId}
+                </span>
+              )}
+              <button className="header-pill header-pill--action" onClick={handleReset} title="Switch brand / Load different menu">
+                <svg className="header-pill-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+                Change
+              </button>
+            </div>
+          )}
           <Breadcrumb items={breadcrumbs} onClick={handleBreadcrumbClick} />
         </div>
         <div className="header-right">
@@ -424,14 +423,6 @@ function App() {
               onProductSelect={handleProductSelect}
             />
             <div className="sidebar-footer">
-              <button
-                className="sidebar-switch-btn"
-                onClick={handleReset}
-                title="Switch brand / Load different menu"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
-                Change Menu
-              </button>
               <div className="sidebar-settings">
                 <label className="header-toggle" title="Hide product IDs, category IDs, and ref codes">
                   <input

@@ -315,7 +315,7 @@ const LOCATION_SUGGESTIONS: Record<BrandId, Record<string, string[]>> = {
   },
 };
 
-interface MenuUploaderProps { onMenuLoad: (menu: Menu, brand?: BrandId) => void }
+interface MenuUploaderProps { onMenuLoad: (menu: Menu, brand?: BrandId, locationId?: string) => void }
 
 export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   const [error, setError] = useState<string | null>(null);
@@ -380,7 +380,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
 
   // ── Shared parser ────────────────────────────
   const parseAndLoad = useCallback(
-    (text: string, source?: string, brand?: BrandId) => {
+    (text: string, source?: string, brand?: BrandId, locId?: string) => {
       try {
         const parsed = JSON.parse(text);
         if (!parsed.products && !parsed.categories) {
@@ -396,7 +396,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
             resolvedBrand = detected.brand;
           }
         }
-        onMenuLoad(parsed as Menu, resolvedBrand);
+        onMenuLoad(parsed as Menu, resolvedBrand, locId);
       } catch (e) {
         setError(`Parse error${source ? ` (${source})` : ''}: ${(e as Error).message}`);
       }
@@ -405,7 +405,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   );
 
   // ── Shared fetch ─────────────────────────────
-  const doFetch = useCallback(async (url: string, brand?: BrandId) => {
+  const doFetch = useCallback(async (url: string, brand?: BrandId, locId?: string) => {
     if (!url) return;
     try { new URL(url); } catch {
       setError('Enter a full URL starting with http:// or https://');
@@ -423,7 +423,7 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('json') && !ct.includes('text'))
         throw new Error(`Unexpected content-type "${ct}"`);
-      parseAndLoad(await res.text(), url, brand);
+      parseAndLoad(await res.text(), url, brand, locId);
     } catch (e) {
       const msg = (e as Error).message;
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS'))
@@ -484,7 +484,10 @@ export function MenuUploader({ onMenuLoad }: MenuUploaderProps) {
   );
 
   // ── Brand tab handler ────────────────────────
-  const handleBrandFetch = useCallback(() => doFetch(builtUrl, selectedBrand), [builtUrl, selectedBrand, doFetch]);
+  const handleBrandFetch = useCallback(() => {
+    const loc = locationId.trim();
+    doFetch(builtUrl, selectedBrand, loc || undefined);
+  }, [builtUrl, selectedBrand, locationId, doFetch]);
 
   // ── Header helpers ───────────────────────────
   const updateHeader = useCallback((i: number, f: 'key' | 'value', v: string) => {
