@@ -1010,6 +1010,118 @@ export function getVirtualProductsWithIngredientRefs(menu: Menu): VirtualWithIng
 // Data Quality: Orphaned virtual products (U2)
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// Data Quality: Unreferenced entities
+// ─────────────────────────────────────────────
+
+export interface UnreferencedEntity {
+  ref: string;
+  name: string;
+  entityType: 'productGroup' | 'category';
+  /** How many childRefs this entity itself has (to show impact) */
+  childCount: number;
+}
+
+/**
+ * Find productGroups and categories that are NEVER referenced anywhere in the menu.
+ * Scans all categories (childRefs), products (relatedProducts.alternatives,
+ * modifierGroupRefs, ingredientRefs), productGroups (childRefs), modifierGroups
+ * (childRefs), and rootCategoryRef to build a complete set of referenced refs,
+ * then finds entities missing from that set.
+ *
+ * Products, modifierGroups, and modifiers are excluded — they have 0 orphans
+ * across all tested brands.
+ */
+export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
+  const allRefs = new Set<string>();
+
+  // rootCategoryRef
+  if (menu.rootCategoryRef) allRefs.add(menu.rootCategoryRef);
+
+  // Helper: add all keys from a record-like field
+  const addKeys = (obj: Record<string, unknown> | null | undefined) => {
+    if (obj && typeof obj === 'object') {
+      for (const ref of Object.keys(obj)) allRefs.add(ref);
+    }
+  };
+
+  // Scan categories
+  for (const cat of Object.values(menu.categories ?? {})) {
+    addKeys(cat.childRefs as Record<string, unknown> | undefined);
+  }
+
+  // Scan products
+  for (const p of Object.values(menu.products ?? {})) {
+    addKeys(p.modifierGroupRefs as Record<string, unknown> | undefined);
+    addKeys(p.ingredientRefs as Record<string, unknown> | undefined);
+
+    // relatedProducts.alternatives
+    const rp = p.relatedProducts as Record<string, unknown> | undefined;
+    if (rp && typeof rp === 'object') {
+      const alts = rp.alternatives;
+      if (alts && typeof alts === 'object') {
+        addKeys(alts as Record<string, unknown>);
+      }
+      // Also add direct relatedProducts keys (they can be refs)
+      for (const key of Object.keys(rp)) {
+        if (key !== 'alternatives') allRefs.add(key);
+      }
+    }
+
+    // inline modifierGroupRefs can have childRefs pointing to modifiers
+    if (p.modifierGroupRefs && typeof p.modifierGroupRefs === 'object') {
+      for (const mgVal of Object.values(p.modifierGroupRefs)) {
+        if (mgVal && typeof mgVal === 'object' && 'childRefs' in mgVal) {
+          addKeys((mgVal as { childRefs?: Record<string, unknown> }).childRefs);
+        }
+      }
+    }
+  }
+
+  // Scan productGroups
+  for (const pg of Object.values(menu.productGroups ?? {})) {
+    addKeys(pg.childRefs as Record<string, unknown> | undefined);
+  }
+
+  // Scan modifierGroups
+  for (const mg of Object.values(menu.modifierGroups ?? {})) {
+    addKeys(mg.childRefs as Record<string, unknown> | undefined);
+  }
+
+  const results: UnreferencedEntity[] = [];
+
+  // Check productGroups
+  for (const [key, pg] of Object.entries(menu.productGroups ?? {})) {
+    const fullRef = key.startsWith('productGroups.') ? key : `productGroups.${key}`;
+    const shortKey = key.startsWith('productGroups.') ? key.replace('productGroups.', '') : key;
+    if (!allRefs.has(fullRef) && !allRefs.has(shortKey) && !allRefs.has(key)) {
+      results.push({
+        ref: fullRef,
+        name: pg.displayName ?? key,
+        entityType: 'productGroup',
+        childCount: pg.childRefs ? Object.keys(pg.childRefs).length : 0,
+      });
+    }
+  }
+
+  // Check categories
+  for (const [key, cat] of Object.entries(menu.categories ?? {})) {
+    const fullRef = key.startsWith('categories.') ? key : `categories.${key}`;
+    const shortKey = key.startsWith('categories.') ? key.replace('categories.', '') : key;
+    if (!allRefs.has(fullRef) && !allRefs.has(shortKey) && !allRefs.has(key)) {
+      results.push({
+        ref: fullRef,
+        name: cat.displayName ?? key,
+        entityType: 'category',
+        childCount: cat.childRefs ? Object.keys(cat.childRefs).length : 0,
+      });
+    }
+  }
+
+  return results;
+}
+
+
 /**
  * An orphaned virtual product — one that has NEITHER relatedProducts.alternatives
  * NOR modifierGroupRefs. It has no mechanism for sizing, selection, or modification.

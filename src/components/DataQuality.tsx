@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
-import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs, getOrphanedVirtualProducts } from '../utils/menuHelpers';
-import type { OrphanedVirtualProduct } from '../utils/menuHelpers';
+import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs, getOrphanedVirtualProducts, getUnreferencedEntities } from '../utils/menuHelpers';
+import type { OrphanedVirtualProduct, UnreferencedEntity } from '../utils/menuHelpers';
 import { CopyRef } from './CopyRef';
 
 /* ── Animated counter hook ── */
@@ -137,6 +137,13 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
       <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
     </svg>
   ),
+  'unreferenced-entities': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+      <line x1="4" y1="4" x2="20" y2="20" />
+    </svg>
+  ),
 };
 
 interface DataQualityProps {
@@ -186,6 +193,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const malformedTags = useMemo(() => getProductsWithMalformedTags(menu), [menu]);
   const virtualWithIngredients = useMemo(() => getVirtualProductsWithIngredientRefs(menu), [menu]);
   const orphanedVirtuals = useMemo(() => getOrphanedVirtualProducts(menu), [menu]);
+  const unreferencedEntities = useMemo(() => getUnreferencedEntities(menu), [menu]);
 
   /** Health score: % of checks that are clean.
    *  Each check type contributes equally; a check with 0 issues → 100%, >0 → 0%. */
@@ -201,10 +209,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       malformedTags.length,
       virtualWithIngredients.length,
       orphanedVirtuals.length,
+      unreferencedEntities.length,
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients, orphanedVirtuals]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -288,6 +297,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       rows.push(['Orphaned virtual product (U2)', 'error', 'high', vp.productName, vp.productRef, 'Yes', '', '', vp.hasIngredientRefs ? `has ${vp.ingredientRefCount} ingredientRef(s)` : 'no refs at all']);
     }
 
+    // Unreferenced entities
+    for (const ue of unreferencedEntities) {
+      rows.push(['Unreferenced ' + ue.entityType, 'warning', 'medium', ue.name, ue.ref, '', '', '', ue.childCount + ' childRefs']);
+    }
+
     const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -296,7 +310,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     a.download = `data-quality-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
 
   /** All quality checks — add new ones here */
   const checks: QualityCheck[] = useMemo(() => {
@@ -475,9 +489,27 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       });
     }
 
+    if (unreferencedEntities.length > 0) {
+      const pgCount = unreferencedEntities.filter(e => e.entityType === 'productGroup').length;
+      const catCount = unreferencedEntities.filter(e => e.entityType === 'category').length;
+      const parts: string[] = [];
+      if (pgCount > 0) parts.push(`${pgCount} productGroup${pgCount !== 1 ? 's' : ''}`);
+      if (catCount > 0) parts.push(`${catCount} ${catCount !== 1 ? 'categories' : 'category'}`);
+      list.push({
+        id: 'unreferenced-entities',
+        title: 'Unreferenced entities (dead data)',
+        description:
+          `${parts.join(' and ')} not referenced anywhere in the menu. These are stale entries that no product, category, or group points to.`,
+        severity: 'warning',
+        priority: 'medium',
+        count: unreferencedEntities.length,
+        icon: '\uD83D\uDD17',
+      });
+    }
+
     list.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
     return list;
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals, unreferencedEntities]);
 
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -761,6 +793,12 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                       <OrphanedVirtualsDetail
                         items={orphanedVirtuals}
                         onProductSelect={onProductSelect}
+                      />
+                    )}
+
+                    {isActive && check.id === 'unreferenced-entities' && (
+                      <UnreferencedEntitiesDetail
+                        items={unreferencedEntities}
                       />
                     )}
                   </div>
@@ -1316,6 +1354,48 @@ function OrphanedVirtualsDetail({
   );
 }
 
+function UnreferencedEntitiesDetail({
+  items,
+}: {
+  items: UnreferencedEntity[];
+}) {
+  const pgItems = items.filter(e => e.entityType === 'productGroup');
+  const catItems = items.filter(e => e.entityType === 'category');
+
+  const renderGroup = (label: string, entities: UnreferencedEntity[]) => (
+    <div className="dq-group">
+      <div className="dq-group-header">
+        <span className="dq-group-name">{label} ({entities.length})</span>
+      </div>
+      <div className="dq-children">
+        {entities.map((e) => (
+          <span key={e.ref} className="dq-child">
+            <span className="dq-child-dot dq-child-dot--miss" />
+            <span className="dq-child-name">{e.name}</span>
+            <code className="dq-child-flag dq-child-flag--miss">{e.ref}</code>
+            {e.childCount > 0 && (
+              <code className="dq-child-flag">{e.childCount} childRefs</code>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        <div className="dq-product-card">
+          <div className="dq-product-detail" style={{ paddingTop: 4 }}>
+            {pgItems.length > 0 && renderGroup('Unreferenced productGroups', pgItems)}
+            {catItems.length > 0 && renderGroup('Unreferenced categories', catItems)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Returns the total number of quality issues for badge display.
  *  Observations (info severity) are excluded from the count. */
 export function useDataQualityCount(menu: Menu | null): number {
@@ -1331,7 +1411,8 @@ export function useDataQualityCount(menu: Menu | null): number {
       getProductsMissingKeywords(menu).length +
       getProductsWithMalformedTags(menu).length +
       getVirtualProductsWithIngredientRefs(menu).length +
-      getOrphanedVirtualProducts(menu).length
+      getOrphanedVirtualProducts(menu).length +
+      getUnreferencedEntities(menu).length
       // inheritable observations intentionally excluded (info only)
     );
   }, [menu]);
