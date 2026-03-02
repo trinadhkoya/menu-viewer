@@ -221,4 +221,109 @@ describe('getUnreferencedEntities', () => {
     });
     expect(getUnreferencedEntities(menu)).toEqual([]);
   });
+
+  it('recognizes PG referenced from product.groupIds', () => {
+    const menu = makeMenu({
+      products: {
+        'products.chicken': {
+          displayName: 'Chicken',
+          groupIds: ['productGroups.entrees'],
+        },
+      } as unknown as Menu['products'],
+      productGroups: {
+        'productGroups.entrees': {
+          displayName: 'Entrees',
+          childRefs: {},
+        },
+      } as unknown as Menu['productGroups'],
+    });
+    expect(getUnreferencedEntities(menu)).toEqual([]);
+  });
+
+  it('recognizes category referenced from product.groupIds', () => {
+    const menu = makeMenu({
+      rootCategoryRef: 'categories.root',
+      categories: {
+        'categories.root': {
+          displayName: 'Root',
+          childRefs: {},
+        },
+        'categories.hot-drinks': {
+          displayName: 'Hot Drinks',
+          childRefs: {},
+        },
+      } as unknown as Menu['categories'],
+      products: {
+        'products.latte': {
+          displayName: 'Latte',
+          groupIds: ['categories.hot-drinks'],
+        },
+      } as unknown as Menu['products'],
+    });
+    expect(getUnreferencedEntities(menu)).toEqual([]);
+  });
+
+  it('recognizes PG referenced from product.parentIds', () => {
+    const menu = makeMenu({
+      products: {
+        'products.sm-coffee': {
+          displayName: 'Small Coffee',
+          parentIds: ['productGroups.coffee-sizes'],
+        },
+      } as unknown as Menu['products'],
+      productGroups: {
+        'productGroups.coffee-sizes': {
+          displayName: 'Coffee Sizes',
+          childRefs: { 'products.sm-coffee': {} },
+        },
+      } as unknown as Menu['productGroups'],
+    });
+    expect(getUnreferencedEntities(menu)).toEqual([]);
+  });
+
+  it('recognizes PG referenced from product.productGroupIds', () => {
+    const menu = makeMenu({
+      products: {
+        'products.burger': {
+          displayName: 'Burger',
+          productGroupIds: ['productGroups.signature-burgers'],
+        },
+      } as unknown as Menu['products'],
+      productGroups: {
+        'productGroups.signature-burgers': {
+          displayName: 'Signature Burgers',
+          childRefs: {},
+        },
+      } as unknown as Menu['productGroups'],
+    });
+    expect(getUnreferencedEntities(menu)).toEqual([]);
+  });
+
+  it('recognizes MG referenced from modifier.modifierGroupRefs', () => {
+    const menu = makeMenu({
+      products: {
+        'products.burger': {
+          displayName: 'Burger',
+          modifierGroupRefs: { 'modifierGroups.toppings': {} },
+        },
+      } as unknown as Menu['products'],
+      modifierGroups: {
+        'modifierGroups.toppings': {
+          displayName: 'Toppings',
+          childRefs: { 'modifiers.cheese': {} },
+        },
+        'modifierGroups.nested-sauces': {
+          displayName: 'Nested Sauces',
+          childRefs: {},
+        },
+      } as unknown as Menu['modifierGroups'],
+      modifiers: {
+        'modifiers.cheese': {
+          displayName: 'Cheese',
+          modifierGroupRefs: { 'modifierGroups.nested-sauces': {} },
+        },
+      } as unknown as Menu['modifiers'],
+    });
+    expect(getUnreferencedEntities(menu)).toEqual([]);
+  });
 });

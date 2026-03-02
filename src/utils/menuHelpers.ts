@@ -1076,6 +1076,26 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
         }
       }
     }
+
+    // groupIds — array of refs (productGroups.* or categories.*)
+    const pAny = p as Record<string, unknown>;
+    if (Array.isArray(pAny.groupIds)) {
+      for (const gid of pAny.groupIds) {
+        if (typeof gid === 'string') allRefs.add(gid);
+      }
+    }
+    // parentIds — array of refs
+    if (Array.isArray(pAny.parentIds)) {
+      for (const pid of pAny.parentIds) {
+        if (typeof pid === 'string') allRefs.add(pid);
+      }
+    }
+    // productGroupIds — array of refs
+    if (Array.isArray(pAny.productGroupIds)) {
+      for (const pgid of pAny.productGroupIds) {
+        if (typeof pgid === 'string') allRefs.add(pgid);
+      }
+    }
   }
 
   // Scan productGroups
@@ -1086,6 +1106,14 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
   // Scan modifierGroups
   for (const mg of Object.values(menu.modifierGroups ?? {})) {
     addKeys(mg.childRefs as Record<string, unknown> | undefined);
+  }
+
+  // Scan modifiers — can have nested modifierGroupRefs
+  for (const mod of Object.values(menu.modifiers ?? {})) {
+    const modAny = mod as Record<string, unknown>;
+    if (modAny.modifierGroupRefs && typeof modAny.modifierGroupRefs === 'object') {
+      addKeys(modAny.modifierGroupRefs as Record<string, unknown>);
+    }
   }
 
   const results: UnreferencedEntity[] = [];
