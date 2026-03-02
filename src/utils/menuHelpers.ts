@@ -940,6 +940,73 @@ export function getProductGroupsMissingDefault(menu: Menu): VirtualProductGroups
 }
 
 // ─────────────────────────────────────────────
+// Data Quality: Virtual products with ingredientRefs (Unintentional Construct)
+// ─────────────────────────────────────────────
+
+/**
+ * A virtual product that has ingredientRefs — an unintentional construct.
+ * Virtual products should NOT have ingredientRefs; they should use
+ * relatedProducts (productGroups) or modifierGroupRefs instead.
+ */
+export interface VirtualWithIngredientRefs {
+  productRef: string;
+  productName: string;
+  ingredientRefKeys: string[];
+  /** Resolved ingredient group names */
+  ingredientGroups: { ref: string; name: string }[];
+  hasAlternatives: boolean;
+  hasModifierGroupRefs: boolean;
+}
+
+/**
+ * Find all virtual products (isVirtual=true) that have ingredientRefs.
+ * These are unintentional constructs — virtual products should use
+ * relatedProducts or modifierGroupRefs, not ingredientRefs.
+ */
+export function getVirtualProductsWithIngredientRefs(menu: Menu): VirtualWithIngredientRefs[] {
+  const products = menu.products ?? {};
+  const results: VirtualWithIngredientRefs[] = [];
+
+  for (const [id, product] of Object.entries(products)) {
+    if (product.isVirtual !== true) continue;
+    if (!product.ingredientRefs || Object.keys(product.ingredientRefs).length === 0) continue;
+
+    const irKeys = Object.keys(product.ingredientRefs);
+    const ingredientGroups: { ref: string; name: string }[] = [];
+
+    for (const ref of irKeys) {
+      const resolved = resolveRef(menu, ref);
+      const name = resolved && typeof resolved === 'object' && 'displayName' in resolved
+        ? (resolved as { displayName?: string }).displayName ?? ref
+        : ref;
+      ingredientGroups.push({ ref, name });
+    }
+
+    const rp = product.relatedProducts as Record<string, unknown> | undefined;
+    const hasAlternatives = rp != null &&
+      typeof rp === 'object' &&
+      rp.alternatives != null &&
+      typeof rp.alternatives === 'object' &&
+      Object.keys(rp.alternatives as object).length > 0;
+
+    const hasModifierGroupRefs = product.modifierGroupRefs != null &&
+      typeof product.modifierGroupRefs === 'object' &&
+      Object.keys(product.modifierGroupRefs).length > 0;
+
+    results.push({
+      productRef: id.startsWith('products.') ? id : `products.${id}`,
+      productName: product.displayName ?? id,
+      ingredientRefKeys: irKeys,
+      ingredientGroups,
+      hasAlternatives,
+      hasModifierGroupRefs,
+    });
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
 // Data Quality: Virtual products with missing ctaLabel
 // ─────────────────────────────────────────────
 

@@ -237,6 +237,7 @@
 [class*="brand-"] .stat-number,
 [class*="brand-"] .ms-stat-pill-value,
 [class*="brand-"] .ms-hero-title,
+[class*="brand-"] .dq-hero-title,
 [class*="brand-"] .cal-number,
 [class*="brand-"] .search-card-title,
 [class*="brand-"] .combo-banner-title,
@@ -260,6 +261,8 @@
 [class*="brand-"] .stat-label,
 [class*="brand-"] .ms-stat-pill-label,
 [class*="brand-"] .ms-hero-action,
+[class*="brand-"] .dq-severity-label,
+[class*="brand-"] .dq-export-btn,
 [class*="brand-"] .badge,
 [class*="brand-"] .mini-badge,
 [class*="brand-"] .tag,
@@ -329,6 +332,7 @@
 [class*="brand-"] .products-count,
 [class*="brand-"] .category-card span,
 [class*="brand-"] .ms-hero-name,
+[class*="brand-"] .dq-hero-subtitle,
 [class*="brand-"] .search-card-desc,
 [class*="brand-"] .search-card-meta,
 [class*="brand-"] .combo-banner-desc,
@@ -4923,8 +4927,8 @@ body,
 
 /* ── Health score ring ── */
 .dq-health-ring {
-  width: 72px;
-  height: 72px;
+  width: 44px;
+  height: 44px;
   position: relative;
   flex-shrink: 0;
 }
@@ -4946,71 +4950,146 @@ body,
   gap: 1px;
 }
 .dq-health-value {
-  font-size: 1.25rem;
+  font-size: 0.82rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 .dq-health-unit {
-  font-size: 0.6rem;
+  font-size: 0.45rem;
   font-weight: 700;
   opacity: 0.55;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
-/* ── Hero banner ── */
+/* ── Hero banner — compact single row ── */
 .dq-hero {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 16px;
-  padding: 24px 28px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-raised, #f8f8fa) 100%);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   animation: dq-fadeSlideDown 0.45s ease both;
-}
-.dq-hero-top {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
+}
+.dq-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent, #e11d48), color-mix(in srgb, var(--color-accent, #e11d48) 60%, #8b5cf6));
+  opacity: 0.8;
+}
+[class*="brand-"] .dq-hero::before {
+  opacity: 1;
 }
 .dq-hero-info {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 .dq-hero-title {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .dq-hero-subtitle {
-  margin: 4px 0 0;
-  font-size: 0.76rem;
+  margin: 2px 0 0;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
-  line-height: 1.4;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
-/* Export button */
+/* Severity stat pills — inline */
+.dq-severity-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.dq-severity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  font-family: inherit;
+  appearance: none;
+  outline: none;
+  cursor: default;
+  transition: all 0.18s ease;
+}
+.dq-severity-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dq-severity-pill--error::before { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
+.dq-severity-pill--warning::before { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15); }
+.dq-severity-pill--info::before { background: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.dq-severity-pill--zero { opacity: 0.45; }
+.dq-severity-pill:hover:not(.dq-severity-pill--zero) {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.dq-severity-count {
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-accent);
+}
+.dq-severity-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Export button — compact */
 .dq-export-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: 0.72rem;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle, var(--color-border));
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.68rem;
   font-weight: 600;
+  color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.18s;
+  transition: all 0.18s ease;
+  appearance: none;
+  outline: none;
 }
 .dq-export-btn:hover {
-  border-color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  transform: translateY(-1px);
 }
 .dq-export-btn:active {
   transform: scale(0.97);
@@ -5019,44 +5098,14 @@ body,
   flex-shrink: 0;
 }
 
-/* Severity breakdown cards */
-.dq-severity-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 20px;
-}
-.dq-severity-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.dq-severity-card::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dq-severity-card--error::before { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); }
-.dq-severity-card--warning::before { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12); }
-.dq-severity-card--info::before { background: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent); }
-.dq-severity-card--zero { opacity: 0.45; }
-.dq-severity-count {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--color-text);
-  line-height: 1;
-}
-.dq-severity-label {
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
-  font-weight: 500;
+/* Responsive */
+@media (max-width: 640px) {
+  .dq-hero {
+    flex-wrap: wrap;
+  }
+  .dq-severity-pills {
+    margin-left: 0;
+  }
 }
 
 /* ── Empty state ── */
@@ -5615,10 +5664,13 @@ body,
 
 /* ── Dark mode overrides ── */
 .dark .dq-hero {
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  background: linear-gradient(135deg, var(--color-surface), rgba(255, 255, 255, 0.02));
 }
-.dark .dq-severity-card {
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+.dark .dq-severity-pill {
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+.dark .dq-severity-pill:hover:not(.dq-severity-pill--zero) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .dark .dq-check {
   background: color-mix(in srgb, var(--color-surface) 60%, transparent);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
-import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault } from '../utils/menuHelpers';
+import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs } from '../utils/menuHelpers';
 import { CopyRef } from './CopyRef';
 
 /* ── Animated counter hook ── */
@@ -123,6 +123,13 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
       <line x1="17.5" y1="15.5" x2="17.5" y2="21.5" /><line x1="14.5" y1="18.5" x2="20.5" y2="18.5" />
     </svg>
   ),
+  'virtual-with-ingredients': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 9v4" /><path d="M12 17h.01" />
+      <path d="M3.44 18.49a10 10 0 1117.12 0" />
+      <path d="M8 15h8" /><path d="M9 12h6" />
+    </svg>
+  ),
 };
 
 interface DataQualityProps {
@@ -170,6 +177,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const missingKeywords = useMemo(() => getProductsMissingKeywords(menu), [menu]);
   const kwInheritObs = useMemo(() => getKeywordsInheritableObservations(menu), [menu]);
   const malformedTags = useMemo(() => getProductsWithMalformedTags(menu), [menu]);
+  const virtualWithIngredients = useMemo(() => getVirtualProductsWithIngredientRefs(menu), [menu]);
 
   /** Health score: % of checks that are clean.
    *  Each check type contributes equally; a check with 0 issues → 100%, >0 → 0%. */
@@ -183,10 +191,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       missingTags.length,
       missingKeywords.length,
       malformedTags.length,
+      virtualWithIngredients.length,
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -258,6 +267,13 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       }
     }
 
+    // Virtual products with ingredientRefs (Unintentional Construct U1)
+    for (const vp of virtualWithIngredients) {
+      for (const g of vp.ingredientGroups) {
+        rows.push(['Virtual with ingredientRefs (U1)', 'error', 'high', vp.productName, vp.productRef, 'Yes', g.name, g.ref, '']);
+      }
+    }
+
     const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -266,7 +282,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     a.download = `data-quality-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients]);
 
   /** All quality checks — add new ones here */
   const checks: QualityCheck[] = useMemo(() => {
@@ -418,9 +434,23 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
     // ── Future checks go here ──
 
+    if (virtualWithIngredients.length > 0) {
+      const totalIRefs = virtualWithIngredients.reduce((s, vp) => s + vp.ingredientRefKeys.length, 0);
+      list.push({
+        id: 'virtual-with-ingredients',
+        title: 'Unintentional: Virtual products with ingredientRefs',
+        description:
+          `${virtualWithIngredients.length} virtual product${virtualWithIngredients.length !== 1 ? 's' : ''} with ${totalIRefs} ingredientRef${totalIRefs !== 1 ? 's' : ''}. Virtual products should use relatedProducts (productGroups) or modifierGroupRefs \u2014 not ingredientRefs. Construct U1.`,
+        severity: 'error',
+        priority: 'high',
+        count: virtualWithIngredients.length,
+        icon: '\u26a0\ufe0f',
+      });
+    }
+
     list.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
     return list;
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients]);
 
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -477,11 +507,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
   return (
     <div className="dq-page">
-      {/* ── Hero banner ── */}
+      {/* ── Compact hero bar ── */}
       <div className="dq-hero">
-        <div className="dq-hero-top">
+        <div className="dq-hero-info">
           <HealthRing score={healthScore} />
-          <div className="dq-hero-info">
+          <div>
             <h2 className="dq-hero-title">Data Quality</h2>
             <p className="dq-hero-subtitle">
               {totalIssues === 0
@@ -489,34 +519,34 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                 : `${animTotalIssues} issue${totalIssues !== 1 ? 's' : ''} across ${checks.length} check${checks.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          {checks.length > 0 && (
-            <button className="dq-export-btn" onClick={handleExport} title="Export all issues as CSV">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export
-            </button>
-          )}
         </div>
 
-        {/* Severity breakdown cards — always show all 3 for stable layout */}
         {checks.length > 0 && (
-          <div className="dq-severity-grid">
-            <div className={`dq-severity-card dq-severity-card--error${severityCounts.error === 0 ? ' dq-severity-card--zero' : ''}`}>
+          <div className="dq-severity-pills">
+            <span className={`dq-severity-pill dq-severity-pill--error${severityCounts.error === 0 ? ' dq-severity-pill--zero' : ''}`}>
               <span className="dq-severity-count">{animErrorCount}</span>
               <span className="dq-severity-label">Errors</span>
-            </div>
-            <div className={`dq-severity-card dq-severity-card--warning${severityCounts.warning === 0 ? ' dq-severity-card--zero' : ''}`}>
+            </span>
+            <span className={`dq-severity-pill dq-severity-pill--warning${severityCounts.warning === 0 ? ' dq-severity-pill--zero' : ''}`}>
               <span className="dq-severity-count">{animWarningCount}</span>
               <span className="dq-severity-label">Warnings</span>
-            </div>
-            <div className={`dq-severity-card dq-severity-card--info${severityCounts.info === 0 ? ' dq-severity-card--zero' : ''}`}>
+            </span>
+            <span className={`dq-severity-pill dq-severity-pill--info${severityCounts.info === 0 ? ' dq-severity-pill--zero' : ''}`}>
               <span className="dq-severity-count">{animInfoCount}</span>
               <span className="dq-severity-label">Observations</span>
-            </div>
+            </span>
           </div>
+        )}
+
+        {checks.length > 0 && (
+          <button className="dq-export-btn" onClick={handleExport} title="Export all issues as CSV">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export
+          </button>
         )}
       </div>
 
@@ -692,6 +722,13 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                         onProductSelect={onProductSelect}
                       />
                     )}
+
+                    {isActive && check.id === 'virtual-with-ingredients' && (
+                      <VirtualWithIngredientsDetail
+                        items={virtualWithIngredients}
+                        onProductSelect={onProductSelect}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -721,7 +758,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
 // ─── Detail sub-components ───
 
-import type { RecipeNoDefaultMismatch, VirtualMissingCtaLabel, ProductMissingDescription, ProductMissingImage, ProductMissingTags, ProductMissingSearchKeywords, MalformedTagProduct, VirtualProductGroupsMissingDefault } from '../utils/menuHelpers';
+import type { RecipeNoDefaultMismatch, VirtualMissingCtaLabel, ProductMissingDescription, ProductMissingImage, ProductMissingTags, ProductMissingSearchKeywords, MalformedTagProduct, VirtualProductGroupsMissingDefault, VirtualWithIngredientRefs } from '../utils/menuHelpers';
 
 function GroupMissingDefaultDetail({
   groups,
@@ -1104,6 +1141,80 @@ function MalformedTagsDetail({
   );
 }
 
+function VirtualWithIngredientsDetail({
+  items,
+  onProductSelect,
+}: {
+  items: VirtualWithIngredientRefs[];
+  onProductSelect: (ref: string) => void;
+}) {
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        {items.map((vp) => (
+          <div key={vp.productRef} className="dq-product-card">
+            <div className="dq-product-toggle" style={{ cursor: 'default' }}>
+              <div className="dq-product-header">
+                <strong
+                  className="dq-product-name"
+                  onClick={() => onProductSelect(vp.productRef)}
+                  title="Open product detail"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {vp.productName}
+                </strong>
+                <span className="dq-product-count">
+                  {vp.ingredientRefKeys.length} ingredientRef{vp.ingredientRefKeys.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <span className="dq-group-badge" style={{ background: '#ef4444', color: '#fff' }}>U1</span>
+              <span className="dq-group-badge">virtual</span>
+              <CopyRef value={vp.productRef} />
+            </div>
+            <div className="dq-product-detail" style={{ paddingTop: 4 }}>
+              <div className="dq-group">
+                <div className="dq-group-header">
+                  <span className="dq-group-name">ingredientRefs (should not exist)</span>
+                </div>
+                <div className="dq-children">
+                  {vp.ingredientGroups.map((g) => (
+                    <span key={g.ref} className="dq-child">
+                      <span className="dq-child-dot dq-child-dot--miss" />
+                      <span className="dq-child-name">{g.name}</span>
+                      <code className="dq-child-flag dq-child-flag--miss">{g.ref}</code>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {(vp.hasAlternatives || vp.hasModifierGroupRefs) && (
+                <div className="dq-group">
+                  <div className="dq-group-header">
+                    <span className="dq-group-name">Also has</span>
+                  </div>
+                  <div className="dq-children">
+                    {vp.hasAlternatives && (
+                      <span className="dq-child">
+                        <span className="dq-child-dot dq-child-dot--ok" />
+                        <span className="dq-child-name">relatedProducts.alternatives</span>
+                      </span>
+                    )}
+                    {vp.hasModifierGroupRefs && (
+                      <span className="dq-child">
+                        <span className="dq-child-dot dq-child-dot--ok" />
+                        <span className="dq-child-name">modifierGroupRefs</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Returns the total number of quality issues for badge display.
  *  Observations (info severity) are excluded from the count. */
 export function useDataQualityCount(menu: Menu | null): number {
@@ -1117,7 +1228,8 @@ export function useDataQualityCount(menu: Menu | null): number {
       getProductsMissingImage(menu).length +
       getProductsMissingTags(menu).length +
       getProductsMissingKeywords(menu).length +
-      getProductsWithMalformedTags(menu).length
+      getProductsWithMalformedTags(menu).length +
+      getVirtualProductsWithIngredientRefs(menu).length
       // inheritable observations intentionally excluded (info only)
     );
   }, [menu]);

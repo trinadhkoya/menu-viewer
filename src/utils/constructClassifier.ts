@@ -440,13 +440,50 @@ export const STRUCTURAL_TAGS: StructuralTagDef[] = [
   },
   {
     id: 'virtual-ingredient',
-    name: 'Virtual + Ingredients (No Sizing)',
+    name: 'Virtual + Ingredients (Unintentional)',
     shortName: 'V+Ing',
-    description: 'Virtual product with ingredientRefs but no size alternatives — uses ingredients for variety instead of sizing (e.g. K-Cup Pods, Bottled Drinks, Packaged Coffee).',
-    icon: '🧪',
-    color: '#14b8a6',
+    description: 'Virtual product with ingredientRefs — unintentional construct. Virtual products should use relatedProducts (productGroups) or modifierGroupRefs, not ingredientRefs. Found in BWW (1) and Dunkin (6).',
+    icon: '⚠️',
+    color: '#ef4444',
   },
 ];
+
+// ─────────────────────────────────────────────
+// Unintentional Constructs
+// ─────────────────────────────────────────────
+
+/** Definition for an unintentional (invalid) construct pattern */
+export interface UnintentionalConstructDef {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string;
+  linkedStructuralTag: string;
+  icon: string;
+  color: string;
+}
+
+/**
+ * Unintentional constructs — patterns that appear in menu data but should not exist.
+ * These are data quality issues that need to be fixed at the source.
+ */
+export const UNINTENTIONAL_CONSTRUCTS: UnintentionalConstructDef[] = [
+  {
+    id: 'U1',
+    name: 'Virtual Product with ingredientRefs',
+    shortName: 'V+Ingredients',
+    description: 'Virtual products should never have ingredientRefs. They should use relatedProducts.alternatives (productGroups) for sizing/selection or modifierGroupRefs for modifications. Having ingredientRefs on a virtual product is a configuration error.',
+    linkedStructuralTag: 'virtual-ingredient',
+    icon: '⚠️',
+    color: '#ef4444',
+  },
+];
+
+const unintentionalMap = new Map(UNINTENTIONAL_CONSTRUCTS.map((u) => [u.id, u]));
+
+export function getUnintentionalConstruct(id: string): UnintentionalConstructDef | undefined {
+  return unintentionalMap.get(id);
+}
 
 const structuralTagMap = new Map(STRUCTURAL_TAGS.map((t) => [t.id, t]));
 
