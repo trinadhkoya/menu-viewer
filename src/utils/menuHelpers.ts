@@ -777,6 +777,169 @@ export function getRecipeNoDefaultMismatches(menu: Menu): RecipeNoDefaultMismatc
 }
 
 // ─────────────────────────────────────────────
+// Data Quality: Virtual products with groups missing isDefault (DOVS-5556)
+// For each isVirtual=true product, traces group references through:
+//   1. relatedProducts.alternatives → productGroups.* (standard sizing)
+//   2. modifierGroupRefs → modifierGroups.* (Sonic intensity: Easy/Regular/Extra)
+// and flags groups where no child has isDefault=true.
+// ─────────────────────────────────────────────
+
+export interface GroupDefaultChild {
+  ref: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export type GroupSourceType = 'productGroup' | 'modifierGroup';
+
+export interface GroupMissingDefaultEntry {
+  groupRef: string;
+  groupName: string;
+  sourceType: GroupSourceType;
+  isRecipe: boolean;
+  childCount: number;
+  children: GroupDefaultChild[];
+}
+
+export interface VirtualProductGroupsMissingDefault {
+  productRef: string;
+  productName: string;
+  groups: GroupMissingDefaultEntry[];
+}
+
+// Keep backward-compatible aliases
+export type ProductGroupDefaultChild = GroupDefaultChild;
+export type ProductGroupMissingDefault = GroupMissingDefaultEntry;
+export type GroupMissingDefault = VirtualProductGroupsMissingDefault;
+
+/**
+ * For each virtual product, find referenced productGroups and modifierGroups
+ * where no child has isDefault=true.
+ *
+ * Virtual products rely on one of two pathways for selection:
+ *   1. relatedProducts → productGroups.* (size, flavor, variety, carrier, etc.)
+ *   2. modifierGroupRefs → modifierGroups.* (Sonic intensity: Easy/Regular/Extra)
+ *
+ * In both cases, at least one child must have isDefault=true so the app knows
+ * which option to pre-select. This catches DOVS-5556 style bugs at the
+ * virtual-product level, making it easy to trace which product is affected.
+ */
+export function getProductGroupsMissingDefault(menu: Menu): VirtualProductGroupsMissingDefault[] {
+  const results: VirtualProductGroupsMissingDefault[] = [];
+  const products = menu.products || {};
+  const productGroups = menu.productGroups || {};
+  const modifierGroupsMap = menu.modifierGroups || {};
+  const modifiers = menu.modifiers || {};
+
+  // Track already-checked group IDs to avoid duplicate work
+  const checkedPgIds = new Set<string>();
+
+  for (const [pid, product] of Object.entries(products)) {
+    if (!product.isVirtual) continue;
+
+    const badGroups: GroupMissingDefaultEntry[] = [];
+
+    // ── Pathway 1: relatedProducts → productGroups.* ──
+    const rp = product.relatedProducts;
+    if (rp) {
+      // Collect all productGroup refs from relatedProducts (can be top-level or nested under "alternatives")
+      const pgRefs: string[] = [];
+      for (const [key, override] of Object.entries(rp)) {
+        if (isProductGroupRef(key)) {
+          pgRefs.push(key);
+        }
+        if (override && typeof override === 'object') {
+          for (const innerRef of Object.keys(override)) {
+            if (isProductGroupRef(innerRef)) {
+              pgRefs.push(innerRef);
+            }
+          }
+        }
+      }
+
+      for (const pgRef of pgRefs) {
+        const pgId = pgRef.startsWith('productGroups.') ? pgRef.slice('productGroups.'.length) : pgRef;
+        if (checkedPgIds.has(pgId)) continue;
+        checkedPgIds.add(pgId);
+        const pg = productGroups[pgId];
+        if (!pg?.childRefs || Object.keys(pg.childRefs).length === 0) continue;
+
+        const children: GroupDefaultChild[] = [];
+        let hasDefault = false;
+
+        for (const [cref, childOverride] of Object.entries(pg.childRefs)) {
+          const cpId = cref.startsWith('products.') ? cref.slice('products.'.length) : cref;
+          const cp = products[cpId];
+          const isDefaultProduct = cp?.isDefault === true;
+          const isDefaultOverride = childOverride != null && typeof childOverride === 'object' &&
+            (childOverride as Record<string, unknown>).isDefault === true;
+          const isDefault = isDefaultProduct || isDefaultOverride;
+          if (isDefault) hasDefault = true;
+          children.push({ ref: cref, name: cp?.displayName ?? cpId, isDefault });
+        }
+
+        if (!hasDefault) {
+          badGroups.push({
+            groupRef: pgRef.startsWith('productGroups.') ? pgRef : `productGroups.${pgRef}`,
+            groupName: pg.displayName ?? pgId,
+            sourceType: 'productGroup',
+            isRecipe: isRecipeGroup(pg),
+            childCount: children.length,
+            children,
+          });
+        }
+      }
+    }
+
+    // ── Pathway 2: modifierGroupRefs → modifierGroups.* ──
+    const mgRefs = product.modifierGroupRefs;
+    if (mgRefs) {
+      for (const mgRef of Object.keys(mgRefs)) {
+        if (!mgRef.startsWith('modifierGroups.')) continue;
+        const mgId = mgRef.slice('modifierGroups.'.length);
+        const mg = modifierGroupsMap[mgId];
+        if (!mg?.childRefs || Object.keys(mg.childRefs).length === 0) continue;
+
+        const children: GroupDefaultChild[] = [];
+        let hasDefault = false;
+
+        for (const [cref, childOverride] of Object.entries(mg.childRefs)) {
+          const modId = cref.startsWith('modifiers.') ? cref.slice('modifiers.'.length) : cref;
+          const mod = modifiers[modId];
+          const isDefaultModifier = mod?.isDefault === true;
+          const isDefaultOverride = childOverride != null && typeof childOverride === 'object' &&
+            (childOverride as Record<string, unknown>).isDefault === true;
+          const isDefault = isDefaultModifier || isDefaultOverride;
+          if (isDefault) hasDefault = true;
+          children.push({ ref: cref, name: mod?.displayName ?? modId, isDefault });
+        }
+
+        if (!hasDefault) {
+          badGroups.push({
+            groupRef: mgRef,
+            groupName: mg.displayName ?? mgId,
+            sourceType: 'modifierGroup',
+            isRecipe: false,
+            childCount: children.length,
+            children,
+          });
+        }
+      }
+    }
+
+    if (badGroups.length > 0) {
+      results.push({
+        productRef: pid.startsWith('products.') ? pid : `products.${pid}`,
+        productName: product.displayName ?? pid,
+        groups: badGroups,
+      });
+    }
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
 // Data Quality: Virtual products with missing ctaLabel
 // ─────────────────────────────────────────────
 

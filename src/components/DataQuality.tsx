@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
-import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags } from '../utils/menuHelpers';
+import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault } from '../utils/menuHelpers';
 import { CopyRef } from './CopyRef';
 
 /* ── Animated counter hook ── */
@@ -116,6 +116,13 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
       <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   ),
+  'pg-missing-default': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+      <line x1="17.5" y1="15.5" x2="17.5" y2="21.5" /><line x1="14.5" y1="18.5" x2="20.5" y2="18.5" />
+    </svg>
+  ),
 };
 
 interface DataQualityProps {
@@ -153,6 +160,7 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 
 export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const recipeNoDefaultMismatches = useMemo(() => getRecipeNoDefaultMismatches(menu), [menu]);
+  const pgMissingDefault = useMemo(() => getProductGroupsMissingDefault(menu), [menu]);
   const virtualMissingCta = useMemo(() => getVirtualMissingCtaLabel(menu), [menu]);
   const missingDescriptions = useMemo(() => getProductsMissingDescription(menu), [menu]);
   const descInheritObs = useMemo(() => getDescriptionInheritableObservations(menu), [menu]);
@@ -168,6 +176,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const healthScore = useMemo(() => {
     const checkResults = [
       recipeNoDefaultMismatches.length,
+      pgMissingDefault.length,
       virtualMissingCta.length,
       missingDescriptions.length,
       missingImages.length,
@@ -177,7 +186,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -209,6 +218,15 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       for (const g of m.groups) {
         for (const c of g.children) {
           rows.push(['Recipe groups missing isDefault', 'warning', 'medium', m.productName, m.productRef, 'No', g.groupName, `${c.name} (isDefault=${c.isDefault})`, c.ref]);
+        }
+      }
+    }
+
+    // Virtual products with groups missing isDefault (DOVS-5556)
+    for (const vp of pgMissingDefault) {
+      for (const g of vp.groups) {
+        for (const c of g.children) {
+          rows.push(['Virtual groups missing isDefault', 'error', 'high', vp.productName, vp.productRef, 'Yes', `${g.groupName} (${g.sourceType})`, `${c.name} (isDefault=${c.isDefault})`, c.ref]);
         }
       }
     }
@@ -248,11 +266,25 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     a.download = `data-quality-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipeNoDefaultMismatches, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
 
   /** All quality checks — add new ones here */
   const checks: QualityCheck[] = useMemo(() => {
     const list: QualityCheck[] = [];
+
+    if (pgMissingDefault.length > 0) {
+      const totalGroups = pgMissingDefault.reduce((s, vp) => s + vp.groups.length, 0);
+      list.push({
+        id: 'pg-missing-default',
+        title: 'Virtual products with groups missing isDefault',
+        description:
+          `${pgMissingDefault.length} virtual product${pgMissingDefault.length !== 1 ? 's' : ''} with ${totalGroups} group${totalGroups !== 1 ? 's' : ''} (productGroups or modifierGroups) where no child has isDefault=true. Traces relatedProducts.alternatives → productGroups and modifierGroupRefs → modifierGroups. DOVS-5556.`,
+        severity: 'error',
+        priority: 'high',
+        count: pgMissingDefault.length,
+        icon: '⚠️',
+      });
+    }
 
     if (recipeNoDefaultMismatches.length > 0) {
       list.push({
@@ -388,7 +420,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
     list.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
     return list;
-  }, [recipeNoDefaultMismatches, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags]);
 
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -557,6 +589,15 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                     </button>
 
                     {/* ── Expanded detail area for each check type ── */}
+                    {isActive && check.id === 'pg-missing-default' && (
+                      <GroupMissingDefaultDetail
+                        groups={pgMissingDefault}
+                        expandedProduct={expandedProduct}
+                        setExpandedProduct={setExpandedProduct}
+                        onProductSelect={onProductSelect}
+                      />
+                    )}
+
                     {isActive && check.id === 'recipe-no-default' && (
                       <RecipeNoDefaultDetail
                         mismatches={recipeNoDefaultMismatches}
@@ -680,7 +721,80 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
 // ─── Detail sub-components ───
 
-import type { RecipeNoDefaultMismatch, VirtualMissingCtaLabel, ProductMissingDescription, ProductMissingImage, ProductMissingTags, ProductMissingSearchKeywords, MalformedTagProduct } from '../utils/menuHelpers';
+import type { RecipeNoDefaultMismatch, VirtualMissingCtaLabel, ProductMissingDescription, ProductMissingImage, ProductMissingTags, ProductMissingSearchKeywords, MalformedTagProduct, VirtualProductGroupsMissingDefault } from '../utils/menuHelpers';
+
+function GroupMissingDefaultDetail({
+  groups,
+  expandedProduct,
+  setExpandedProduct,
+  onProductSelect,
+}: {
+  groups: VirtualProductGroupsMissingDefault[];
+  expandedProduct: string | null;
+  setExpandedProduct: (v: string | null) => void;
+  onProductSelect: (ref: string) => void;
+}) {
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        {groups.map((vp) => {
+          const isExpanded = expandedProduct === vp.productRef;
+          const totalGroups = vp.groups.length;
+          return (
+            <div key={vp.productRef} className="dq-product-card">
+              <button
+                className="dq-product-toggle"
+                onClick={() => setExpandedProduct(isExpanded ? null : vp.productRef)}
+              >
+                <div className="dq-product-header">
+                  <strong
+                    className="dq-product-name"
+                    onClick={(e) => { e.stopPropagation(); onProductSelect(vp.productRef); }}
+                    title="Open product detail"
+                  >
+                    {vp.productName}
+                  </strong>
+                  <span className="dq-product-count">
+                    {totalGroups} group{totalGroups !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <span className="dq-group-badge">virtual</span>
+                <CopyRef value={vp.productRef} />
+                <span className={`dq-chevron ${isExpanded ? 'open' : ''}`}>▸</span>
+              </button>
+              {isExpanded && (
+                <div className="dq-product-detail">
+                  {vp.groups.map((g) => (
+                    <div key={g.groupRef} className="dq-group">
+                      <div className="dq-group-header">
+                        <span className="dq-group-name">{g.groupName}</span>
+                        <span className="dq-group-badge">
+                          {g.sourceType === 'modifierGroup' ? 'modifierGroup' : g.isRecipe ? 'recipe' : 'productGroup'}
+                        </span>
+                        <CopyRef value={g.groupRef} />
+                      </div>
+                      <div className="dq-children">
+                        {g.children.map((c) => (
+                          <span key={c.ref} className="dq-child">
+                            <span className={`dq-child-dot ${c.isDefault ? 'dq-child-dot--ok' : 'dq-child-dot--miss'}`} />
+                            <span className="dq-child-name">{c.name}</span>
+                            <code className={`dq-child-flag ${c.isDefault ? 'dq-child-flag--ok' : 'dq-child-flag--miss'}`}>
+                              isDefault={String(c.isDefault)}
+                            </code>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function RecipeNoDefaultDetail({
   mismatches,
@@ -996,6 +1110,7 @@ export function useDataQualityCount(menu: Menu | null): number {
   return useMemo(() => {
     if (!menu) return 0;
     return (
+      getProductGroupsMissingDefault(menu).length +
       getRecipeNoDefaultMismatches(menu).length +
       getVirtualMissingCtaLabel(menu).length +
       getProductsMissingDescription(menu).length +
