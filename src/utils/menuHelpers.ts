@@ -1166,22 +1166,21 @@ export function getUnreferencedEntities(menu: Menu): UnreferencedEntity[] {
 export interface ProductMissingNutrition {
   productRef: string;
   productName: string;
-  isVirtual: boolean;
 }
 
 /**
- * Find all products that have no `nutrition` object at all (or an empty one).
- * Counts ALL products in the menu, not just category-visible ones.
+ * Find non-virtual products that have no `nutrition` object at all (or an empty one).
+ * Virtual products are containers — their sized children (non-virtual) are checked directly.
  */
 export function getProductsMissingNutrition(menu: Menu): ProductMissingNutrition[] {
   const results: ProductMissingNutrition[] = [];
   for (const [key, p] of Object.entries(menu.products ?? {})) {
+    if ((p as Record<string, unknown>).isVirtual) continue;
     const n = p.nutrition;
     if (!n || typeof n !== 'object' || Object.keys(n).length === 0) {
       results.push({
         productRef: `products.${key}`,
         productName: p.displayName ?? key,
-        isVirtual: Boolean((p as Record<string, unknown>).isVirtual),
       });
     }
   }
@@ -1195,24 +1194,23 @@ export function getProductsMissingNutrition(menu: Menu): ProductMissingNutrition
 export interface ProductZeroCalories {
   productRef: string;
   productName: string;
-  isVirtual: boolean;
   totalCalories: number;
 }
 
 /**
- * Find products that HAVE a nutrition object but report totalCalories = 0.
- * These may be data entry errors (legitimate zero-calorie items are rare).
+ * Find non-virtual products that HAVE a nutrition object but report totalCalories = 0.
+ * Virtual products are containers — their sized children (non-virtual) are checked directly.
  */
 export function getProductsWithZeroCalories(menu: Menu): ProductZeroCalories[] {
   const results: ProductZeroCalories[] = [];
   for (const [key, p] of Object.entries(menu.products ?? {})) {
+    if ((p as Record<string, unknown>).isVirtual) continue;
     const n = p.nutrition;
     if (!n || typeof n !== 'object' || Object.keys(n).length === 0) continue;
     if (n.totalCalories === 0) {
       results.push({
         productRef: `products.${key}`,
         productName: p.displayName ?? key,
-        isVirtual: Boolean((p as Record<string, unknown>).isVirtual),
         totalCalories: 0,
       });
     }

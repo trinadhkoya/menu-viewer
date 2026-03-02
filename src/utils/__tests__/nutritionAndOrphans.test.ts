@@ -67,7 +67,7 @@ describe('getProductsMissingNutrition', () => {
     expect(getProductsMissingNutrition(menu)).toHaveLength(1);
   });
 
-  it('sets isVirtual correctly', () => {
+  it('skips virtual products', () => {
     const menu = makeMenu({
       products: {
         virtual: { displayName: 'Virtual', isVirtual: true },
@@ -75,10 +75,8 @@ describe('getProductsMissingNutrition', () => {
       } as unknown as Menu['products'],
     });
     const results = getProductsMissingNutrition(menu);
-    const vr = results.find(r => r.productRef === 'products.virtual');
-    const nr = results.find(r => r.productRef === 'products.normal');
-    expect(vr?.isVirtual).toBe(true);
-    expect(nr?.isVirtual).toBe(false);
+    expect(results).toHaveLength(1);
+    expect(results[0].productRef).toBe('products.normal');
   });
 });
 
@@ -133,14 +131,16 @@ describe('getProductsWithZeroCalories', () => {
     expect(getProductsWithZeroCalories(menu)).toEqual([]);
   });
 
-  it('sets isVirtual correctly', () => {
+  it('skips virtual products', () => {
     const menu = makeMenu({
       products: {
         virtual: { displayName: 'Virtual', isVirtual: true, nutrition: { totalCalories: 0 } },
+        normal: { displayName: 'Normal', nutrition: { totalCalories: 0 } },
       } as unknown as Menu['products'],
     });
     const results = getProductsWithZeroCalories(menu);
-    expect(results[0].isVirtual).toBe(true);
+    expect(results).toHaveLength(1);
+    expect(results[0].productRef).toBe('products.normal');
   });
 });
 

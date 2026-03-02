@@ -328,12 +328,12 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
 
     // Missing nutrition
     for (const mn of missingNutrition) {
-      rows.push(['Missing nutrition', 'warning', 'high', mn.productName, mn.productRef, mn.isVirtual ? 'Yes' : 'No', '', '', 'no nutrition object']);
+      rows.push(['Missing nutrition', 'warning', 'high', mn.productName, mn.productRef, 'No', '', '', 'no nutrition object']);
     }
 
     // Zero calories
     for (const zc of zeroCalories) {
-      rows.push(['Calories = 0', 'warning', 'high', zc.productName, zc.productRef, zc.isVirtual ? 'Yes' : 'No', '', '', 'totalCalories=0']);
+      rows.push(['Calories = 0', 'warning', 'high', zc.productName, zc.productRef, 'No', '', '', 'totalCalories=0']);
     }
 
     // Orphaned products
@@ -1536,7 +1536,7 @@ function SimpleProductListDetail({
   onProductSelect,
   badgeLabel,
 }: {
-  items: { productRef: string; productName: string; isVirtual: boolean }[];
+  items: { productRef: string; productName: string }[];
   onProductSelect: (ref: string) => void;
   badgeLabel: string;
 }) {
@@ -1556,7 +1556,6 @@ function SimpleProductListDetail({
                     {p.productName}
                   </button>
                   <CopyRef value={p.productRef} />
-                  {p.isVirtual && <code className="dq-child-flag">virtual</code>}
                   <code className="dq-child-flag dq-child-flag--miss">{badgeLabel}</code>
                 </span>
               ))}
