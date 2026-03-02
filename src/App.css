@@ -4917,7 +4917,7 @@ body,
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   gap: 20px;
 }
 
@@ -5231,13 +5231,10 @@ body,
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   padding-bottom: 12px;
 }
-.dq-checks::-webkit-scrollbar { width: 5px; }
-.dq-checks::-webkit-scrollbar-thumb {
+.dq-page::-webkit-scrollbar { width: 5px; }
+.dq-page::-webkit-scrollbar-thumb {
   background: var(--color-border-subtle);
   border-radius: 100px;
 }
