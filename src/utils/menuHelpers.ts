@@ -1007,6 +1007,62 @@ export function getVirtualProductsWithIngredientRefs(menu: Menu): VirtualWithIng
 }
 
 // ─────────────────────────────────────────────
+// Data Quality: Orphaned virtual products (U2)
+// ─────────────────────────────────────────────
+
+/**
+ * An orphaned virtual product — one that has NEITHER relatedProducts.alternatives
+ * NOR modifierGroupRefs. It has no mechanism for sizing, selection, or modification.
+ */
+export interface OrphanedVirtualProduct {
+  productRef: string;
+  productName: string;
+  /** Does it have ingredientRefs? (also unusual for virtuals but separate from this check) */
+  hasIngredientRefs: boolean;
+  ingredientRefCount: number;
+}
+
+/**
+ * Find all virtual products that have NEITHER relatedProducts.alternatives
+ * NOR modifierGroupRefs. These are "orphaned" — they declare isVirtual=true
+ * but have no sizing or modification pathway, making them dead-end products.
+ */
+export function getOrphanedVirtualProducts(menu: Menu): OrphanedVirtualProduct[] {
+  const products = menu.products ?? {};
+  const results: OrphanedVirtualProduct[] = [];
+
+  for (const [id, product] of Object.entries(products)) {
+    if (product.isVirtual !== true) continue;
+
+    const rp = product.relatedProducts as Record<string, unknown> | undefined;
+    const hasAlternatives = rp != null &&
+      typeof rp === 'object' &&
+      rp.alternatives != null &&
+      typeof rp.alternatives === 'object' &&
+      Object.keys(rp.alternatives as object).length > 0;
+
+    const hasModifierGroupRefs = product.modifierGroupRefs != null &&
+      typeof product.modifierGroupRefs === 'object' &&
+      Object.keys(product.modifierGroupRefs).length > 0;
+
+    if (hasAlternatives || hasModifierGroupRefs) continue;
+
+    const hasIngredientRefs = product.ingredientRefs != null &&
+      typeof product.ingredientRefs === 'object' &&
+      Object.keys(product.ingredientRefs).length > 0;
+
+    results.push({
+      productRef: id.startsWith('products.') ? id : `products.${id}`,
+      productName: product.displayName ?? id,
+      hasIngredientRefs,
+      ingredientRefCount: hasIngredientRefs ? Object.keys(product.ingredientRefs!).length : 0,
+    });
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────
 // Data Quality: Virtual products with missing ctaLabel
 // ─────────────────────────────────────────────
 

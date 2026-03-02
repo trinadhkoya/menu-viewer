@@ -477,6 +477,15 @@ export const UNINTENTIONAL_CONSTRUCTS: UnintentionalConstructDef[] = [
     icon: '⚠️',
     color: '#ef4444',
   },
+  {
+    id: 'U2',
+    name: 'Orphaned Virtual Product',
+    shortName: 'V+Nothing',
+    description: 'Virtual products must have either relatedProducts.alternatives (productGroups) for sizing/selection OR modifierGroupRefs for modifications. A virtual product with neither is a dead-end that cannot be ordered.',
+    linkedStructuralTag: 'orphaned-virtual',
+    icon: '🚫',
+    color: '#dc2626',
+  },
 ];
 
 const unintentionalMap = new Map(UNINTENTIONAL_CONSTRUCTS.map((u) => [u.id, u]));

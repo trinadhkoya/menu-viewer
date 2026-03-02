@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Menu } from '../types/menu';
-import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs } from '../utils/menuHelpers';
+import { getRecipeNoDefaultMismatches, getVirtualMissingCtaLabel, getProductsMissingDescription, getDescriptionInheritableObservations, getProductsMissingImage, getProductsMissingTags, getTagsInheritableObservations, getProductsMissingKeywords, getKeywordsInheritableObservations, getProductsWithMalformedTags, getProductGroupsMissingDefault, getVirtualProductsWithIngredientRefs, getOrphanedVirtualProducts } from '../utils/menuHelpers';
+import type { OrphanedVirtualProduct } from '../utils/menuHelpers';
 import { CopyRef } from './CopyRef';
 
 /* ── Animated counter hook ── */
@@ -130,6 +131,12 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
       <path d="M8 15h8" /><path d="M9 12h6" />
     </svg>
   ),
+  'orphaned-virtuals': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+    </svg>
+  ),
 };
 
 interface DataQualityProps {
@@ -178,6 +185,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
   const kwInheritObs = useMemo(() => getKeywordsInheritableObservations(menu), [menu]);
   const malformedTags = useMemo(() => getProductsWithMalformedTags(menu), [menu]);
   const virtualWithIngredients = useMemo(() => getVirtualProductsWithIngredientRefs(menu), [menu]);
+  const orphanedVirtuals = useMemo(() => getOrphanedVirtualProducts(menu), [menu]);
 
   /** Health score: % of checks that are clean.
    *  Each check type contributes equally; a check with 0 issues → 100%, >0 → 0%. */
@@ -192,10 +200,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       missingKeywords.length,
       malformedTags.length,
       virtualWithIngredients.length,
+      orphanedVirtuals.length,
     ];
     const clean = checkResults.filter((v) => v === 0).length;
     return Math.round((clean / checkResults.length) * 100);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, missingImages, missingTags, missingKeywords, malformedTags, virtualWithIngredients, orphanedVirtuals]);
 
   /* ── CSV export ── */
   const handleExport = useCallback(() => {
@@ -274,6 +283,11 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       }
     }
 
+    // Orphaned virtual products (Unintentional Construct U2)
+    for (const vp of orphanedVirtuals) {
+      rows.push(['Orphaned virtual product (U2)', 'error', 'high', vp.productName, vp.productRef, 'Yes', '', '', vp.hasIngredientRefs ? `has ${vp.ingredientRefCount} ingredientRef(s)` : 'no refs at all']);
+    }
+
     const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -282,7 +296,7 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
     a.download = `data-quality-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals]);
 
   /** All quality checks — add new ones here */
   const checks: QualityCheck[] = useMemo(() => {
@@ -448,9 +462,22 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
       });
     }
 
+    if (orphanedVirtuals.length > 0) {
+      list.push({
+        id: 'orphaned-virtuals',
+        title: 'Unintentional: Orphaned virtual products',
+        description:
+          `${orphanedVirtuals.length} virtual product${orphanedVirtuals.length !== 1 ? 's' : ''} with neither relatedProducts.alternatives nor modifierGroupRefs. These are dead-end products with no sizing or modification pathway. Construct U2.`,
+        severity: 'error',
+        priority: 'high',
+        count: orphanedVirtuals.length,
+        icon: '\uD83D\uDEAB',
+      });
+    }
+
     list.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
     return list;
-  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients]);
+  }, [recipeNoDefaultMismatches, pgMissingDefault, virtualMissingCta, missingDescriptions, descInheritObs, missingImages, missingTags, tagsInheritObs, missingKeywords, kwInheritObs, malformedTags, virtualWithIngredients, orphanedVirtuals]);
 
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -726,6 +753,13 @@ export function DataQuality({ menu, onProductSelect }: DataQualityProps) {
                     {isActive && check.id === 'virtual-with-ingredients' && (
                       <VirtualWithIngredientsDetail
                         items={virtualWithIngredients}
+                        onProductSelect={onProductSelect}
+                      />
+                    )}
+
+                    {isActive && check.id === 'orphaned-virtuals' && (
+                      <OrphanedVirtualsDetail
+                        items={orphanedVirtuals}
                         onProductSelect={onProductSelect}
                       />
                     )}
@@ -1215,6 +1249,73 @@ function VirtualWithIngredientsDetail({
   );
 }
 
+function OrphanedVirtualsDetail({
+  items,
+  onProductSelect,
+}: {
+  items: OrphanedVirtualProduct[];
+  onProductSelect: (ref: string) => void;
+}) {
+  return (
+    <div className="dq-detail">
+      <div className="dq-detail-list">
+        {items.map((vp) => (
+          <div key={vp.productRef} className="dq-product-card">
+            <div className="dq-product-toggle" style={{ cursor: 'default' }}>
+              <div className="dq-product-header">
+                <strong
+                  className="dq-product-name"
+                  onClick={() => onProductSelect(vp.productRef)}
+                  title="Open product detail"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {vp.productName}
+                </strong>
+                <span className="dq-product-count">no alternatives or modifierGroupRefs</span>
+              </div>
+              <span className="dq-group-badge" style={{ background: '#dc2626', color: '#fff' }}>U2</span>
+              <span className="dq-group-badge">virtual</span>
+              <CopyRef value={vp.productRef} />
+            </div>
+            <div className="dq-product-detail" style={{ paddingTop: 4 }}>
+              <div className="dq-group">
+                <div className="dq-group-header">
+                  <span className="dq-group-name">Missing pathways</span>
+                </div>
+                <div className="dq-children">
+                  <span className="dq-child">
+                    <span className="dq-child-dot dq-child-dot--miss" />
+                    <span className="dq-child-name">relatedProducts.alternatives</span>
+                    <code className="dq-child-flag dq-child-flag--miss">absent</code>
+                  </span>
+                  <span className="dq-child">
+                    <span className="dq-child-dot dq-child-dot--miss" />
+                    <span className="dq-child-name">modifierGroupRefs</span>
+                    <code className="dq-child-flag dq-child-flag--miss">absent</code>
+                  </span>
+                </div>
+              </div>
+              {vp.hasIngredientRefs && (
+                <div className="dq-group">
+                  <div className="dq-group-header">
+                    <span className="dq-group-name">Has (unexpected for virtual)</span>
+                  </div>
+                  <div className="dq-children">
+                    <span className="dq-child">
+                      <span className="dq-child-dot dq-child-dot--miss" />
+                      <span className="dq-child-name">ingredientRefs ({vp.ingredientRefCount})</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Returns the total number of quality issues for badge display.
  *  Observations (info severity) are excluded from the count. */
 export function useDataQualityCount(menu: Menu | null): number {
@@ -1229,7 +1330,8 @@ export function useDataQualityCount(menu: Menu | null): number {
       getProductsMissingTags(menu).length +
       getProductsMissingKeywords(menu).length +
       getProductsWithMalformedTags(menu).length +
-      getVirtualProductsWithIngredientRefs(menu).length
+      getVirtualProductsWithIngredientRefs(menu).length +
+      getOrphanedVirtualProducts(menu).length
       // inheritable observations intentionally excluded (info only)
     );
   }, [menu]);
